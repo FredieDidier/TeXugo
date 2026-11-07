@@ -1,0 +1,1 @@
+{ "name": "Parecer (referee report)", "description": "Parecer para periódico: resumo, comentários principais e menores.", "icon": "review", "order": 5, "main": "report.tex" }

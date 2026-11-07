@@ -1,0 +1,41 @@
+{
+  "name": "texugo",
+  "productName": "TeXugo",
+  "version": "0.1.0",
+  "description": "Editor LaTeX local para Mac: várias abas, compilação por aba ou de tudo, e zero ?? no PDF.",
+  "main": "electron/main.js",
+  "private": true,
+  "license": "MIT",
+  "author": "Fredie Didier",
+  "scripts": {
+    "build:web": "node scripts/build-web.mjs",
+    "watch:web": "node scripts/build-web.mjs --watch",
+    "serve": "npm run build:web && node server/standalone.js",
+    "start": "npm run build:web && electron .",
+    "test": "node --test test/*.test.js",
+    "icon": "node scripts/make-icon.mjs",
+    "package": "npm run build:web && node scripts/package-mac.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@codemirror/autocomplete": "^6.18.0",
+    "@codemirror/commands": "^6.7.0",
+    "@codemirror/language": "^6.10.0",
+    "@codemirror/legacy-modes": "^6.4.0",
+    "@codemirror/lint": "^6.8.0",
+    "@codemirror/search": "^6.5.0",
+    "@codemirror/state": "^6.4.0",
+    "@codemirror/view": "^6.34.0",
+    "@lezer/highlight": "^1.2.0",
+    "electron": "^38.0.0",
+    "esbuild": "^0.24.0",
+    "pdfjs-dist": "^4.10.38"
+  },
+  "allowScripts": {
+    "electron@38.8.6": true,
+    "esbuild@0.24.2": true
+  },
+  "type": "module"
+}

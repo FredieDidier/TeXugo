@@ -1,0 +1,76 @@
+% !TEX program = pdflatex
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usetheme{toca}
+
+\title{{{TITLE}}}
+\subtitle{Subtítulo da apresentação}
+\author{{{AUTHOR}}}
+\institute{{{INSTITUTION}}}
+\date{{{DATE}}}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+\section{Motivação}
+
+\begin{frame}{A pergunta}
+  \begin{itemize}
+    \item Uma frase que diz o que o trabalho responde.
+    \item Por que a resposta importa para política pública.
+    \item \alert{O que há de novo} em relação à literatura.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Duas colunas}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Desenho}
+        Diferença tripla: tratado $\times$ janela $\times$ pós.
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{exampleblock}{Resultado}
+        $\hat\beta = 0{,}12$ (0{,}04)
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Resultados}
+
+\begin{frame}{Tabela}
+  \centering
+  \begin{tabular}{lcc}
+    \toprule
+    & (1) & (2) \\
+    \midrule
+    Tratado $\times$ pós & 0{,}12 & 0{,}10 \\
+                         & (0{,}04) & (0{,}05) \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Passo a passo}
+  \begin{enumerate}
+    \item<1-> Primeiro aparece isto.
+    \item<2-> Depois isto.
+    \item<3-> \alert{E por fim a conclusão.}
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}[plain]
+  \centering\vfill
+  {\Huge\bfseries Obrigado!}\par\vspace{0.5cm}
+  {\color{tocaGrey}email@instituicao.br}
+  \vfill
+\end{frame}
+
+\end{document}

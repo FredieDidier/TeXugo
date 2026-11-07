@@ -1,0 +1,24 @@
+% !TEX program = pdflatex
+% The paper. Labels of the online appendix come from appendix.aux.
+% TeXugo compiles both files in the right order on its own.
+\documentclass[12pt]{article}
+\input{preamble}
+\externaldocument{appendix}
+
+\title{{{TITLE}}}
+\author{{{AUTHOR}}\\{{INSTITUTION}}}
+\date{{{DATE}}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent The question, the variation, the estimate and why it matters.
+\end{abstract}
+
+\input{sections/body}
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

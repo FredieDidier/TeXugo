@@ -1,0 +1,1 @@
+{ "name": "Artigo + apêndice online", "description": "Dois PDFs que citam um ao outro (xr). O TeXugo compila os dois na ordem certa: zero ??.", "icon": "papers", "order": 2, "main": "paper.tex" }

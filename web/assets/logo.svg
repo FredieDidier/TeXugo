@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0.4" y2="1">
+      <stop offset="0" stop-color="#F4B957"/>
+      <stop offset="1" stop-color="#D98A1C"/>
+    </linearGradient>
+    <clipPath id="head">
+      <path d="M256 430C212 430 164 384 142 332C120 280 114 228 124 188C136 136 194 106 256 106C318 106 376 136 388 188C398 228 392 280 370 332C348 384 300 430 256 430Z"/>
+    </clipPath>
+  </defs>
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bg)"/>
+  <ellipse cx="256" cy="446" rx="150" ry="18" fill="#A8650F" opacity="0.35"/>
+  <circle cx="150" cy="150" r="38" fill="#1E2127"/>
+  <circle cx="362" cy="150" r="38" fill="#1E2127"/>
+  <circle cx="150" cy="150" r="18" fill="#F3EEE3"/>
+  <circle cx="362" cy="150" r="18" fill="#F3EEE3"/>
+  <path d="M256 430C212 430 164 384 142 332C120 280 114 228 124 188C136 136 194 106 256 106C318 106 376 136 388 188C398 228 392 280 370 332C348 384 300 430 256 430Z" fill="#F7F2E8"/>
+  <g clip-path="url(#head)" fill="#1E2127">
+    <path d="M236 96C212 100 194 108 182 120C164 168 160 222 172 270C184 318 208 358 240 398C243 362 240 322 237 290C234 236 232 166 236 96Z"/>
+    <path d="M276 96C300 100 318 108 330 120C348 168 352 222 340 270C328 318 304 358 272 398C269 362 272 322 275 290C278 236 280 166 276 96Z"/>
+  </g>
+  <circle cx="208" cy="262" r="14" fill="#F4B957"/>
+  <circle cx="304" cy="262" r="14" fill="#F4B957"/>
+  <circle cx="212.5" cy="257" r="4.5" fill="#FFF8EA"/>
+  <circle cx="308.5" cy="257" r="4.5" fill="#FFF8EA"/>
+  <path d="M230 388Q256 372 282 388Q276 420 256 424Q236 420 230 388Z" fill="#1E2127"/>
+</svg>

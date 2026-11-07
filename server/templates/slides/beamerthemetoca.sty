@@ -1,0 +1,80 @@
+% Toca: the TeXugo Beamer theme. Graphite, cream and honey; no gradients,
+% no shadows, generous margins. Works with pdfLaTeX (no system fonts).
+\mode<presentation>
+\usefonttheme{professionalfonts}
+\usefonttheme[onlymath]{serif}
+\setbeamertemplate{navigation symbols}{}
+\setbeamersize{text margin left=1.2cm, text margin right=1.2cm}
+
+\definecolor{tocaInk}{HTML}{1E2127}
+\definecolor{tocaCream}{HTML}{FAF7F0}
+\definecolor{tocaHoney}{HTML}{D98E1F}
+\definecolor{tocaMoss}{HTML}{2E8B62}
+\definecolor{tocaGrey}{HTML}{6B7280}
+\definecolor{tocaLine}{HTML}{E6DFD0}
+
+\setbeamercolor{normal text}{fg=tocaInk,bg=tocaCream}
+\setbeamercolor{background canvas}{bg=tocaCream}
+\setbeamercolor{structure}{fg=tocaHoney}
+\setbeamercolor{alerted text}{fg=tocaHoney!85!black}
+\setbeamercolor{example text}{fg=tocaMoss}
+\setbeamercolor{frametitle}{fg=tocaInk}
+\setbeamercolor{title}{fg=tocaInk}
+\setbeamercolor{subtitle}{fg=tocaGrey}
+\setbeamercolor{author}{fg=tocaInk}
+\setbeamercolor{date}{fg=tocaGrey}
+\setbeamercolor{institute}{fg=tocaGrey}
+\setbeamercolor{item}{fg=tocaHoney}
+\setbeamercolor{footline}{fg=tocaGrey}
+\setbeamercolor{block title}{fg=tocaCream,bg=tocaInk}
+\setbeamercolor{block body}{fg=tocaInk,bg=tocaLine!60}
+\setbeamercolor{block title alerted}{fg=tocaCream,bg=tocaHoney}
+\setbeamercolor{block body alerted}{fg=tocaInk,bg=tocaHoney!12}
+\setbeamercolor{block title example}{fg=tocaCream,bg=tocaMoss}
+\setbeamercolor{block body example}{fg=tocaInk,bg=tocaMoss!10}
+
+\setbeamerfont{frametitle}{size=\Large,series=\bfseries}
+\setbeamerfont{title}{size=\huge,series=\bfseries}
+\setbeamerfont{subtitle}{size=\large}
+\setbeamerfont{footline}{size=\scriptsize}
+\setbeamertemplate{itemize items}{\raisebox{0.15ex}{\rule{0.5em}{0.5em}}}
+\setbeamertemplate{itemize subitem}{\textendash}
+\setbeamertemplate{enumerate items}[default]
+\setbeamertemplate{blocks}[rounded][shadow=false]
+
+\setbeamertemplate{frametitle}{%
+  \vspace*{0.7cm}%
+  \usebeamerfont{frametitle}\usebeamercolor[fg]{frametitle}\insertframetitle\par
+  \vspace{0.15cm}{\color{tocaHoney}\rule{1.4cm}{2.5pt}}\par
+  \vspace{0.1cm}}
+
+\setbeamertemplate{footline}{%
+  \leavevmode\hbox to \paperwidth{\hspace{1.2cm}%
+    \usebeamerfont{footline}\usebeamercolor[fg]{footline}\insertshorttitle\hfill
+    \insertframenumber\,/\,\inserttotalframenumber\hspace{1.2cm}}%
+  \vspace{0.45cm}}
+
+\setbeamertemplate{title page}{%
+  \vfill
+  {\color{tocaHoney}\rule{2cm}{4pt}}\par\vspace{0.5cm}
+  {\usebeamerfont{title}\usebeamercolor[fg]{title}\inserttitle\par}
+  \ifx\insertsubtitle\@empty\else\vspace{0.3cm}{\usebeamerfont{subtitle}\usebeamercolor[fg]{subtitle}\insertsubtitle\par}\fi
+  \vspace{1cm}
+  {\usebeamercolor[fg]{author}\insertauthor\par}
+  \vspace{0.15cm}{\small\usebeamercolor[fg]{institute}\insertinstitute\par}
+  \vspace{0.15cm}{\small\usebeamercolor[fg]{date}\insertdate\par}
+  \vfill}
+
+% Section divider slide.
+\AtBeginSection[]{%
+  \begingroup
+  \setbeamercolor{background canvas}{bg=tocaInk}
+  \setbeamertemplate{footline}{}
+  \begin{frame}[plain]
+    \vfill
+    {\color{tocaHoney}\rule{1.4cm}{3pt}}\par\vspace{0.4cm}
+    {\color{tocaCream}\huge\bfseries\insertsectionhead\par}
+    \vfill
+  \end{frame}
+  \endgroup}
+\mode<all>

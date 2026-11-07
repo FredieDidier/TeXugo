@@ -1,0 +1,1 @@
+{ "name": "Artigo", "description": "Artigo acadêmico em inglês: natbib, tabelas booktabs, figuras e bibliografia.", "icon": "paper", "order": 1, "main": "paper.tex" }

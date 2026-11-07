@@ -1,0 +1,1 @@
+{ "name": "Carta", "description": "Carta formal ou cover letter para submissão.", "icon": "letter", "order": 6, "main": "carta.tex" }

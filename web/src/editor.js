@@ -1,0 +1,238 @@
+// CodeMirror 6 setup for LaTeX (and plain text, BibTeX, Markdown files).
+import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/state';
+import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, dropCursor, rectangularSelection, crosshairCursor, highlightSpecialChars, Decoration } from '@codemirror/view';
+import { defaultKeymap, history, historyKeymap, indentWithTab, toggleComment } from '@codemirror/commands';
+import { StreamLanguage, syntaxHighlighting, HighlightStyle, bracketMatching, indentOnInput, foldGutter, foldKeymap } from '@codemirror/language';
+import { stex } from '@codemirror/legacy-modes/mode/stex';
+import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/search';
+import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap, snippetCompletion } from '@codemirror/autocomplete';
+import { linter, lintGutter, setDiagnostics } from '@codemirror/lint';
+import { tags as t } from '@lezer/highlight';
+
+const latex = StreamLanguage.define(stex);
+
+const style = HighlightStyle.define([
+  { tag: t.keyword, color: 'var(--hl-cmd)' },
+  { tag: t.tagName, color: 'var(--hl-cmd)' },
+  { tag: t.atom, color: 'var(--hl-cmd)' },
+  { tag: t.bracket, color: 'var(--hl-bracket)' },
+  { tag: t.comment, color: 'var(--hl-comment)', fontStyle: 'italic' },
+  { tag: t.string, color: 'var(--hl-math)' },
+  { tag: t.keyword, color: 'var(--hl-cmd)' },
+  { tag: t.number, color: 'var(--hl-num)' },
+  { tag: t.variableName, color: 'var(--hl-arg)' },
+  { tag: t.meta, color: 'var(--hl-env)' },
+  { tag: t.invalid, color: 'var(--err)' },
+  { tag: t.heading, fontWeight: '700' },
+]);
+
+const COMMANDS = [
+  'section', 'subsection', 'subsubsection', 'paragraph', 'chapter', 'part', 'label', 'ref', 'eqref', 'cref', 'Cref', 'autoref', 'pageref',
+  'cite', 'citet', 'citep', 'citeauthor', 'citeyear', 'textcite', 'parencite', 'emph', 'textbf', 'textit', 'texttt', 'textsc', 'underline',
+  'footnote', 'caption', 'includegraphics', 'input', 'include', 'usepackage', 'documentclass', 'newcommand', 'renewcommand',
+  'item', 'centering', 'hline', 'toprule', 'midrule', 'bottomrule', 'cmidrule', 'multicolumn', 'multirow', 'frametitle', 'framesubtitle',
+  'pause', 'alert', 'url', 'href', 'today', 'maketitle', 'tableofcontents', 'bibliography', 'bibliographystyle', 'printbibliography',
+  'addbibresource', 'externaldocument', 'vspace', 'hspace', 'medskip', 'bigskip', 'smallskip', 'noindent', 'newpage', 'clearpage',
+  'frac', 'sqrt', 'sum', 'prod', 'int', 'alpha', 'beta', 'gamma', 'delta', 'varepsilon', 'epsilon', 'theta', 'lambda', 'mu', 'sigma',
+  'tau', 'phi', 'rho', 'omega', 'Delta', 'mathbb', 'mathbf', 'mathrm', 'mathcal', 'hat', 'bar', 'tilde', 'left', 'right', 'times',
+  'cdot', 'ldots', 'leq', 'geq', 'neq', 'approx', 'infty', 'partial', 'mathbb{E}', 'text', 'quad', 'qquad', 'thanks', 'appendix',
+];
+const ENVS = ['figure', 'table', 'tabular', 'itemize', 'enumerate', 'description', 'equation', 'equation*', 'align', 'align*', 'frame', 'columns', 'column', 'block', 'alertblock', 'exampleblock', 'abstract', 'center', 'minipage', 'threeparttable', 'tablenotes', 'longtable', 'quote', 'proof', 'theorem', 'lemma', 'verbatim', 'tikzpicture', 'document'];
+
+// Supplies labels and bib keys (refreshed by the app from the server).
+export const symbols = { labels: [], bibKeys: [] };
+
+function latexCompletions(ctx) {
+  // \ref{..}, \cref{..}, \eqref{..}: labels
+  let m = ctx.matchBefore(/\\(?:[cC]ref|ref|eqref|autoref|pageref|vref|nameref|labelcref)\{[^}]*$/);
+  if (m) {
+    const brace = m.text.lastIndexOf('{') + 1;
+    const part = m.text.slice(brace);
+    const comma = part.lastIndexOf(',') + 1;
+    return {
+      from: m.from + brace + comma,
+      options: dedupe(symbols.labels.map((l) => l.key)).map((k) => ({ label: k, type: 'variable', detail: labelDetail(k) })),
+      validFor: /^[^},]*$/,
+    };
+  }
+  m = ctx.matchBefore(/\\(?:cite[a-zA-Z]*|[pP]arencite|[tT]extcite|footcite|autocite|nocite)\*?(?:\[[^\]]*\])*\{[^}]*$/);
+  if (m) {
+    const brace = m.text.lastIndexOf('{') + 1;
+    const part = m.text.slice(brace);
+    const comma = part.lastIndexOf(',') + 1;
+    return {
+      from: m.from + brace + comma,
+      options: symbols.bibKeys.map((b) => ({ label: b.key, type: 'text', detail: [b.author && b.author.split(' and ')[0].split(',')[0], b.year].filter(Boolean).join(' '), info: b.title || '' })),
+      validFor: /^[^},]*$/,
+    };
+  }
+  m = ctx.matchBefore(/\\(?:begin|end)\{[^}]*$/);
+  if (m) {
+    const brace = m.text.indexOf('{') + 1;
+    return { from: m.from + brace, options: ENVS.map((e) => ({ label: e, type: 'type' })), validFor: /^[^}]*$/ };
+  }
+  m = ctx.matchBefore(/\\[a-zA-Z]*$/);
+  if (m && (m.text.length > 1 || ctx.explicit)) {
+    const opts = COMMANDS.map((c) => ({ label: '\\' + c, type: 'keyword' }));
+    opts.push(
+      snippetCompletion('\\begin{${env}}\n\t${}\n\\end{${env}}', { label: '\\begin{…}', type: 'keyword', detail: 'ambiente' }),
+      snippetCompletion('\\begin{figure}[t]\n\t\\centering\n\t\\includegraphics[width=\\linewidth]{${arquivo}}\n\t\\caption{${legenda}}\\label{fig:${rótulo}}\n\\end{figure}', { label: '\\figure', type: 'keyword', detail: 'figura completa' }),
+      snippetCompletion('\\begin{table}[t]\n\t\\centering\n\t\\caption{${legenda}}\\label{tab:${rótulo}}\n\t\\begin{tabular}{lcc}\n\t\t\\toprule\n\t\t& (1) & (2) \\\\\\\\\n\t\t\\midrule\n\t\t${} \\\\\\\\\n\t\t\\bottomrule\n\t\\end{tabular}\n\\end{table}', { label: '\\table', type: 'keyword', detail: 'tabela booktabs' }),
+      snippetCompletion('\\begin{frame}{${título}}\n\t\\begin{itemize}\n\t\t\\item ${}\n\t\\end{itemize}\n\\end{frame}', { label: '\\frame', type: 'keyword', detail: 'slide Beamer' }),
+      snippetCompletion('\\begin{itemize}\n\t\\item ${}\n\\end{itemize}', { label: '\\itemize', type: 'keyword', detail: 'lista' }),
+      snippetCompletion('\\begin{equation}\\label{eq:${rótulo}}\n\t${}\n\\end{equation}', { label: '\\equation', type: 'keyword', detail: 'equação numerada' }),
+    );
+    return { from: m.from, options: opts, validFor: /^\\[a-zA-Z]*$/ };
+  }
+  return null;
+}
+
+function labelDetail(k) {
+  const l = symbols.labels.find((x) => x.key === k);
+  return l ? l.file.split('/').pop() + ':' + l.line : '';
+}
+function dedupe(a) {
+  return [...new Set(a)];
+}
+
+// Auto-close \begin{env} with \end{env} when Enter is pressed right after it.
+const autoEnd = keymap.of([
+  {
+    key: 'Enter',
+    run(view) {
+      const { state } = view;
+      const sel = state.selection.main;
+      if (!sel.empty) return false;
+      const line = state.doc.lineAt(sel.head);
+      const before = line.text.slice(0, sel.head - line.from);
+      const m = before.match(/\\begin\{([^}]+)\}(\[[^\]]*\]|\{[^}]*\})*\s*$/);
+      if (!m) return false;
+      const env = m[1];
+      const rest = state.doc.sliceString(sel.head, Math.min(state.doc.length, sel.head + 4000));
+      const opens = (rest.match(new RegExp(`\\\\begin\\{${escapeRe(env)}\\}`, 'g')) || []).length;
+      const closes = (rest.match(new RegExp(`\\\\end\\{${escapeRe(env)}\\}`, 'g')) || []).length;
+      if (closes > opens) return false;
+      const indent = line.text.match(/^\s*/)[0];
+      const insert = `\n${indent}  \n${indent}\\end{${env}}`;
+      view.dispatch({ changes: { from: sel.head, insert }, selection: { anchor: sel.head + indent.length + 3 } });
+      return true;
+    },
+  },
+]);
+function escapeRe(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Flash a line after a jump (from the PDF, a problem or the outline).
+const flashEffect = StateEffect.define();
+const flashField = StateField.define({
+  create: () => Decoration.none,
+  update(deco, tr) {
+    deco = deco.map(tr.changes);
+    for (const e of tr.effects) if (e.is(flashEffect)) deco = e.value == null ? Decoration.none : Decoration.set([Decoration.line({ class: 'cm-flash-line' }).range(e.value)]);
+    return deco;
+  },
+  provide: (f) => EditorView.decorations.from(f),
+});
+
+function wrapSelection(before, after) {
+  return (view) => {
+    const changes = view.state.changeByRange((range) => {
+      const text = view.state.sliceDoc(range.from, range.to);
+      return {
+        changes: { from: range.from, to: range.to, insert: before + text + after },
+        range: range.empty ? { anchor: range.from + before.length } : { anchor: range.from + before.length, head: range.to + before.length },
+      };
+    });
+    view.dispatch(view.state.update(changes, { scrollIntoView: true }));
+    return true;
+  };
+}
+
+export const wrapCompartment = new Compartment();
+export const sizeCompartment = new Compartment();
+
+export function languageFor(path) {
+  if (/\.(tex|sty|cls|ltx|bib|dtx|ins)$/i.test(path)) return [latex];
+  return [];
+}
+
+// Creates the state for a file. `hooks` carries app callbacks: save,
+// compile, compileAll, syncForward, onChange.
+export function createState(doc, path, hooks, settings = {}) {
+  return EditorState.create({
+    doc,
+    extensions: [
+      lineNumbers(),
+      highlightActiveLineGutter(),
+      highlightSpecialChars(),
+      history(),
+      foldGutter(),
+      drawSelection(),
+      dropCursor(),
+      EditorState.allowMultipleSelections.of(true),
+      indentOnInput(),
+      syntaxHighlighting(style),
+      bracketMatching(),
+      closeBrackets(),
+      autocompletion({ override: [latexCompletions], activateOnTyping: true, maxRenderedOptions: 80 }),
+      rectangularSelection(),
+      crosshairCursor(),
+      highlightActiveLine(),
+      highlightSelectionMatches(),
+      search({ top: true }),
+      lintGutter(),
+      linter(null),
+      flashField,
+      wrapCompartment.of(settings.wrap === false ? [] : EditorView.lineWrapping),
+      languageFor(path),
+      autoEnd,
+      keymap.of([
+        { key: 'Mod-s', preventDefault: true, run: () => (hooks.save(), true) },
+        { key: 'Mod-Enter', preventDefault: true, run: () => (hooks.compile(), true) },
+        { key: 'Mod-Shift-Enter', preventDefault: true, run: () => (hooks.compileAll(), true) },
+        { key: 'Mod-j', preventDefault: true, run: (v) => (hooks.syncForward(v), true) },
+        { key: 'Mod-b', run: wrapSelection('\\textbf{', '}') },
+        { key: 'Mod-i', run: wrapSelection('\\emph{', '}') },
+        { key: 'Mod-/', run: toggleComment },
+        ...closeBracketsKeymap,
+        ...defaultKeymap,
+        ...searchKeymap,
+        ...historyKeymap,
+        ...foldKeymap,
+        ...completionKeymap,
+        indentWithTab,
+      ]),
+      EditorView.updateListener.of((u) => {
+        if (u.docChanged) hooks.onChange(u);
+        if (u.selectionSet || u.docChanged) hooks.onCursor && hooks.onCursor(u.state);
+      }),
+      EditorState.languageData.of(() => [{ commentTokens: { line: '%' } }]),
+    ],
+  });
+}
+
+export function createView(parent) {
+  return new EditorView({ parent, state: EditorState.create({ doc: '' }) });
+}
+
+export function jumpTo(view, line, col = 0) {
+  const l = view.state.doc.line(Math.max(1, Math.min(line, view.state.doc.lines)));
+  const pos = Math.min(l.from + col, l.to);
+  view.dispatch({ selection: { anchor: pos }, effects: [EditorView.scrollIntoView(pos, { y: 'center' }), flashEffect.of(l.from)], scrollIntoView: false });
+  view.focus();
+  setTimeout(() => view.dispatch({ effects: flashEffect.of(null) }), 1700);
+}
+
+export function showDiagnostics(view, diags) {
+  const doc = view.state.doc;
+  const list = diags
+    .filter((d) => d.line && d.line <= doc.lines)
+    .map((d) => {
+      const l = doc.line(d.line);
+      return { from: l.from, to: Math.max(l.from, l.to), severity: d.severity, message: d.message, source: d.source };
+    });
+  view.dispatch(setDiagnostics(view.state, list));
+}
+
+export { EditorView, EditorState, wrapSelection };

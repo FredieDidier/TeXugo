@@ -1,0 +1,39 @@
+% !TEX program = pdflatex
+% Online appendix. Labels of the paper come from paper.aux.
+\documentclass[12pt]{article}
+\input{preamble}
+\externaldocument{paper}
+\renewcommand{\thetable}{A\arabic{table}}
+\renewcommand{\thefigure}{A\arabic{figure}}
+
+\title{Online Appendix\\[4pt]\large {{TITLE}}}
+\author{{{AUTHOR}}}
+\date{}
+
+\begin{document}
+\maketitle
+\appendix
+
+\section{Data}\label{app:data}
+Sources and definitions. The main estimate is in Table~\ref{tab:main} of the paper.
+
+\begin{table}[h]
+  \centering
+  \caption{Robustness}\label{tab:robust}
+  \begin{tabular}{lcc}
+    \toprule
+    & Drop 2020 & Urban only \\
+    \midrule
+    Treated $\times$ post & 0.11 & 0.14 \\
+                          & (0.05) & (0.06) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{figure}[h]
+  \centering
+  \fbox{\parbox{0.6\linewidth}{\centering\vspace{2cm}Event study\vspace{2cm}}}
+  \caption{Event study}\label{fig:event}
+\end{figure}
+
+\end{document}

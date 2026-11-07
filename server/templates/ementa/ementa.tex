@@ -1,0 +1,96 @@
+% !TEX program = pdflatex
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{booktabs,longtable,tabularx,array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{tocaInk}{HTML}{1E2127}
+\definecolor{tocaHoney}{HTML}{C47E12}
+\definecolor{tocaGrey}{HTML}{6B7280}
+\titleformat{\section}{\large\bfseries\color{tocaInk}}{}{0pt}{}[{\color{tocaHoney}\titlerule[1pt]}]
+\titlespacing*{\section}{0pt}{1.4em}{0.6em}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
+
+\newcommand{\disciplina}{{{TITLE}}}
+\newcommand{\docente}{{{AUTHOR}}}
+
+\begin{document}
+
+{\color{tocaGrey}\small {{INSTITUTION}}}\par
+{\LARGE\bfseries\color{tocaInk}\disciplina}\par
+\vspace{0.3em}
+{\color{tocaHoney}\rule{2.5cm}{3pt}}
+
+\vspace{0.8em}
+\begin{tabularx}{\linewidth}{@{}>{\bfseries}l X >{\bfseries}l X@{}}
+  Docente & \docente & Semestre & {{YEAR}}.1 \\
+  Carga horária & 60 h (4 créditos) & Horário & Terças e quintas, 10h--12h \\
+  Contato & email@instituicao.br & Atendimento & Quartas, 14h--16h (sala 000) \\
+  Pré-requisitos & Nenhum & Código & ECO0000 \\
+\end{tabularx}
+
+\section{Ementa}
+Texto oficial da ementa: os grandes temas da disciplina em um parágrafo.
+
+\section{Objetivos}
+Ao final da disciplina, o estudante deverá ser capaz de:
+\begin{enumerate}
+  \item explicar ...;
+  \item aplicar ...;
+  \item avaliar criticamente ....
+\end{enumerate}
+
+\section{Conteúdo programático}
+\begin{enumerate}[label=\textbf{Unidade \arabic*.},leftmargin=*,align=left]
+  \item \textbf{Introdução.} Tópicos da primeira unidade.
+  \item \textbf{Métodos.} Tópicos da segunda unidade.
+  \item \textbf{Aplicações.} Tópicos da terceira unidade.
+\end{enumerate}
+
+\section{Cronograma}
+\begin{longtable}{@{}c l p{0.5\linewidth} l@{}}
+  \toprule
+  Aula & Data & Tema & Leitura \\
+  \midrule
+  \endhead
+  1 & 03/03 & Apresentação da disciplina & -- \\
+  2 & 05/03 & Unidade 1: introdução & Cap. 1 \\
+  3 & 10/03 & Unidade 1: continuação & Cap. 2 \\
+  4 & 12/03 & Unidade 2: métodos & Cap. 3 \\
+  5 & 17/03 & \textbf{Prova 1} & -- \\
+  \bottomrule
+\end{longtable}
+
+\section{Avaliação}
+\begin{tabular}{@{}lr@{}}
+  Prova 1 & 30\% \\
+  Prova 2 & 30\% \\
+  Trabalho final & 30\% \\
+  Participação & 10\% \\
+  \midrule
+  \textbf{Total} & \textbf{100\%} \\
+\end{tabular}
+
+Aprovação com média igual ou superior a 7,0 e frequência mínima de 75\%.
+
+\section{Bibliografia}
+\textbf{Básica}
+\begin{itemize}
+  \item SOBRENOME, Nome. \textit{Título do livro}. Cidade: Editora, ano.
+\end{itemize}
+\textbf{Complementar}
+\begin{itemize}
+  \item SOBRENOME, Nome. Título do artigo. \textit{Periódico}, v. 1, n. 1, p. 1--20, ano.
+\end{itemize}
+
+\end{document}

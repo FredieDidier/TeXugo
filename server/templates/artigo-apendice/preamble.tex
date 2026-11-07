@@ -1,0 +1,17 @@
+% Shared preamble of paper.tex and appendix.tex.
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[authoryear,round]{natbib}
+% xr-hyper must come before hyperref. Each file imports the other's labels
+% with \externaldocument, so the paper can cite "Appendix Table A1" and the
+% appendix can cite "Table 1" of the paper.
+\usepackage{xr-hyper}
+\usepackage[hidelinks]{hyperref}
