@@ -15,6 +15,7 @@ function copyStatic() {
   fs.copyFileSync(path.join(pdfjs, 'build', 'pdf.worker.min.mjs'), path.join(dist, 'pdf.worker.min.mjs'));
   fs.copyFileSync(path.join(pdfjs, 'web', 'pdf_viewer.css'), path.join(dist, 'pdf_viewer.css'));
   for (const d of ['cmaps', 'standard_fonts']) fs.cpSync(path.join(pdfjs, d), path.join(dist, d), { recursive: true });
+  fs.cpSync(path.join(pdfjs, 'web', 'images'), path.join(dist, 'images'), { recursive: true });
 }
 
 const opts = {

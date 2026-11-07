@@ -27,6 +27,12 @@ function commands(app, S) {
     { t: 'Mostrar/esconder painel inferior', i: 'panel', run: () => app.toggleBottom() },
     { t: 'Preferências', k: '⌘,', i: 'gear', run: () => openSettings(app, S) },
     { t: 'Parar compilação', i: 'stop', run: () => call('cancelBuild') },
+    { t: 'Exportar ZIP para submissão (arXiv)', i: 'down', run: () => app.tools.exportZip(app, S) },
+    { t: 'Checar anonimato (double-blind)', i: 'eye', run: () => app.tools.blindCheck(app, S) },
+    { t: 'Revisar estilo (ChkTeX)', i: 'check', run: () => app.tools.chktex(app, S) },
+    { t: 'Contar palavras (texcount)', i: 'outline', run: () => app.tools.wordCount(app, S) },
+    { t: 'Abrir Terminal na pasta do projeto', i: 'command', run: () => call('openTerminal', { path: S.project.root }) },
+    { t: 'Mostrar projeto no Finder', i: 'folder', run: () => call('reveal', { path: S.project.root }) },
   ];
 }
 

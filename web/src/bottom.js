@@ -9,7 +9,7 @@ export class BottomPanel {
     this.view = 'build';
     this.logDoc = null;
     this.noteText = null;
-    this.filter = { error: true, undefined: true, warning: true, badbox: false };
+    this.filter = { error: true, undefined: true, warning: true, badbox: false, lint: false };
     this.tabsEl = h('div', { class: 'bottom-tabs' });
     this.body = h('div', { class: 'bottom-body' });
     app.bottomEl.append(this.tabsEl, this.body);
@@ -146,7 +146,7 @@ export class BottomPanel {
     if (this.view !== 'problems') return force ? null : this.renderTabsOnly();
     const all = this.app.allProblems();
     const S = this.S;
-    const counts = { error: 0, undefined: 0, warning: 0, badbox: 0 };
+    const counts = { error: 0, undefined: 0, warning: 0, badbox: 0, lint: 0 };
     all.forEach((p) => counts[p.severity]++);
     const shown = all.filter((p) => this.filter[p.severity]);
     const chip = (k, label, cls) =>
@@ -162,11 +162,11 @@ export class BottomPanel {
       if (!byDoc.has(p.doc)) byDoc.set(p.doc, []);
       byDoc.get(p.doc).push(p);
     }
-    const order = { error: 0, undefined: 1, warning: 2, badbox: 3 };
-    const ico = { error: 'error', undefined: 'warn', warning: 'warn', badbox: 'info' };
+    const order = { error: 0, undefined: 1, warning: 2, badbox: 3, lint: 4 };
+    const ico = { error: 'error', undefined: 'warn', warning: 'warn', badbox: 'info', lint: 'info' };
     clear(
       this.body,
-      h('div', { style: { display: 'flex', gap: '6px', padding: '4px 0', flexWrap: 'wrap' } }, chip('error', 'Erros', 'error'), chip('undefined', '??', 'undefined'), chip('warning', 'Avisos', 'warn'), chip('badbox', 'Caixas', '')),
+      h('div', { style: { display: 'flex', gap: '6px', padding: '4px 0', flexWrap: 'wrap' } }, chip('error', 'Erros', 'error'), chip('undefined', '??', 'undefined'), chip('warning', 'Avisos', 'warn'), chip('badbox', 'Caixas', ''), counts.lint ? chip('lint', 'Estilo', '') : null),
       counts.undefined
         ? h(
             'div',

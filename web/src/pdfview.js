@@ -1,7 +1,7 @@
 // One PDF viewer per open PDF tab. Each keeps its own scroll and zoom, and a
 // reload after a build returns to the same place in the document.
 import pdfjsLib from './pdfjs-setup.js';
-import { EventBus, PDFLinkService, PDFViewer } from 'pdfjs-dist/web/pdf_viewer.mjs';
+import { EventBus, PDFLinkService, PDFViewer, ScrollMode, SpreadMode } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { h } from './dom.js';
 
 export class PdfTab {
@@ -126,6 +126,39 @@ export class PdfTab {
     const [px, py] = pv.viewport.convertToPdfPoint(e.clientX - rect.left, e.clientY - rect.top);
     const pageH = pv.viewport.viewBox[3] - pv.viewport.viewBox[1];
     this.onInverse && this.onInverse({ pdf: this.path, page: n, x: px, y: pageH - py });
+  }
+
+  // Full-screen presentation: one page at a time, arrows/space/clicks to move.
+  async present() {
+    if (!this.doc) return;
+    const prev = { scale: this.scale, scroll: this.viewer.scrollMode, page: this.page };
+    const onKey = (e) => {
+      if (['ArrowRight', 'ArrowDown', 'PageDown', ' ', 'Enter'].includes(e.key)) this.viewer.nextPage();
+      else if (['ArrowLeft', 'ArrowUp', 'PageUp', 'Backspace'].includes(e.key)) this.viewer.previousPage();
+      else if (e.key === 'Home') this.page = 1;
+      else if (e.key === 'End') this.page = this.pages;
+      else return;
+      e.preventDefault();
+    };
+    const onClick = (e) => (e.shiftKey ? this.viewer.previousPage() : this.viewer.nextPage());
+    const exit = () => {
+      if (document.fullscreenElement) return;
+      document.removeEventListener('fullscreenchange', exit);
+      document.removeEventListener('keydown', onKey, true);
+      this.el.removeEventListener('click', onClick);
+      this.el.classList.remove('presenting');
+      this.viewer.scrollMode = prev.scroll;
+      this.setScale(prev.scale);
+    };
+    this.el.classList.add('presenting');
+    await this.el.requestFullscreen();
+    this.viewer.scrollMode = ScrollMode.PAGE;
+    this.viewer.spreadMode = SpreadMode.NONE;
+    this.page = prev.page;
+    setTimeout(() => (this.viewer.currentScaleValue = 'page-fit'), 60);
+    document.addEventListener('fullscreenchange', exit);
+    document.addEventListener('keydown', onKey, true);
+    this.el.addEventListener('click', onClick);
   }
 
   destroy() {

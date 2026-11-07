@@ -79,7 +79,7 @@ export class BuildManager extends EventEmitter {
     try {
       summary = await this._build(req);
     } catch (err) {
-      summary = { id: req.id, ok: false, fatal: String(err && err.stack ? err.stack : err), docs: [] };
+      summary = { id: req.id, root: req.projectRoot, ok: false, fatal: String(err && err.stack ? err.stack : err), docs: [] };
     }
     summary.duration = Date.now() - t0;
     summary.cancelled = this.running.cancelled;
@@ -127,6 +127,7 @@ export class BuildManager extends EventEmitter {
     }
     this.emit('event', {
       type: 'build:start',
+      root: req.projectRoot,
       id: req.id,
       requested: req.docs,
       order,
@@ -227,7 +228,7 @@ export class BuildManager extends EventEmitter {
       docsOut.push(out);
     }
     const ok = docsOut.every((d) => d.status === 'ok' || d.status === 'skipped');
-    return { id: req.id, ok, passes, order, docs: docsOut };
+    return { id: req.id, root: req.projectRoot, ok, passes, order, docs: docsOut };
   }
 
   _latexmk(id, doc, info, { force, clean }) {

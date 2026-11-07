@@ -16,6 +16,8 @@ TeXugo é um editor LaTeX local para Mac. Os arquivos ficam no seu disco, a comp
 - **Editor de verdade.** CodeMirror com destaque de LaTeX, autocompletar de `\ref`/`\cref` (a partir dos rótulos do projeto), de `\cite` (a partir das chaves do `.bib`) e de ambientes, snippets de figura, tabela e slide, `\end{…}` automático, ⌘B/⌘I e comentário com ⌘/.
 - **Arquivos mudados fora do app** (git pull, Claude Code, outro editor) recarregam sozinhos. Se você tiver alterações não salvas, o app pergunta antes de sobrescrever.
 - **Git e GitHub.** Status, diff, commit, pull e push no painel lateral, usando o git do sistema e as credenciais que o GitHub Desktop já configurou.
+- **Slides:** botão "Apresentar" para Beamer (tela cheia, um slide por vez, setas e clique) e um modo em que o PDF acompanha o cursor do editor.
+- **Submissão:** ZIP que compila sozinho (leva o `.bbl` no lugar do `.bib`, como o arXiv pede, e avisa quando uma figura está fora da pasta do documento); checagem de anonimato para double-blind (nomes, e-mails, `\thanks`, agradecimentos, links do GitHub/OSF, comentários com nome, metadado de autor do PDF); revisão de estilo com ChkTeX; contagem de palavras com texcount.
 - **Modelos:** artigo, artigo + apêndice online, slides Beamer (tema "Toca"), ementa de disciplina, parecer, carta e documento em branco.
 - Busca no projeto, estrutura do documento (seções, slides, rótulos), paleta de comandos (⌘K), abertura rápida (⌘P), contagem de palavras, temas claro e escuro.
 
@@ -34,7 +36,13 @@ Para desenvolver no navegador, sem o Electron:
 npm run serve
 ```
 
-Testes do motor de compilação:
+Para gerar o `out/TeXugo.app` (arraste para Aplicativos):
+
+```bash
+npm run package
+```
+
+Testes do motor de compilação e dos modelos:
 
 ```bash
 npm test

@@ -8,6 +8,7 @@ import { BottomPanel } from './bottom.js';
 import { showWelcome, newProjectDialog } from './welcome.js';
 import { openPalette } from './palette.js';
 import { openSettings, applyTheme } from './settings.js';
+import * as tools from './tools.js';
 
 export const S = {
   hello: null,
@@ -155,19 +156,20 @@ function activeTab() {
 }
 app.activeTab = activeTab;
 
-const editorHooks = (path) => ({
-  save: () => saveTab(tabByPath(path)),
-  compile: () => compileTab(tabByPath(path)),
+// Hooks hold the tab object, not its path, so they keep working after the
+// file is renamed.
+const editorHooks = (t) => ({
+  save: () => saveTab(t),
+  compile: () => compileTab(t),
   compileAll: () => compileAll(),
   syncForward: () => syncForward(),
   onChange: () => {
-    const t = tabByPath(path);
-    if (t && !t.dirty) {
+    if (!t.dirty) {
       t.dirty = true;
       renderTabs();
       app.sidebar.renderIfFiles();
     }
-    if (t) t.version = (t.version || 0) + 1;
+    t.version = (t.version || 0) + 1;
     countWordsSoon();
   },
   onCursor: (state) => {
@@ -177,6 +179,7 @@ const editorHooks = (path) => ({
     S.cursor.col = pos - line.from + 1;
     renderStatusSoon();
     app.sidebar.cursorMoved && app.sidebar.cursorMoved(line.number);
+    if (S.settings.followCursor) followSoon();
   },
 });
 
@@ -196,7 +199,7 @@ export async function openFile(path, { line, col, focus = true, preview = false 
       return;
     }
     t = { path, name: basename(path), kind, dirty: false, mtime: data.mtime, binary: data.binary || kind === 'image', roots: [], root: null, autoCompile: S.settings.autoCompile };
-    if (!t.binary) t.state = createState(data.text, path, editorHooks(path), S.settings);
+    if (!t.binary) t.state = createState(data.text, path, editorHooks(t), S.settings);
     const idx = S.tabs.findIndex((x) => x.path === S.active);
     S.tabs.splice(idx >= 0 ? idx + 1 : S.tabs.length, 0, t);
     refreshRoots(t);
@@ -265,11 +268,28 @@ async function closeTab(path) {
   if (!t) return;
   if (t.dirty) {
     if (path === S.active) t.state = app.view.state;
-    const ok = await confirmBox('Fechar sem salvar?', `${t.name} tem alterações não salvas.`, { ok: 'Salvar e fechar' });
-    if (ok) {
-      const saved = await saveTab(t);
-      if (!saved) return;
-    } else return;
+    const choice = await new Promise((resolve) => {
+      let done = false;
+      const pick = (v) => {
+        if (done) return;
+        done = true;
+        m.close();
+        resolve(v);
+      };
+      const m = modal({
+        title: 'Alterações não salvas',
+        body: h('div', {}, `${t.name} tem alterações que ainda não foram salvas.`),
+        footer: [
+          h('button', { class: 'btn danger', onclick: () => pick('discard') }, 'Descartar'),
+          h('span', { style: { flex: 1 } }),
+          h('button', { class: 'btn', onclick: () => pick('cancel') }, 'Cancelar'),
+          h('button', { class: 'btn primary', onclick: () => pick('save') }, 'Salvar e fechar'),
+        ],
+        onClose: () => pick('cancel'),
+      });
+    });
+    if (choice === 'cancel') return;
+    if (choice === 'save' && !(await saveTab(t, { quiet: true }))) return;
   }
   const idx = S.tabs.indexOf(t);
   S.tabs.splice(idx, 1);
@@ -301,7 +321,7 @@ function renderTabs() {
             menu(e.clientX, e.clientY, [
               t.root ? { label: `Compilar ${basename(t.root)}`, icon: 'play', kb: '⌘↵', action: () => compileTab(t) } : null,
               { label: 'Fechar', icon: 'x', kb: '⌘W', action: () => closeTab(t.path) },
-              { label: 'Fechar as outras', action: () => S.tabs.filter((x) => x !== t).forEach((x) => closeTab(x.path)) },
+              { label: 'Fechar as outras', action: async () => { for (const x of S.tabs.filter((x) => x !== t)) await closeTab(x.path); } },
               'sep',
               { label: 'Mostrar no Finder', icon: 'folder', action: () => call('reveal', { path: t.path }) },
               { label: 'Copiar caminho', action: () => navigator.clipboard.writeText(t.path) },
@@ -420,6 +440,11 @@ function renderDocBar() {
                 { label: 'Mostrar no PDF', icon: 'target', kb: '⌘J', action: () => syncForward() },
                 { label: 'Abrir PDF fora do app', icon: 'external', action: () => call('openExternal', { path: t.root.replace(/\.tex$/, '.pdf') }).catch((e) => toast(e.message, 'error')) },
                 { label: 'Limpar arquivos auxiliares', icon: 'trash', action: () => call('cleanAux', { doc: t.root }).then(() => toast('Auxiliares removidos.', 'ok')) },
+                'sep',
+                { label: 'Exportar ZIP para submissão', icon: 'down', action: () => tools.exportZip(app, S) },
+                { label: 'Checar anonimato (double-blind)', icon: 'eye', action: () => tools.blindCheck(app, S) },
+                { label: 'Revisar estilo (ChkTeX)', icon: 'check', action: () => tools.chktex(app, S) },
+                { label: 'Contar palavras', icon: 'outline', action: () => tools.wordCount(app, S) },
               ]);
             },
           },
@@ -548,12 +573,22 @@ app.compileDocs = compileDocs;
 
 let wantPdf = null; // the PDF to bring to front when its build ends
 
+// Several windows share one server: ignore builds of other projects.
+const mine = (e) => {
+  if (!S.project) return false;
+  if (e.root) return e.root === S.project.root;
+  const d = e.doc || (e.docs && e.docs[0]);
+  return !d || d.startsWith(S.project.root + '/') || (S.building && S.building.id === e.id);
+};
+
 function wireBuildEvents() {
-  on('build:queued', () => {
+  on('build:queued', (e) => {
+    if (!mine(e)) return;
     S.queued = true;
     renderTopbar();
   });
   on('build:start', (e) => {
+    if (!mine(e)) return;
     S.building = { id: e.id, order: e.order, requested: e.requested };
     S.queued = false;
     for (const d of e.order) {
@@ -567,6 +602,7 @@ function wireBuildEvents() {
     refreshBuildUi();
   });
   on('build:doc', (e) => {
+    if (!mine(e)) return;
     for (const [d, st] of S.docState) if (st.current) st.current = false;
     const st = S.docState.get(e.doc) || { steps: [], passes: [] };
     st.status = 'building';
@@ -577,16 +613,19 @@ function wireBuildEvents() {
     refreshBuildUi();
   });
   on('build:step', (e) => {
+    if (!mine(e)) return;
     const st = S.docState.get(e.doc);
     if (!st) return;
     st.steps.push({ rule: e.rule.replace(/ .*$/, '') });
     app.bottom.renderBuild();
   });
   on('build:log', (e) => {
+    if (!mine(e)) return;
     S.logs.set(e.doc, (S.logs.get(e.doc) || '') + e.text);
     app.bottom.appendLog(e.doc, e.text);
   });
   on('build:done', (e) => {
+    if (!mine(e)) return;
     S.building = null;
     S.lastSummary = e;
     for (const d of e.docs || []) {
@@ -651,6 +690,7 @@ export function allProblems() {
     }
     for (const b of r.badboxes) if (b.kind === 'overfull' || S.settings.showUnderfull) out.push({ severity: 'badbox', doc: r.doc, file: b.file, line: b.line, message: b.message });
   }
+  if (S.lint) for (const l of S.lint.items) out.push({ severity: 'lint', doc: S.lint.file, file: S.lint.file, line: l.line, message: `ChkTeX ${l.num}: ${l.message}` });
   return out;
 }
 app.allProblems = allProblems;
@@ -658,7 +698,7 @@ app.allProblems = allProblems;
 function applyDiagnostics() {
   const t = activeTab();
   if (!t || t.binary) return;
-  const sev = { error: 'error', undefined: 'warning', warning: 'warning', badbox: 'info' };
+  const sev = { error: 'error', undefined: 'warning', warning: 'warning', badbox: 'info', lint: 'info' };
   const diags = allProblems()
     .filter((p) => p.file === t.path && p.line)
     .map((p) => ({ line: p.line, severity: sev[p.severity], message: p.message + (p.hint ? '\n' + p.hint : ''), source: basename(p.doc) }));
@@ -785,10 +825,18 @@ function renderPdfTools() {
     h('button', { class: 'icon-btn' + (v.scale === 'page-width' ? ' on' : ''), title: 'Largura da página', onclick: () => v.setScale('page-width') }, icon('fitWidth')),
     h('button', { class: 'icon-btn' + (v.scale === 'page-fit' ? ' on' : ''), title: 'Página inteira', onclick: () => v.setScale('page-fit') }, icon('fitPage')),
     h('span', { style: { flex: 1 } }),
+    isSlides(p) ? h('button', { class: 'btn sm', title: 'Tela cheia, um slide por vez (setas, espaço, clique; Esc sai)', onclick: () => v.present() }, icon('slides'), 'Apresentar') : null,
+    h('button', { class: 'icon-btn' + (S.settings.followCursor ? ' on' : ''), title: 'O PDF acompanha o cursor do editor', onclick: () => ((S.settings.followCursor = !S.settings.followCursor), saveSettingsSoon(), renderPdfTools()) }, icon('target')),
     h('button', { class: 'icon-btn' + (S.settings.invertPdf ? ' on' : ''), title: 'PDF escuro (só na tela)', onclick: toggleInvert }, icon('invert')),
     p.doc ? h('button', { class: 'icon-btn', title: 'Ir ao trecho no código (ou dê 2 cliques no PDF)', onclick: () => toast('Dê dois cliques num trecho do PDF para ir à linha do código.', 'info') }, icon('sync')) : null,
     h('button', { class: 'icon-btn', title: 'Abrir no Preview', onclick: () => call('openExternal', { path: p.path }) }, icon('external')),
   );
+}
+
+function isSlides(p) {
+  if (!p.doc) return false;
+  const d = (S.project.docs || []).find((x) => x.path === p.doc);
+  return !!d && d.kind === 'slides';
 }
 
 function toggleInvert() {
@@ -798,9 +846,23 @@ function toggleInvert() {
   renderPdfTools();
 }
 
-async function syncForward() {
+const followSoon = debounce(() => syncForward({ quiet: true }), 500);
+
+async function syncForward({ quiet = false } = {}) {
   const t = activeTab();
   if (!t || !t.root) return;
+  if (quiet) {
+    // Following the cursor: only when the PDF is already open and current.
+    const pdf = t.root.replace(/\.tex$/, '.pdf');
+    const p = S.pdfTabs.find((x) => x.path === pdf);
+    if (!p || p.missing || S.building) return;
+    if (S.activePdf !== pdf) activatePdf(pdf);
+    try {
+      const r = await call('syncForward', { file: t.path, line: S.cursor.line, column: S.cursor.col, pdf });
+      if (r.ok) p.viewer.showSync(r.hits[0]);
+    } catch {}
+    return;
+  }
   const pdf = t.root.replace(/\.tex$/, '.pdf');
   let p = S.pdfTabs.find((x) => x.path === pdf);
   if (!p) {
@@ -1009,41 +1071,55 @@ async function refreshGit() {
 app.refreshGit = refreshGit;
 const refreshGitSoon = debounce(refreshGit, 800);
 
+async function checkDisk() {
+  if (!S.project) return;
+  // macOS may report a rename (editors and agents often write a temp file
+  // and move it over the original) under the temporary name only, so
+  // check every open tab's mtime instead of trusting the file list.
+  let stats = [];
+  try {
+    stats = await call('stat', { paths: S.tabs.filter((t) => !t.binary).map((t) => t.path) });
+  } catch {}
+  for (const st of stats) {
+    const t = tabByPath(st.path);
+    if (!t || st.mtime == null || Math.abs(st.mtime - t.mtime) < 1) continue;
+    let data;
+    try {
+      data = await call('read', { path: t.path });
+    } catch {
+      continue;
+    }
+    const current = t.path === S.active ? app.view.state.doc.toString() : t.state.doc.toString();
+    if (current === data.text) {
+      t.mtime = data.mtime;
+      continue;
+    }
+    if (!t.dirty) {
+      // Changed on disk (git pull, an agent, another editor): reload in
+      // place, keeping the cursor where it was.
+      const est = t.path === S.active ? app.view.state : t.state;
+      const head = Math.min(est.selection.main.head, data.text.length);
+      const tr = est.update({ changes: { from: 0, to: est.doc.length, insert: data.text }, selection: { anchor: head } });
+      if (t.path === S.active) app.view.dispatch(tr);
+      else t.state = tr.state;
+      t.dirty = false;
+      t.mtime = data.mtime;
+      renderTabs();
+    } else if (!t.warnedMtime || t.warnedMtime !== data.mtime) {
+      t.warnedMtime = data.mtime;
+      toast(`${t.name} mudou no disco e você tem alterações não salvas. Ao salvar, o TeXugo pergunta antes de sobrescrever.`, 'warn', 7000);
+    }
+  }
+}
+const checkDiskSoon = debounce(checkDisk, 300);
+
 function wireFsEvents() {
   on('fs:change', async (e) => {
     if (!S.project || e.root !== S.project.root) return;
     app.sidebar.refreshTreeSoon();
     refreshGitSoon();
+    await checkDisk();
     for (const f of e.files) {
-      const t = tabByPath(f);
-      if (t && !t.binary) {
-        let data;
-        try {
-          data = await call('read', { path: f });
-        } catch {
-          continue; // deleted or moved
-        }
-        if (Math.abs(data.mtime - t.mtime) < 1) continue;
-        const current = t.path === S.active ? app.view.state.doc.toString() : t.state.doc.toString();
-        if (current === data.text) {
-          t.mtime = data.mtime;
-          continue;
-        }
-        if (!t.dirty) {
-          // Changed on disk (git pull, an agent, another editor): reload in
-          // place, keeping the cursor where it was.
-          const st = t.path === S.active ? app.view.state : t.state;
-          const head = Math.min(st.selection.main.head, data.text.length);
-          const tr = st.update({ changes: { from: 0, to: st.doc.length, insert: data.text }, selection: { anchor: head } });
-          if (t.path === S.active) app.view.dispatch(tr);
-          else t.state = tr.state;
-          t.dirty = false;
-          t.mtime = data.mtime;
-          renderTabs();
-        } else {
-          toast(`${t.name} mudou no disco e você tem alterações não salvas. Ao salvar, o TeXugo pergunta antes de sobrescrever.`, 'warn', 7000);
-        }
-      }
       // A PDF rebuilt outside the app (terminal, build.sh).
       if (f.endsWith('.pdf') && !S.building) {
         const p = S.pdfTabs.find((x) => x.path === f);
@@ -1165,7 +1241,8 @@ async function boot() {
   wireFsEvents();
   wireKeys();
   connect();
-  on('ws:open', () => S.project && refreshGit());
+  on('ws:open', () => S.project && (refreshGit(), checkDiskSoon()));
+  window.addEventListener('focus', () => checkDiskSoon());
   renderTopbar();
   renderActivity();
   renderStatus();
@@ -1180,6 +1257,7 @@ async function boot() {
 }
 
 app.S = S;
+app.tools = tools;
 app.wrapCompartment = wrapCompartment;
 app.EditorView = EditorView;
 boot();

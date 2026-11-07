@@ -14,6 +14,7 @@ import * as sync from './synctex.js';
 import { BuildManager } from './build.js';
 import { isInside, dataDir, run, which } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
+import { exportZip, blindCheck } from './submission.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -80,7 +81,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     try {
       const w = fs.watch(root, { recursive: true }, (_ev, rel) => {
         if (!rel) return;
-        if (/(^|\/)(\.git|node_modules)(\/|$)/.test(rel)) return;
+        if (/(^|\/)(\.git|node_modules)(\/|$)/.test(rel) || rel.endsWith('.texugo-tmp')) return;
         const full = path.join(root, rel);
         pending.set(full, true);
         clearTimeout(timer);
@@ -210,6 +211,15 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       await run('open', [url]);
       return true;
     },
+    async stat({ paths }) {
+      return paths.map((p) => {
+        try {
+          return { path: p, mtime: fs.statSync(mustAllow(p)).mtimeMs };
+        } catch {
+          return { path: p, mtime: null };
+        }
+      });
+    },
     async rootsFor({ root, path: p }) {
       mustAllow(p);
       return project.rootsFor(root, p).map((d) => project.docInfo(d));
@@ -317,6 +327,25 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       if (fs.existsSync(target) && fs.readdirSync(target).length) throw httpError(409, 'A pasta já existe e não está vazia.');
       createFromTemplate(template, target, fields || {});
       return api.openProject({ root: target });
+    },
+    async exportZip({ doc }) {
+      return exportZip(mustAllow(doc));
+    },
+    async blindCheck({ doc, names }) {
+      return blindCheck(mustAllow(doc), { names });
+    },
+    async openTerminal({ path: p }) {
+      p = mustAllow(p);
+      await run('open', ['-a', 'Terminal', fs.statSync(p).isDirectory() ? p : path.dirname(p)]);
+      return true;
+    },
+    async wordCount({ doc }) {
+      // texcount counts words in the text, headers and captions separately,
+      // following \input; much better than counting in the editor.
+      doc = mustAllow(doc);
+      const r = await run('texcount', ['-inc', '-total', '-brief', '-utf8', path.basename(doc)], { cwd: path.dirname(doc), timeout: 30000 });
+      const m = r.stdout.match(/(\d+)\+(\d+)\+(\d+)/);
+      return m ? { text: Number(m[1]), headers: Number(m[2]), captions: Number(m[3]), raw: r.stdout.trim() } : { raw: r.stdout + r.stderr };
     },
     async chktex({ path: p }) {
       p = mustAllow(p);
