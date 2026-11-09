@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('texugo', {
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
   pickVersion: () => ipcRenderer.invoke('pick-version'),
   pickBib: () => ipcRenderer.invoke('pick-bib'),
+  pickPdf: () => ipcRenderer.invoke('pick-pdf'),
   newWindow: () => ipcRenderer.invoke('new-window'),
   focus: () => ipcRenderer.invoke('focus-self'),
   setLang: (l) => ipcRenderer.invoke('set-lang', l),

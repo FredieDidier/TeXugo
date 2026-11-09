@@ -36,6 +36,7 @@ function commands(app, S) {
     { t: 'Revisar como parecerista (parecer do Claude)', kw: 'referee report parecer revisão claude ia ai review', i: 'review', run: () => app.review() },
     { t: 'Parecer: ver o último', kw: 'referee report parecer', i: 'review', run: async () => (await app.loadLastReview(), app.bottom.show('parecer')) },
     { t: 'Resposta aos pareceristas (R&R, response letter)', kw: 'r&r revise resubmit response letter referee resposta parecer carta', i: 'letter', run: () => app.respond() },
+    { t: 'Anotações do PDF (Preview, Acrobat, coautor)', kw: 'anotações annotations highlight destaque nota comentários pdf coautor preview acrobat', i: 'edit', run: () => app.annotations() },
     { t: 'Comparar com outra versão (PDF com mudanças)', kw: 'latexdiff diff coautor overleaf zip commit revisão mudanças marcadas', i: 'columns', run: () => app.compare() },
     { t: 'Importar do Zotero (ou .bib do Mendeley, Paperpile)', kw: 'zotero mendeley paperpile bib bibtex biblioteca importar referências', i: 'down', run: () => app.zotero() },
     { t: 'Adicionar referência (DOI, arXiv, título)', kw: 'bib bibtex citar cite crossref paper doi arxiv', k: '⌥⌘R', i: 'plus', run: () => app.addReference() },

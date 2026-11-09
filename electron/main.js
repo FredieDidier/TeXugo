@@ -132,6 +132,11 @@ ipcMain.handle('pick-version', async (e) => {
   const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'openDirectory'], filters: [{ name: 'LaTeX, ZIP ou pasta', extensions: ['tex', 'zip'] }], buttonLabel: 'Comparar' });
   return r.canceled ? null : r.filePaths[0];
 });
+ipcMain.handle('pick-pdf', async (e) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'PDF', extensions: ['pdf'] }], buttonLabel: 'Ler anotações' });
+  return r.canceled ? null : r.filePaths[0];
+});
 ipcMain.handle('pick-bib', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender);
   const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'BibTeX', extensions: ['bib'] }], buttonLabel: 'Importar' });

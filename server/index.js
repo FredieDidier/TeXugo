@@ -505,6 +505,39 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       if (source && !['git', 'path'].includes(source.kind)) throw httpError(400, 'Versão inválida.');
       return rr.respond({ root, doc: path.resolve(mustAllow(doc)), reports: String(reports).slice(0, 200000), source, lang, model, effort });
     },
+    // PDF annotations: a received annotated PDF is copied into the project
+    // (so the viewer may read it); which notes are resolved is kept beside it.
+    async annotImport({ doc, file }) {
+      doc = mustAllow(doc);
+      if (!/\.pdf$/i.test(file || '') || !fs.existsSync(file)) throw httpError(400, 'Escolha um PDF.');
+      const dir = path.join(path.dirname(doc), '.texugo', 'annotations');
+      fs.mkdirSync(dir, { recursive: true });
+      const target = path.join(dir, path.basename(file));
+      fs.copyFileSync(file, target);
+      return target;
+    },
+    async annotState({ doc, pdf }) {
+      mustAllow(doc);
+      try {
+        return JSON.parse(fs.readFileSync(path.join(path.dirname(doc), '.texugo', 'annotations', path.basename(pdf) + '.json'), 'utf8'));
+      } catch {
+        return {};
+      }
+    },
+    async annotMark({ doc, pdf, id, done }) {
+      mustAllow(doc);
+      const dir = path.join(path.dirname(doc), '.texugo', 'annotations');
+      fs.mkdirSync(dir, { recursive: true });
+      const f = path.join(dir, path.basename(pdf) + '.json');
+      let st = {};
+      try {
+        st = JSON.parse(fs.readFileSync(f, 'utf8'));
+      } catch {}
+      if (done) st[id] = true;
+      else delete st[id];
+      fs.writeFileSync(f, JSON.stringify(st));
+      return st;
+    },
     async reviewLast({ doc }) {
       return reviewer.lastReview(path.resolve(mustAllow(doc)));
     },

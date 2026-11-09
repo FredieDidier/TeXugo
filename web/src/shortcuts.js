@@ -80,6 +80,7 @@ export const SECTIONS = [
       ['Revisar como parecerista (parecer do Claude, ponto a ponto)', '', 'Seta ao lado de Compilar; resultados na aba Parecer do painel inferior'],
       ['Resposta aos pareceristas (response.tex ligado às mudanças)', '', 'Seta ao lado de Compilar; paleta: “Resposta”'],
       ['Abrir a linha citada como arquivo.tex:123', '⌘-clique', 'Em comentários do response.tex, logs e notas'],
+      ['Anotações do PDF (suas ou do coautor), ligadas ao .tex', '', 'Seta ao lado de Compilar; aba Anotações do painel inferior'],
       ['Comparar com outra versão (PDF com mudanças marcadas)', '', 'Seta ao lado de Compilar'],
       ['Checar antes de submeter (anonimato, fontes Type 3)', '', 'Seta ao lado de Compilar'],
       ['Exportar ZIP para submissão', '', 'Seta ao lado de Compilar'],
