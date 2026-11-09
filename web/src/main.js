@@ -15,6 +15,7 @@ import { TOKEN } from './api.js';
 import { setLang, tr } from './i18n.js';
 import { SplitEditor } from './split.js';
 import { viciosConfig, viciosOf } from './vicios/cm.js';
+import { AI_ACTIONS, runAiAction } from './ai.js';
 
 export const S = {
   hello: null,
@@ -95,6 +96,19 @@ function buildLayout() {
   app.editorHost.append(app.emptyEditor, app.binaryView, app.mdView);
   app.split = new SplitEditor(app, S);
   app.editorRow.append(app.split.gutter, app.split.el);
+  // Right click on a selection: the AI writing actions.
+  app.editorRow.addEventListener('contextmenu', (e) => {
+    const inSplit = app.split.el.contains(e.target);
+    const view = inSplit ? app.split.view : app.view;
+    const tab = inSplit ? app.split.tab : activeTab();
+    if (!e.target.closest('.cm-editor') || !tab || view.state.selection.main.empty) return;
+    e.preventDefault();
+    menu(e.clientX, e.clientY, [
+      ...AI_ACTIONS.map((a) => ({ label: a.label, title: a.hint, icon: 'edit', action: () => runAiAction(app, S, a.id, { view, tab }) })),
+      'sep',
+      { label: 'Copiar', action: () => navigator.clipboard.writeText(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)) },
+    ]);
+  });
   app.sidebar = new Sidebar(app, S);
   app.bottom = new BottomPanel(app, S);
   applyLayoutSizes();

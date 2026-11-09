@@ -15,6 +15,7 @@ import { BuildManager } from './build.js';
 import { isInside, dataDir, run, which, toolEnv } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
+import * as ai from './ai.js';
 import * as doctor from './doctor.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -368,6 +369,15 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     },
     async format({ path: p, text }) {
       return doctor.formatLatex(text, mustAllow(p));
+    },
+    async aiRewrite({ root, path: p, action, text, before, after, hints, lang }) {
+      mustAllow(p);
+      mustAllow(root);
+      if (!text || text.length > 12000) throw httpError(400, 'Selecione um trecho de até 12 mil caracteres.');
+      return ai.rewrite({ root, file: p, action, text, before, after, hints: hints || [], lang });
+    },
+    async aiCancel() {
+      return ai.cancelAi();
     },
     async exportZip({ doc }) {
       return exportZip(mustAllow(doc));

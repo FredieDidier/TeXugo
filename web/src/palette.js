@@ -1,4 +1,5 @@
 // Command palette (⌘K) and quick open (⌘P).
+import { AI_ACTIONS, runAiAction } from './ai.js';
 import { call } from './api.js';
 import { tr } from './i18n.js';
 import { h, clear, icon, fileIcon, relPath } from './dom.js';
@@ -33,6 +34,7 @@ function commands(app, S) {
     { t: 'Formatar documento', kw: 'latexindent indentar', k: '⌥⇧F', i: 'wrap', run: () => app.tools.formatDoc(app, S) },
     { t: 'Médico do TeX (pacotes, instalação)', i: 'info', run: () => app.tools.texDoctor(app, S) },
     { t: 'Exportar ZIP para submissão', kw: 'arxiv', i: 'down', run: () => app.tools.exportZip(app, S) },
+    ...AI_ACTIONS.map((a) => ({ t: `IA: ${a.label} (seleção)`, kw: 'claude ia ai reescrever ' + a.hint, i: 'edit', run: () => runAiAction(app, S, a.id) })),
     { t: 'Vícios de escrita (tiques de IA)', kw: 'ia ai detector humanizar estilo travessão', i: 'edit', run: () => app.tools.viciosReport(app, S) },
     { t: 'Checar anonimato (double-blind)', i: 'eye', run: () => app.tools.blindCheck(app, S) },
     { t: 'Revisar estilo', kw: 'chktex lint', i: 'check', run: () => app.tools.chktex(app, S) },

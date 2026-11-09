@@ -13,6 +13,9 @@ const EXTRA_PATHS = [
   '/usr/local/texlive/2025/bin/universal-darwin',
   '/usr/local/texlive/2024/bin/universal-darwin',
   '/opt/homebrew/bin',
+  // Claude Code's native installer.
+  path.join(os.homedir(), '.local', 'bin'),
+  path.join(os.homedir(), '.claude', 'local'),
   '/usr/local/bin',
   '/usr/bin',
   '/bin',

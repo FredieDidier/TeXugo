@@ -455,3 +455,9 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border);
 .vicios-report mark { background: color-mix(in srgb, var(--vicio) 22%, transparent); color: inherit; border-radius: 2px; }
 /* Hover tooltips live in <body>: keep them under dialogs. */
 body > .cm-tooltip { z-index: 40; }
+
+/* AI rewrite diff */
+.ai-diff-text { white-space: pre-wrap; font: 13px/1.6 var(--editor-font, var(--mono)); background: var(--sunken); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 12px; max-height: 50vh; overflow: auto; }
+.ai-diff del { background: color-mix(in srgb, var(--err) 18%, transparent); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--err) 70%, transparent); }
+.ai-diff ins { background: color-mix(in srgb, var(--ok) 22%, transparent); text-decoration: none; }
+.ai-diff del + ins, .ai-diff ins + del { margin-left: 3px; }
