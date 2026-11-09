@@ -516,3 +516,11 @@ body > .cm-tooltip { z-index: 40; }
 .agent-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); }
 .agent-perm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
 .agent-perm-actions .agent-note { flex: 1 1 100%; }
+
+/* lines changed since the last build */
+.cm-line.cm-chg-add { box-shadow: inset 3px 0 0 var(--ok); }
+.cm-line.cm-chg-mod { box-shadow: inset 3px 0 0 var(--info, #6aa9f0); }
+.cm-line.cm-chg-del { border-bottom: 2px solid color-mix(in srgb, var(--err) 70%, transparent); }
+.cm-line.cm-chg-del-top { border-top: 2px solid color-mix(in srgb, var(--err) 70%, transparent); }
+body.no-change-marks .cm-line.cm-chg-add, body.no-change-marks .cm-line.cm-chg-mod { box-shadow: none; }
+body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-del-top { border: 0; }

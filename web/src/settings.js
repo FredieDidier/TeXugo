@@ -117,6 +117,7 @@ export function openSettings(app, S) {
         [app.view, app.split.view].forEach(refreshVicios);
         app.renderStatus();
       }),
+      check('changeMarks', 'Marcar na margem as linhas alteradas desde a última compilação', () => document.body.classList.toggle('no-change-marks', !st.changeMarks)),
       check('wrap', 'Quebrar linhas longas no editor', () => [app.view, app.split.view].forEach((v) => v.dispatch({ effects: app.wrapCompartment.reconfigure(st.wrap ? EditorView.lineWrapping : []) }))),
       check('autoCompile', 'Abas novas já vêm com "compilar ao salvar" ligado'),
       check('invertPdf', 'PDF escuro no tema escuro (só na tela; o arquivo não muda)'),

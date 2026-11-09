@@ -10,6 +10,7 @@ import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap, s
 import { linter, lintGutter, setDiagnostics } from '@codemirror/lint';
 import { tags as t } from '@lezer/highlight';
 import { viciosExtension } from './vicios/cm.js';
+import { changesField } from './changes.js';
 
 const latex = StreamLanguage.define(stex);
 
@@ -192,6 +193,7 @@ export function createState(doc, path, hooks, settings = {}) {
       languageFor(path),
       autoEnd,
       viciosExtension(path),
+      changesField,
       keymap.of([
         { key: 'Mod-s', preventDefault: true, run: () => (hooks.save(), true) },
         { key: 'Mod-Enter', preventDefault: true, run: () => (hooks.compile(), true) },

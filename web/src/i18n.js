@@ -139,6 +139,8 @@ const EN = {
   'Abra o Claude Code pelo TeXugo primeiro (painel inferior, aba Terminal).': 'Open Claude Code from TeXugo first (bottom panel, Terminal tab).',
   'Se você aceitar, o Claude grava o arquivo e o TeXugo recarrega a aba (⌘Z desfaz). Se recusar, ele não grava e pergunta o que fazer.': 'If you accept, Claude writes the file and TeXugo reloads the tab (⌘Z undoes it). If you reject, it writes nothing and asks what to do.',
   'Recusar': 'Reject',
+  'Nova': 'New', 'Começa uma conversa nova': 'Starts a new conversation', 'Abrir o Claude Code completo no terminal': 'Open the full Claude Code in the terminal',
+  'Marcar na margem as linhas alteradas desde a última compilação': 'Mark in the margin the lines changed since the last build',
   // split editor
   'Arquivo mostrado no lado direito': 'File shown on the right', 'Fechar a divisão (⌘⌥\\)': 'Close the split (⌘⌥\\)',
   'Dividir o editor: outro arquivo ou outro trecho ao lado (⌘⌥\\)': 'Split the editor: another file or another part side by side (⌘⌥\\)', 'Dividir o editor / fechar a divisão': 'Split the editor / close the split',

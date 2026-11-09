@@ -19,6 +19,7 @@ import { AI_ACTIONS, runAiAction, focusedTarget } from './ai.js';
 import { TerminalPanel } from './terminal.js';
 import { setupIde, mentionInClaude } from './ide.js';
 import { AgentPanel } from './agent.js';
+import { setBaseline } from './changes.js';
 
 export const S = {
   hello: null,
@@ -33,7 +34,7 @@ export const S = {
   building: null, // { id, order, requested }
   queued: false,
   lastSummary: null,
-  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true, vicios: true },
+  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true, vicios: true, changeMarks: true },
   cursor: { line: 1, col: 1, words: 0 },
   detached: new Set(), // PDFs shown in their own window
 };
@@ -699,6 +700,14 @@ function wireBuildEvents() {
     if (!mine(e)) return;
     S.building = { id: e.id, order: e.order, requested: e.requested };
     S.queued = false;
+    // What is compiled now becomes the reference for the change marks.
+    for (const t of S.tabs) {
+      if (t.binary || t.dirty || !(e.order.includes(t.root) || e.order.includes(t.path))) continue;
+      const st = t.path === S.active ? app.view.state : t.state;
+      const fx = { effects: setBaseline.of(st.doc.toString()) };
+      if (t.path === S.active) app.view.dispatch(fx);
+      else t.state = t.state.update(fx).state;
+    }
     for (const d of e.order) {
       const st = S.docState.get(d) || {};
       S.docState.set(d, { ...st, status: 'waiting', steps: [], passes: [], current: false });
@@ -1484,6 +1493,7 @@ async function boot() {
   }
   Object.assign(S.settings, S.hello.settings || {});
   viciosConfig.enabled = S.settings.vicios !== false;
+  document.body.classList.toggle('no-change-marks', S.settings.changeMarks === false);
   viciosConfig.onResult = (view) => view === app.view && renderStatusSoon();
   // Nothing to show before the first build: start with the bottom panel
   // closed; it opens when a build starts.

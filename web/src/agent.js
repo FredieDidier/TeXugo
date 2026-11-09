@@ -51,8 +51,8 @@ export class AgentPanel {
         h('span', { class: 'term-kind claude' }, '✻'),
         h('b', {}, 'Claude'),
         h('span', { style: { flex: 1 } }),
-        h('button', { class: 'icon-btn', title: 'Nova conversa', onclick: () => this.reset() }, icon('plus')),
-        h('button', { class: 'icon-btn', title: 'Abrir o Claude Code completo no terminal', onclick: () => app.terminals.open('claude') }, icon('command')),
+        h('button', { class: 'btn sm ghost', title: 'Começa uma conversa nova', onclick: () => this.reset() }, icon('plus'), 'Nova'),
+        h('button', { class: 'btn sm ghost', title: 'Abrir o Claude Code completo no terminal', onclick: () => app.terminals.open('claude') }, icon('command'), 'Terminal'),
       ),
       this.log,
       h(
