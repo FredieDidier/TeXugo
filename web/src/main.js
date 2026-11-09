@@ -978,6 +978,7 @@ async function syncForward({ quiet = false } = {}) {
     await new Promise((r) => setTimeout(r, 700));
   }
   activatePdf(pdf);
+  if (!(await ensureSynctex(pdf))) return;
   try {
     const r = await call('syncForward', { file: t.path, line: S.cursor.line, column: S.cursor.col, pdf });
     if (r.ok) p.viewer.showSync(r.hits[0]);
@@ -988,7 +989,31 @@ async function syncForward({ quiet = false } = {}) {
 }
 app.syncForward = syncForward;
 
+// A PDF built outside TeXugo (terminal, Lattice, plain pdflatex) may have no
+// .synctex.gz, the map between PDF and source. Say so and offer a build.
+async function ensureSynctex(pdf) {
+  const map = pdf.replace(/\.pdf$/, '.synctex.gz');
+  let st = [];
+  try {
+    st = await call('stat', { paths: [map] });
+  } catch {}
+  if (st[0] && st[0].mtime != null) return true;
+  const doc = pdf.replace(/\.pdf$/, '.tex');
+  const isDoc = (S.project.docs || []).some((d) => d.path === doc);
+  const ok = await confirmBox(
+    'Este PDF não tem SyncTeX',
+    `${basename(pdf)} foi compilado fora do TeXugo, sem o mapa que liga o PDF ao código (${basename(map)}). ${isDoc ? 'Compile uma vez pelo TeXugo e o clique duplo passa a funcionar.' : ''}`,
+    { ok: isDoc ? 'Compilar agora' : 'OK' },
+  );
+  if (ok && isDoc) {
+    wantPdf = doc;
+    compileDocs([doc]);
+  }
+  return false;
+}
+
 async function inverseSync(args) {
+  if (!(await ensureSynctex(args.pdf))) return;
   try {
     const r = await call('syncInverse', args);
     if (r.ok) await openFile(r.file, { line: r.line });

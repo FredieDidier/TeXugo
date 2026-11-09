@@ -25,7 +25,7 @@ export async function bootPdfWindow(pdf, root) {
       try {
         const r = await call('syncInverse', a);
         if (r.ok) send({ type: 'open-request', root, file: r.file, line: r.line });
-        else toast('Não achei a linha correspondente.', 'warn');
+        else toast('Não achei a linha. Se o PDF foi compilado fora do TeXugo, compile uma vez pela janela principal (isso cria o SyncTeX).', 'warn', 7000);
       } catch (err) {
         toast(err.message, 'error');
       }
