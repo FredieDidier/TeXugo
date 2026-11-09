@@ -72,7 +72,7 @@ const EN = {
   'Mostrar arquivos': 'Show files', 'Buscar no projeto': 'Search the project', 'Git: commit, pull, push': 'Git: commit, pull, push', 'Problemas da compilação': 'Build problems',
   'Log da compilação': 'Build log', 'Mostrar/esconder painel inferior': 'Show/hide bottom panel', 'Preferências': 'Settings', 'Parar compilação': 'Stop build',
   'Médico do TeX (pacotes, instalação)': 'TeX doctor (packages, installation)', 'Exportar ZIP para submissão (arXiv)': 'Export submission ZIP (arXiv)',
-  'Checar anonimato (double-blind)': 'Check anonymity (double-blind)', 'Contar palavras (texcount)': 'Count words (texcount)',
+  'Contar palavras (texcount)': 'Count words (texcount)',
   'Abrir Terminal na pasta do projeto': 'Open Terminal in the project folder', 'Mostrar projeto no Finder': 'Show project in Finder',
   'Nome do arquivo… (digite > para comandos)': 'File name… (type > for commands)', '> Comando…': '> Command…',
   // settings
