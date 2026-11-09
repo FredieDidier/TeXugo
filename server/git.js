@@ -123,6 +123,11 @@ export async function sync(root, message) {
   return { code: 0, steps };
 }
 
+// Asks the remote what is new without changing anything here.
+export async function fetch(root) {
+  return git(root, ['fetch', '--quiet'], { timeout: 60000 });
+}
+
 export async function pull(root) {
   return git(root, ['pull', '--ff-only']);
 }

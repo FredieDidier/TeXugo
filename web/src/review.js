@@ -53,6 +53,7 @@ async function run(app, S, doc, { journal, focus }) {
   if (app.saveAll) await app.saveAll();
   S.review = { status: 'running', doc, start: Date.now() };
   app.bottom.show('parecer');
+  app.refreshRevisao && app.refreshRevisao();
   const tick = setInterval(() => S.review && S.review.status === 'running' && app.bottom.view === 'parecer' && app.bottom.render(), 1000);
   try {
     const report = await call('reviewRun', { root: S.project.root, doc, journal, focus, lang: getLang() === 'en' ? 'en' : 'pt', ...claudeChoice(S) });
@@ -63,6 +64,7 @@ async function run(app, S, doc, { journal, focus }) {
   } finally {
     clearInterval(tick);
     app.bottom.show('parecer', { soft: true });
+    app.refreshRevisao && app.refreshRevisao();
   }
 }
 
@@ -79,7 +81,7 @@ export async function loadLastReview(app, S) {
 export function renderReviewPanel(app, S, body) {
   const r = S.review;
   if (!r) {
-    return clear(body, h('div', { class: 'pad muted' }, 'Nenhum parecer ainda. ', h('a', { href: '#', onclick: (e) => (e.preventDefault(), reviewDialog(app, S)) }, 'Revisar como parecerista'), ' (seta ao lado de Compilar).'));
+    return clear(body, h('div', { class: 'pad muted' }, 'Nenhum parecer ainda. ', h('a', { href: '#', onclick: (e) => (e.preventDefault(), reviewDialog(app, S)) }, 'Revisar como parecerista'), ' (aba Revisão, na barra da esquerda).'));
   }
   if (r.status === 'running') {
     const s = Math.round((Date.now() - r.start) / 1000);
@@ -126,7 +128,8 @@ export function renderReviewPanel(app, S, body) {
             onchange: async (e) => {
               p.done = e.target.checked;
               await call('reviewMark', { doc: rep.doc, id: p.id, done: p.done }).catch(() => {});
-              renderReviewPanel(app, S, body);
+              app.bottom.render();
+              app.refreshRevisao && app.refreshRevisao();
             },
           }),
           h('span', { class: 'kind ' + KIND[p.kind].cls }, KIND[p.kind].label),

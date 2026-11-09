@@ -360,6 +360,10 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       mustAllow(root);
       return gitOps.sync(root, message);
     },
+    async gitFetch({ root }) {
+      mustAllow(root);
+      return gitOps.fetch(root);
+    },
     async gitPull({ root }) {
       mustAllow(root);
       return gitOps.pull(root);

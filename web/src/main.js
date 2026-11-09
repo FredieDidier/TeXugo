@@ -575,18 +575,11 @@ function renderDocBar() {
                 { label: 'Abrir PDF fora do app', icon: 'external', action: () => call('openExternal', { path: t.root.replace(/\.tex$/, '.pdf') }).catch((e) => toast(e.message, 'error')) },
                 { label: 'Limpar arquivos auxiliares', icon: 'trash', action: () => call('cleanAux', { doc: t.root }).then(() => toast('Auxiliares removidos.', 'ok')) },
                 'sep',
-                { label: 'Revisar como parecerista…', title: 'O seu Claude Code lê o paper inteiro e escreve um parecer, cada ponto ligado à linha', icon: 'review', action: () => reviewDialog(app, S) },
-                { label: 'Resposta aos pareceristas…', title: 'Cole os pareceres: o Claude escreve o response.tex com cada comentário, a resposta e onde o paper mudou', icon: 'letter', action: () => responseDialog(app, S) },
-                { label: 'Anotações do PDF…', title: 'Destaques e notas do Preview/Acrobat, seus ou de um coautor, ligados às linhas do .tex', icon: 'edit', action: () => annotationsDialog(app, S) },
-                { label: 'Comparar com outra versão…', title: 'PDF com as mudanças marcadas (latexdiff): versão do coautor, do Overleaf ou de um commit', icon: 'columns', action: () => compareDialog(app, S) },
                 { label: 'Adicionar referência…', title: 'Por DOI, arXiv ou título, direto no .bib', icon: 'plus', kb: '⌥⌘R', action: () => addReference(app, S) },
                 { label: 'Formatar documento', title: 'Arruma a indentação com o latexindent do TeX Live', icon: 'wrap', kb: '⌥⇧F', action: () => tools.formatDoc(app, S) },
-                { label: 'Médico do TeX', icon: 'info', action: () => tools.texDoctor(app, S) },
-                { label: 'Exportar ZIP para submissão', icon: 'down', action: () => tools.exportZip(app, S) },
-                { label: 'Vícios de escrita', title: 'Tiques de IA e outros vícios, em português e inglês', icon: 'edit', action: () => tools.viciosReport(app, S) },
-                { label: 'Checar antes de submeter', title: 'Anonimato (double-blind) e fontes do PDF (Type 3, não embutidas)', icon: 'eye', action: () => tools.blindCheck(app, S) },
-                { label: 'Revisar estilo', title: 'Sugestões de estilo do ChkTeX', icon: 'check', action: () => tools.chktex(app, S) },
-                { label: 'Contar palavras', title: 'Conta com o texcount, seguindo \\input e \\include', icon: 'outline', action: () => tools.wordCount(app, S) },
+                { label: 'Médico do TeX', title: 'Pacotes que faltam e a instalação do TeX', icon: 'info', action: () => tools.texDoctor(app, S) },
+                'sep',
+                { label: 'Revisão e submissão…', title: 'Anotações, comparar versões, parecer, resposta aos pareceristas, vícios, checagens e ZIP: tudo na aba Revisão', icon: 'clipboard', action: () => app.sidebar.show('revisao') },
               ]);
             },
           },
@@ -1232,6 +1225,7 @@ function renderActivity() {
     ['outline', 'outline', 'Estrutura do documento'],
     ['search', 'search', 'Buscar no projeto (⌘⇧F)'],
     ['refs', 'book', 'Referências: o .bib do projeto, citar, verificar no Crossref'],
+    ['revisao', 'clipboard', 'Revisão: anotações e versões dos coautores, parecer, resposta aos pareceristas e checagens antes de enviar'],
     ['git', 'git', 'Git e GitHub'],
     ['claude', 'claude', 'Claude: converse com o seu Claude Code sobre o projeto'],
   ];
@@ -1243,6 +1237,7 @@ function renderActivity() {
         { class: 'icon-btn' + (S.sidebarView === id && !S.settings.sidebarHidden ? ' on' : ''), title, onclick: () => app.sidebar.toggle(id) },
         icon(ic),
         id === 'git' && S.git && S.git.files && S.git.files.length ? h('span', { class: 'badge warn' }, String(Math.min(99, S.git.files.length))) : null,
+        id === 'revisao' && revisaoOpen() ? h('span', { class: 'badge warn' }, String(Math.min(99, revisaoOpen()))) : null,
         id === 'claude' && app.agent && (app.agent.running || app.agent.waiting) ? h('span', { class: 'badge ' + (app.agent.waiting ? 'warn' : 'live') }, app.agent.waiting ? '!' : '') : null,
       ),
     ),
@@ -1253,6 +1248,17 @@ function renderActivity() {
   );
 }
 app.renderActivity = renderActivity;
+
+// Open items in the Revisão view: unresolved PDF notes and report points.
+function revisaoOpen() {
+  const a = S.annots && S.annots.items ? S.annots.items.filter((x) => !x.done).length : 0;
+  const r = S.review && S.review.report ? S.review.report.points.filter((x) => !x.done).length : 0;
+  return a + r;
+}
+app.refreshRevisao = () => {
+  renderActivity();
+  if (S.sidebarView === 'revisao' && !S.settings.sidebarHidden) app.sidebar.render();
+};
 
 function toggleBottom(force) {
   S.settings.bottomOpen = force ?? !S.settings.bottomOpen;

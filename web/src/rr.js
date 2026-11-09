@@ -69,6 +69,7 @@ export function responseDialog(app, S) {
       const r = await running;
       m.close();
       await app.openFile(r.file);
+      app.refreshRevisao && app.refreshRevisao();
       toast(`${relPath(S.project.root, r.file)}: ${r.comments} comentários${r.todo ? `, ${r.todo} ainda a fazer (em vermelho)` : ''}.${r.pages ? '' : ' Compile o paper pelo TeXugo para as mudanças ganharem a página.'} ⌘-clique no comentário % arquivo:linha abre a mudança.`, 'ok', 12000);
     } catch (err) {
       clear(status, h('div', { class: 'qq-banner' }, icon('warn'), h('div', {}, err.message)));

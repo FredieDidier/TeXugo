@@ -132,6 +132,7 @@ async function load(app, S, doc, pdfPath, received, label) {
     S.annots = { status: 'error', doc, error: err.message };
   }
   app.bottom.show('anotacoes', { soft: true });
+  app.refreshRevisao && app.refreshRevisao();
 }
 
 export function renderAnnotationsPanel(app, S, body) {
@@ -172,7 +173,8 @@ export function renderAnnotationsPanel(app, S, body) {
             onchange: async (e) => {
               a.done = e.target.checked;
               await call('annotMark', { doc: st.doc, pdf: st.pdf, id: a.id, done: a.done }).catch(() => {});
-              renderAnnotationsPanel(app, S, body);
+              app.bottom.render();
+              app.refreshRevisao && app.refreshRevisao();
             },
           }),
           h('span', { class: 'kind ' + (a.kind === 'StrikeOut' ? 'err' : a.kind === 'Text' || a.kind === 'FreeText' ? 'muted' : 'warn') }, KINDS[a.kind]),

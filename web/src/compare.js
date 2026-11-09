@@ -67,6 +67,7 @@ export async function compareDialog(app, S) {
       m.close();
       app.openPdf(r.pdf, { activate: true });
       resultDialog(app, S, doc, r);
+      app.refreshRevisao && app.refreshRevisao();
     } catch (err) {
       clear(status, h('div', { class: 'qq-banner' }, icon('warn'), h('div', {}, err.message)));
     } finally {
