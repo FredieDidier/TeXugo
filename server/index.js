@@ -18,6 +18,7 @@ import { exportZip, blindCheck } from './submission.js';
 import * as ai from './ai.js';
 import { Terminals } from './terminal.js';
 import { IdeBridge } from './ide.js';
+import { Agents } from './agent.js';
 import * as doctor from './doctor.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -104,6 +105,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     return out;
   };
   const ide = new IdeBridge({ broadcast, askUi, diagnostics, allowed });
+  const agents = new Agents(broadcast);
 
   function watch(root) {
     if (watchers.has(root)) return;
@@ -435,6 +437,21 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       if (fn) fn(answer);
       return true;
     },
+    // Claude chat panel.
+    async agentSend({ root, text }) {
+      mustAllow(root);
+      if (!text || !text.trim()) throw httpError(400, 'Mensagem vazia.');
+      return agents.send(path.resolve(root), text);
+    },
+    async agentAnswer({ root, reqId, allow, note }) {
+      return agents.answer(path.resolve(mustAllow(root)), reqId, !!allow, note);
+    },
+    async agentInterrupt({ root }) {
+      return agents.interrupt(path.resolve(mustAllow(root)));
+    },
+    async agentReset({ root }) {
+      return agents.reset(path.resolve(mustAllow(root)));
+    },
     async aiRewrite({ root, path: p, action, text, before, after, hints, lang }) {
       mustAllow(p);
       mustAllow(root);
@@ -565,6 +582,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
         },
         close: () => {
           terminals.killAll();
+          agents.killAll();
           ide.removeLock();
           for (const w of watchers.values()) w.close();
           builds.cancel();

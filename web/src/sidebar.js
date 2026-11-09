@@ -48,6 +48,10 @@ export class Sidebar {
     else if (v === 'outline') this.renderOutline();
     else if (v === 'search') this.renderSearch();
     else if (v === 'git') this.renderGit();
+    else if (v === 'claude') {
+      if (this.app.agent && this.app.agent.el.parentNode !== this.el) clear(this.el, this.app.agent.el);
+      this.app.agent && this.app.agent.focus();
+    }
   }
   renderIfFiles() {
     if (this.S.sidebarView === 'files') this.renderFiles();

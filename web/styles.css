@@ -483,3 +483,36 @@ body > .cm-tooltip { z-index: 40; }
 .term-view .xterm-viewport { background: transparent !important; }
 .statusbar .ide-on { color: #d97757; }
 .bottom-body:has(.term-panel) { padding: 0; overflow: hidden; }
+
+/* Claude panel */
+.activitybar .icon-btn[title^="Claude"] { color: #d97757; }
+.activitybar .badge.live { background: #d97757; width: 8px; height: 8px; min-width: 0; padding: 0; animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: 0.35; } }
+.agent-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.agent-head { display: flex; align-items: center; gap: 6px; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.agent-log { flex: 1; min-height: 0; overflow: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; font-size: 12.5px; }
+.agent-hello p { margin: 0 0 8px; line-height: 1.5; }
+.agent-msg.user { align-self: flex-end; max-width: 92%; background: var(--accent-soft, var(--sunken)); border-radius: 10px 10px 2px 10px; padding: 6px 9px; white-space: pre-wrap; }
+.agent-attach { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.agent-msg.claude .agent-md { font-size: 12.5px; line-height: 1.5; }
+.agent-md p { margin: 0 0 6px; } .agent-md pre { font-size: 11.5px; padding: 6px 8px; overflow: auto; } .agent-md ul, .agent-md ol { padding-left: 18px; margin: 0 0 6px; }
+.agent-tool { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 11.5px; cursor: default; }
+.agent-tool[onclick], .agent-tool:has(code) { cursor: pointer; }
+.agent-tool svg { width: 13px; height: 13px; flex: none; }
+.agent-tool code { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.agent-tool.failed { color: var(--err); }
+.agent-thinking { font-size: 12px; }
+.agent-error { color: var(--err); background: var(--err-soft); border-radius: 6px; padding: 6px 8px; }
+.agent-perm { border: 1px solid var(--accent); border-radius: 8px; padding: 8px; background: var(--raised, var(--bg)); display: flex; flex-direction: column; gap: 6px; }
+.agent-perm.allowed { border-color: var(--ok); opacity: 0.8; } .agent-perm.denied, .agent-perm.closed { border-color: var(--border); opacity: 0.6; }
+.agent-perm .ai-diff-text { max-height: 260px; font-size: 11.5px; }
+.agent-perm-title { display: flex; align-items: center; gap: 4px; }
+.agent-perm-title svg { width: 14px; height: 14px; }
+.agent-cmd { font-size: 11.5px; background: var(--sunken); padding: 6px 8px; border-radius: 6px; white-space: pre-wrap; margin: 0; max-height: 160px; overflow: auto; }
+.agent-row { display: flex; align-items: center; gap: 6px; }
+.agent-note { flex: 1; min-width: 0; font-size: 11.5px; padding: 3px 6px; }
+.agent-compose { border-top: 1px solid var(--border); padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.agent-input { width: 100%; resize: vertical; min-height: 54px; font: 12.5px/1.45 var(--ui); padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); box-sizing: border-box; }
+.agent-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; color: var(--muted); }
+.agent-perm-actions { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.agent-perm-actions .agent-note { flex: 1 1 100%; }

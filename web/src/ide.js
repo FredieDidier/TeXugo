@@ -130,7 +130,7 @@ export async function mentionInClaude(app, S, target) {
 
 // The changed region of a whole file, with two lines of context, as a word
 // diff; the rest of the file is summarized.
-function fileDiff(oldText, newText) {
+export function fileDiff(oldText, newText) {
   const a = oldText.split('\n');
   const b = newText.split('\n');
   let p = 0;

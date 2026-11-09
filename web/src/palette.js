@@ -36,6 +36,7 @@ function commands(app, S) {
     { t: 'Exportar ZIP para submissão', kw: 'arxiv', i: 'down', run: () => app.tools.exportZip(app, S) },
     ...AI_ACTIONS.map((a) => ({ t: `IA: ${a.label} (seleção)`, kw: 'claude ia ai reescrever ' + a.hint, i: 'edit', run: () => runAiAction(app, S, a.id) })),
     { t: 'Abrir terminal na pasta do projeto', k: '⌃`', kw: 'shell zsh bash console', i: 'command', run: () => app.terminals.open('shell') },
+    { t: 'Claude: conversar sobre o projeto', kw: 'chat agente ia ai claude perguntar', i: 'claude', run: () => app.sidebar.show('claude') },
     { t: 'Claude Code (ligado ao TeXugo)', kw: 'claude agente ia ai terminal', i: 'command', run: () => app.terminals.open('claude') },
     { t: 'Mencionar a seleção no Claude Code', kw: 'claude at mention arroba', i: 'command', run: () => app.mentionInClaude() },
     { t: 'Vícios de escrita (tiques de IA)', kw: 'ia ai detector humanizar estilo travessão', i: 'edit', run: () => app.tools.viciosReport(app, S) },

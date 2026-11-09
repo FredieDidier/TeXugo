@@ -18,6 +18,7 @@ import { viciosConfig, viciosOf } from './vicios/cm.js';
 import { AI_ACTIONS, runAiAction, focusedTarget } from './ai.js';
 import { TerminalPanel } from './terminal.js';
 import { setupIde, mentionInClaude } from './ide.js';
+import { AgentPanel } from './agent.js';
 
 export const S = {
   hello: null,
@@ -114,6 +115,7 @@ function buildLayout() {
   });
   app.sidebar = new Sidebar(app, S);
   app.terminals = new TerminalPanel(app, S);
+  app.agent = new AgentPanel(app, S);
   app.bottom = new BottomPanel(app, S);
   setupIde(app, S);
   applyLayoutSizes();
@@ -1154,6 +1156,7 @@ function renderActivity() {
     ['outline', 'outline', 'Estrutura do documento'],
     ['search', 'search', 'Buscar no projeto (⌘⇧F)'],
     ['git', 'git', 'Git e GitHub'],
+    ['claude', 'claude', 'Claude: converse com o seu Claude Code sobre o projeto'],
   ];
   clear(
     app.activity,
@@ -1163,6 +1166,7 @@ function renderActivity() {
         { class: 'icon-btn' + (S.sidebarView === id && !S.settings.sidebarHidden ? ' on' : ''), title, onclick: () => app.sidebar.toggle(id) },
         icon(ic),
         id === 'git' && S.git && S.git.files && S.git.files.length ? h('span', { class: 'badge warn' }, String(Math.min(99, S.git.files.length))) : null,
+        id === 'claude' && app.agent && (app.agent.running || app.agent.waiting) ? h('span', { class: 'badge ' + (app.agent.waiting ? 'warn' : 'live') }, app.agent.waiting ? '!' : '') : null,
       ),
     ),
     h('div', { class: 'grow' }),
