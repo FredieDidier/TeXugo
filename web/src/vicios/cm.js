@@ -1,7 +1,7 @@
 // Editor side of the writing-tic detector: dotted underlines, an explanation
 // on hover, and the current hits for the status bar and the report.
 import { StateEffect, StateField } from '@codemirror/state';
-import { EditorView, Decoration, ViewPlugin, hoverTooltip, tooltips } from '@codemirror/view';
+import { EditorView, Decoration, ViewPlugin, hoverTooltip, tooltips, closeHoverTooltips } from '@codemirror/view';
 import { detect, kindOf, CATEGORIES, SOURCES } from './core.js';
 import { getLang } from '../i18n.js';
 
@@ -110,6 +110,16 @@ const tooltip = hoverTooltip((view, pos) => {
           box.append(s);
         }
         dom.append(box);
+      }
+      if (viciosConfig.onReplace) {
+        const b = document.createElement('button');
+        b.className = 'btn sm vicio-tip-replace';
+        b.textContent = getLang() === 'en' ? '✻ Replace with Claude' : '✻ Trocar com o Claude';
+        b.title = getLang() === 'en' ? 'Claude rewrites only the flagged words of this sentence; you accept or discard' : 'O Claude troca só o trecho sublinhado desta frase; você aceita ou descarta';
+        const from = Math.min(...here.map((x) => x.from));
+        const to = Math.max(...here.map((x) => x.to));
+        b.onmousedown = (e) => (e.preventDefault(), view.dispatch({ effects: closeHoverTooltips }), viciosConfig.onReplace(view, from, to));
+        dom.append(b);
       }
       return { dom };
     },

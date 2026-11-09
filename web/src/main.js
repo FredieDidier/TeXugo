@@ -15,7 +15,7 @@ import { TOKEN } from './api.js';
 import { setLang, tr } from './i18n.js';
 import { SplitEditor } from './split.js';
 import { viciosConfig, viciosOf } from './vicios/cm.js';
-import { AI_ACTIONS, runAiAction, focusedTarget } from './ai.js';
+import { AI_ACTIONS, runAiAction, focusedTarget, replaceFlagged } from './ai.js';
 import { TerminalPanel } from './terminal.js';
 import { setupIde, mentionInClaude } from './ide.js';
 import { AgentPanel } from './agent.js';
@@ -1567,6 +1567,7 @@ async function boot() {
   }
   Object.assign(S.settings, S.hello.settings || {});
   viciosConfig.enabled = S.settings.vicios !== false;
+  viciosConfig.onReplace = (view, from, to) => replaceFlagged(app, S, view, from, to);
   document.body.classList.toggle('no-change-marks', S.settings.changeMarks === false);
   mathPreview.on = S.settings.mathPreview !== false;
   viciosConfig.onResult = (view) => view === app.view && renderStatusSoon();

@@ -16,6 +16,7 @@ export const ACTIONS = {
   encurtar: 'Shorten the passage by about a third. Cut words that say nothing; never cut a qualifier, a number, a subject or the referent of a pronoun, and do not compress sentences into aphorisms.',
   traduzir: 'Translate the passage from Portuguese into English for an academic economics journal. Natural English, no calques from Portuguese, same register, same LaTeX commands.',
   fluidez: 'Improve flow and cohesion: the links between sentences and between this passage and its neighbours (transitions, referents, the order of information, given before new). Change only what the flow needs.',
+  trocar: 'Replace only the spans the TeXugo detector flagged (listed below) with plain, specific wording that fits the sentence. Change nothing else: every other word, number, citation and the sentence structure stay exactly as they are, unless a flagged span cannot be replaced without touching its immediate neighbours.',
   formal: 'Make the passage more formal, in the register of an academic paper, without inflating it: plain words, no stock phrases.',
 };
 

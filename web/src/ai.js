@@ -9,6 +9,7 @@ import { wordDiff } from './diff.js';
 import { claudeChoice } from './agent.js';
 
 export const AI_ACTIONS = [
+  { id: 'trocar', label: 'Trocar o trecho marcado', hint: 'Só o que o detector de vícios sublinhou muda' },
   { id: 'revisar', label: 'Revisar', hint: 'Gramática, clareza e afirmações exageradas' },
   { id: 'polir', label: 'Polir', hint: 'Palavras melhores, mesmo sentido e tamanho' },
   { id: 'humanizar', label: 'Humanizar (tirar tiques de IA)', hint: 'Usa os vícios sublinhados como pista' },
@@ -23,6 +24,22 @@ export function focusedTarget(app) {
   const inSplit = app.split.open && app.split.el.contains(document.activeElement);
   if (inSplit) return { view: app.split.view, tab: app.split.tab };
   return { view: app.view, tab: app.activeTab() };
+}
+
+// From a vício tooltip: select the sentence around the flagged span and ask
+// Claude to replace just the flagged words.
+export function replaceFlagged(app, S, view, from, to) {
+  const doc = view.state.doc;
+  const line = doc.lineAt(from);
+  const text = line.text;
+  let a = from - line.from;
+  let b = to - line.from;
+  while (a > 0 && !/[.!?]\s/.test(text.slice(a - 2, a))) a--;
+  const m = /[.!?](\s|$)/.exec(text.slice(b));
+  b = m ? b + m.index + 1 : text.length;
+  view.dispatch({ selection: { anchor: line.from + a, head: line.from + b } });
+  const tab = app.split.open && app.split.view === view ? app.split.tab : app.activeTab();
+  return runAiAction(app, S, 'trocar', { view, tab });
 }
 
 export async function runAiAction(app, S, action, target = focusedTarget(app)) {
@@ -49,6 +66,7 @@ export async function runAiAction(app, S, action, target = focusedTarget(app)) {
     .slice(0, 40)
     .map((x) => ({ text: doc.sliceString(x.from, x.to).slice(0, 120), why: hitInfo(x).title + ': ' + x.en }));
   const lang = detect(text, { kind }).stats.lang;
+  if (action === 'trocar' && !hints.length) return toast('Nada sublinhado pelo detector de vícios neste trecho.', 'info');
 
   let cancelled = false;
   const wait = modal({
