@@ -1,0 +1,51 @@
+% !TEX program = pdflatex
+% Versão do professor (com soluções): tire o % da linha abaixo e compile.
+% \printanswers
+\documentclass[11pt,a4paper]{exam}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\definecolor{tocaHoney}{HTML}{C47E12}
+
+\renewcommand{\solutiontitle}{\noindent\textbf{Solução:}\enspace}
+\shadedsolutions
+\definecolor{SolutionColor}{HTML}{FBF1DF}
+\qformat{\textbf{Exercício \thequestion}\hfill}
+
+\pagestyle{headandfoot}
+\header{{{INSTITUTION}}}{}{{{TITLE}}}
+\footer{}{\thepage}{}
+
+\begin{document}
+
+{\Large\bfseries {{TITLE}}}\par
+{\color{tocaHoney}\rule{2.5cm}{2pt}}\par\smallskip
+{\small {{AUTHOR}} \textbullet{} Entrega: dd/mm}
+
+\vspace{1em}
+\begin{questions}
+
+\question Mostre que, se $f(x) = x^2$, então $f'(x) = 2x$ pela definição de derivada.
+\begin{solution}
+  $f'(x) = \lim_{h\to 0} \frac{(x+h)^2 - x^2}{h} = \lim_{h \to 0} (2x + h) = 2x$.
+\end{solution}
+
+\question Resolva o sistema.
+\begin{parts}
+  \part $x + y = 5$ e $x - y = 1$.
+  \begin{solution}$x = 3$, $y = 2$.\end{solution}
+  \part $2x + y = 4$ e $x + 3y = 7$.
+  \begin{solution}$x = 1$, $y = 2$.\end{solution}
+\end{parts}
+
+\question Leia o capítulo 2 do livro-texto e resuma o argumento central em um parágrafo.
+\fillwithlines{4cm}
+
+\end{questions}
+
+\end{document}

@@ -1,0 +1,91 @@
+% !TEX program = pdflatex
+% Para gerar o GABARITO, tire o % da linha abaixo e compile.
+% \printanswers
+\documentclass[11pt,a4paper,addpoints]{exam}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\definecolor{tocaHoney}{HTML}{C47E12}
+
+% Textos da classe exam em português.
+\pointpoints{ponto}{pontos}
+\bonuspointpoints{ponto extra}{pontos extras}
+\renewcommand{\solutiontitle}{\noindent\textbf{Resposta:}\enspace}
+\hpword{Pontos:}
+\vpword{Pontos}
+\hqword{Questão:}
+\vqword{Questão}
+\htword{Total}
+\vtword{Total}
+\hsword{Nota:}
+\vsword{Nota}
+\shadedsolutions
+\definecolor{SolutionColor}{HTML}{FBF1DF}
+\qformat{\textbf{Questão \thequestion} \hfill (\totalpoints\ \points)}
+
+\pagestyle{headandfoot}
+\firstpageheader{{{INSTITUTION}}}{}{{{DATE}}}
+\runningheader{{{TITLE}}}{}{Página \thepage\ de \numpages}
+\firstpagefooter{}{}{}
+\runningfooter{}{}{}
+
+\begin{document}
+
+\begin{center}
+  {\Large\bfseries {{TITLE}}}\par\medskip
+  Professor(a): {{AUTHOR}}\par
+  {\color{tocaHoney}\rule{3cm}{2pt}}
+\end{center}
+
+\vspace{0.5em}
+\noindent\makebox[0.65\textwidth]{Nome:\enspace\hrulefill}\hfill\makebox[0.3\textwidth]{Matrícula:\enspace\hrulefill}
+
+\vspace{1em}
+\begin{center}
+  \gradetable[h][questions]
+\end{center}
+
+\noindent\textbf{Instruções.} A prova vale \numpoints\ pontos e tem \numquestions\ questões. Justifique as respostas. Duração: 2 horas.
+
+\begin{questions}
+
+\question[2] Defina custo de oportunidade e dê um exemplo.
+\begin{solution}
+  O valor da melhor alternativa de que se abre mão ao fazer uma escolha.
+\end{solution}
+\vspace{4cm}
+
+\question Considere a demanda $Q = 100 - 2P$.
+\begin{parts}
+  \part[1] Calcule a quantidade demandada quando $P = 10$.
+  \begin{solution}$Q = 80$.\end{solution}
+  \vspace{2.5cm}
+  \part[2] Calcule a elasticidade-preço nesse ponto.
+  \begin{solution}$\varepsilon = -2 \cdot 10/80 = -0{,}25$.\end{solution}
+  \vspace{2.5cm}
+\end{parts}
+
+\question[1] Marque a alternativa correta: um bem de Giffen é aquele cuja demanda
+\begin{checkboxes}
+  \choice cai quando a renda sobe.
+  \CorrectChoice sobe quando o próprio preço sobe.
+  \choice não depende do preço.
+  \choice sobe quando o preço do substituto cai.
+\end{checkboxes}
+
+\question[2] Verdadeiro ou falso? Justifique: ``Todo bem inferior é um bem de Giffen.''
+\begin{solution}
+  Falso. Todo bem de Giffen é inferior, mas não o contrário.
+\end{solution}
+\vspace{4cm}
+
+\bonusquestion[1] Questão extra: explique o paradoxo da água e do diamante.
+\vspace{3cm}
+
+\end{questions}
+
+\end{document}
