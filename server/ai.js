@@ -11,6 +11,7 @@ import { claudeFlags } from './agent.js';
 
 export const ACTIONS = {
   revisar: 'Revise the passage: fix grammar, wording, clarity and any claim the wording overstates. Keep the meaning, the structure and the length roughly the same.',
+  reescrever: 'Rewrite the passage freely so it reads better: you may reorder sentences, split or merge them, change the structure and the wording, and cut repetition. Keep every claim, number, qualifier, citation and the meaning exactly; do not add new claims or content. The length may change, but do not pad.',
   polir: 'Polish the passage: smoother wording and better word choice, same meaning, same structure, same length.',
   humanizar: 'Remove every AI writing tell from the passage (the dated catalogue in the writing skill, if one is available; the flagged spans listed below are candidates) so it reads as written by the author. Keep every number, claim and qualifier.',
   encurtar: 'Shorten the passage by about a third. Cut words that say nothing; never cut a qualifier, a number, a subject or the referent of a pronoun, and do not compress sentences into aphorisms.',

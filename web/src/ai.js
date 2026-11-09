@@ -11,6 +11,7 @@ import { claudeChoice } from './agent.js';
 export const AI_ACTIONS = [
   { id: 'trocar', label: 'Trocar o trecho marcado', hint: 'Só o que o detector de vícios sublinhou muda' },
   { id: 'revisar', label: 'Revisar', hint: 'Gramática, clareza e afirmações exageradas' },
+  { id: 'reescrever', label: 'Reescrever', hint: 'Mais livre: muda a estrutura das frases, mantém o conteúdo' },
   { id: 'polir', label: 'Polir', hint: 'Palavras melhores, mesmo sentido e tamanho' },
   { id: 'humanizar', label: 'Humanizar (tirar tiques de IA)', hint: 'Usa os vícios sublinhados como pista' },
   { id: 'encurtar', label: 'Encurtar', hint: 'Cerca de um terço a menos, sem cortar ressalvas' },

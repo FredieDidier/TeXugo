@@ -117,7 +117,7 @@ const EN = {
   ' Nenhum vício encontrado.': ' No tics found.',
   'São candidatos a uma segunda leitura, não prova de que o texto foi escrito por IA: cada padrão também aparece em texto humano, e o que pesa é o acúmulo. Passe o mouse sobre um trecho sublinhado no editor para ver o motivo.': 'These are candidates for a second reading, not proof that AI wrote the text: every pattern also occurs in human writing, and what counts is the pile-up. Hover over an underlined passage in the editor to see why.',
   // AI actions
-  'Revisar': 'Review', 'Polir': 'Polish', 'Humanizar (tirar tiques de IA)': 'Humanize (remove AI tells)', 'Encurtar': 'Shorten', 'Traduzir para o inglês': 'Translate into English',
+  'Revisar': 'Review', 'Reescrever': 'Rewrite', 'Mais livre: muda a estrutura das frases, mantém o conteúdo': 'Freer: changes sentence structure, keeps the content', 'Trocar o trecho marcado': 'Replace the flagged words', 'Só o que o detector de vícios sublinhou muda': 'Only what the detector underlined changes', 'Polir': 'Polish', 'Humanizar (tirar tiques de IA)': 'Humanize (remove AI tells)', 'Encurtar': 'Shorten', 'Traduzir para o inglês': 'Translate into English',
   'Fluidez e coesão': 'Flow and cohesion', 'Deixar mais formal': 'Make more formal', 'Gramática, clareza e afirmações exageradas': 'Grammar, clarity and overstated claims',
   'Palavras melhores, mesmo sentido e tamanho': 'Better words, same meaning and length', 'Usa os vícios sublinhados como pista': 'Uses the underlined tics as hints',
   'Cerca de um terço a menos, sem cortar ressalvas': 'About a third shorter, keeping qualifiers', 'Inglês acadêmico, sem decalques do português': 'Academic English, no calques from Portuguese',
