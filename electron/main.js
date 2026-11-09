@@ -35,6 +35,21 @@ function createWindow(openPath) {
   win.loadURL(url.toString());
   // Links in the PDF or the UI open in the default browser, never in-app.
   win.webContents.setWindowOpenHandler(({ url: u }) => {
+    // Our own PDF windows open in the app; everything else in the browser.
+    if (u.startsWith(`http://127.0.0.1:${server.port}/`) && u.includes('pdfwin=')) {
+      return {
+        action: 'allow',
+        overrideBrowserWindowOptions: {
+          width: 900,
+          height: 1000,
+          title: 'TeXugo — PDF',
+          titleBarStyle: 'hiddenInset',
+          trafficLightPosition: { x: 14, y: 14 },
+          backgroundColor: nativeTheme.shouldUseDarkColors ? '#15171c' : '#f7f4ee',
+          webPreferences: { preload: path.join(HERE, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false },
+        },
+      };
+    }
     if (/^https?:/.test(u)) shell.openExternal(u);
     return { action: 'deny' };
   });
@@ -93,6 +108,14 @@ ipcMain.handle('pick-folder', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender);
   const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'], buttonLabel: 'Abrir' });
   return r.canceled ? null : r.filePaths[0];
+});
+ipcMain.handle('focus-self', (e) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (win) {
+    if (win.isMinimized()) win.restore();
+    win.focus();
+  }
+  return true;
 });
 ipcMain.handle('new-window', () => {
   createWindow();

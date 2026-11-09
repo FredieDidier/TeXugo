@@ -2,7 +2,7 @@
 import { call } from './api.js';
 import { h, clear, icon, fileIcon, relPath } from './dom.js';
 import { openSettings } from './settings.js';
-import { newProjectDialog, showWelcome } from './welcome.js';
+import { newProjectDialog, showWelcome, cloneDialog } from './welcome.js';
 
 function commands(app, S) {
   const t = app.activeTab();
@@ -18,6 +18,7 @@ function commands(app, S) {
     { t: 'Abrir pasta…', i: 'folderOpen', run: () => app.pickAndOpen() },
     { t: 'Novo projeto a partir de modelo…', i: 'plus', run: () => newProjectDialog(app, S) },
     { t: 'Tela inicial', i: 'files', run: () => showWelcome(app, S) },
+    { t: 'Clonar repositório do GitHub…', i: 'github', run: () => cloneDialog(app, S) },
     { t: 'Mostrar arquivos', k: '⌘⇧E', i: 'files', run: () => app.sidebar.show('files') },
     { t: 'Estrutura do documento', i: 'outline', run: () => app.sidebar.show('outline') },
     { t: 'Buscar no projeto', k: '⌘⇧F', i: 'search', run: () => app.sidebar.show('search') },

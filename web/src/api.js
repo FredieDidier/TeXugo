@@ -36,8 +36,8 @@ export function emit(type, payload) {
 
 let ws;
 let wsOk = false;
-export function connect() {
-  const url = `ws://${location.host}/ws?t=${encodeURIComponent(TOKEN)}`;
+export function connect(extra = '') {
+  const url = `ws://${location.host}/ws?t=${encodeURIComponent(TOKEN)}${extra}`;
   ws = new WebSocket(url);
   ws.onopen = () => {
     wsOk = true;
@@ -50,7 +50,7 @@ export function connect() {
   ws.onclose = () => {
     if (wsOk) emit('ws:close', {});
     wsOk = false;
-    setTimeout(connect, 1200);
+    setTimeout(() => connect(extra), 1200);
   };
 }
 

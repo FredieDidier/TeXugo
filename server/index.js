@@ -12,7 +12,7 @@ import * as project from './project.js';
 import * as gitOps from './git.js';
 import * as sync from './synctex.js';
 import { BuildManager } from './build.js';
-import { isInside, dataDir, run, which } from './util.js';
+import { isInside, dataDir, run, which, toolEnv } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
 
@@ -211,6 +211,13 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       await run('open', [url]);
       return true;
     },
+    async broadcast({ msg }) {
+      // Relay between TeXugo windows (main window <-> PDF windows).
+      const okTypes = ['open-request', 'sync-show', 'pdfwin:open', 'pdfwin:close', 'pdfwin:dock', 'pdfwin:ping'];
+      if (!msg || !okTypes.includes(msg.type)) throw httpError(400, 'Mensagem desconhecida.');
+      broadcast(msg);
+      return true;
+    },
     async stat({ paths }) {
       return paths.map((p) => {
         try {
@@ -322,6 +329,22 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async templates() {
       return listTemplates();
     },
+    async gitClone({ url, parent, name }) {
+      url = String(url || '').trim();
+      if (!/^(https:\/\/[\w.-]+\/[\w.\/~-]+|git@[\w.-]+:[\w.\/~-]+)$/.test(url)) throw httpError(400, 'Endereço inválido. Use https://github.com/dono/repo ou git@github.com:dono/repo.git');
+      if (!name || /[\/]|^\.\.?$/.test(name)) throw httpError(400, 'Nome de pasta inválido.');
+      const target = path.join(path.resolve(parent), name);
+      if (fs.existsSync(target) && fs.readdirSync(target).length) throw httpError(409, 'A pasta já existe e não está vazia.');
+      fs.mkdirSync(path.resolve(parent), { recursive: true });
+      // GIT_TERMINAL_PROMPT=0: fail fast instead of waiting for a password
+      // prompt nobody can answer; credentials come from the keychain.
+      const r = await run('git', ['clone', '--', url, target], { timeout: 10 * 60 * 1000, env: { ...toolEnv(), GIT_TERMINAL_PROMPT: '0' } });
+      if (r.code !== 0) {
+        const msg = (r.stderr || r.stdout).trim().split('\n').slice(-3).join(' ');
+        throw httpError(500, /Authentication|could not read Username|Permission denied/i.test(msg) ? 'Sem permissão para clonar. Repositório privado? Entre na conta pelo GitHub Desktop ou use o endereço SSH. (' + msg + ')' : msg);
+      }
+      return api.openProject({ root: target });
+    },
     async createProject({ template, parent, name, fields }) {
       const target = path.join(path.resolve(parent), name);
       if (fs.existsSync(target) && fs.readdirSync(target).length) throw httpError(409, 'A pasta já existe e não está vazia.');
@@ -413,7 +436,14 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     }
     wss.handleUpgrade(req, socket, head, (ws) => {
       clients.add(ws);
-      ws.on('close', () => clients.delete(ws));
+      // A PDF window says which PDF it shows; when its connection drops
+      // (closed, crashed, reloaded) the main window takes the PDF back.
+      const pdfwin = url.searchParams.get('pdfwin');
+      const pdfroot = url.searchParams.get('root');
+      ws.on('close', () => {
+        clients.delete(ws);
+        if (pdfwin) broadcast({ type: 'pdfwin:close', pdf: pdfwin, root: pdfroot });
+      });
     });
   });
 

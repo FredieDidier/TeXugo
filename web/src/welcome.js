@@ -42,7 +42,12 @@ export async function showWelcome(app, S) {
           'div',
           {},
           h('h3', {}, 'Abrir'),
-          h('button', { class: 'btn primary', style: { marginBottom: '14px' }, onclick: () => app.pickAndOpen() }, icon('folderOpen'), 'Abrir pasta…'),
+          h(
+            'div',
+            { style: { display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' } },
+            h('button', { class: 'btn primary', onclick: () => app.pickAndOpen() }, icon('folderOpen'), 'Abrir pasta…'),
+            h('button', { class: 'btn', onclick: () => cloneDialog(app, S) }, icon('github'), 'Clonar do GitHub…'),
+          ),
           recents.length ? h('h3', { style: { marginTop: '8px' } }, 'Recentes') : null,
           recents.map((r) =>
             h(
@@ -172,4 +177,53 @@ function slug(s) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 50);
+}
+
+export function cloneDialog(app, S) {
+  const url = h('input', { placeholder: 'https://github.com/dono/repositorio' });
+  const parent = h('input', { value: S.settings.lastCloneParent || (S.hello.home || '') + '/Documents/GitHub' });
+  const folder = h('input', { placeholder: 'repositorio' });
+  url.addEventListener('input', () => {
+    if (folder.dataset.touched) return;
+    const m = url.value.trim().match(/([^/:]+?)(\.git)?\/?$/);
+    folder.value = m ? m[1] : '';
+  });
+  folder.addEventListener('input', () => (folder.dataset.touched = '1'));
+  const btn = h('button', { class: 'btn primary' }, icon('down'), 'Clonar');
+  btn.onclick = async () => {
+    if (!url.value.trim()) return toast('Cole o endereço do repositório.', 'warn');
+    btn.disabled = true;
+    btn.textContent = 'Clonando…';
+    S.settings.lastCloneParent = parent.value;
+    app.saveSettingsSoon();
+    try {
+      const p = await call('gitClone', { url: url.value.trim(), parent: parent.value, name: folder.value.trim() });
+      m.close();
+      document.querySelector('.welcome')?.remove();
+      await app.openProject(p.root);
+      toast(`Clonado em ${p.root}`, 'ok');
+    } catch (err) {
+      toast(err.message, 'error', 9000);
+      btn.disabled = false;
+      btn.textContent = 'Clonar';
+    }
+  };
+  const m = modal({
+    title: [icon('github'), ' Clonar repositório'],
+    body: h(
+      'div',
+      {},
+      h('div', { class: 'field' }, h('label', {}, 'Endereço do repositório (HTTPS ou SSH)'), url),
+      h(
+        'div',
+        { class: 'field' },
+        h('label', {}, 'Onde salvar'),
+        h('div', { class: 'row' }, parent, native ? h('button', { class: 'btn', onclick: async () => { const p = await native.pickFolder(); if (p) parent.value = p; } }, 'Escolher…') : null),
+      ),
+      h('div', { class: 'field' }, h('label', {}, 'Nome da pasta'), folder),
+      h('p', { class: 'faint', style: { fontSize: '12px' } }, 'Repositórios privados usam as credenciais que o GitHub Desktop ou o Keychain já guardaram.'),
+    ),
+    footer: [h('button', { class: 'btn', onclick: () => m.close() }, 'Cancelar'), btn],
+  });
+  setTimeout(() => url.focus(), 0);
 }

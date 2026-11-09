@@ -10,6 +10,8 @@ import { openPalette } from './palette.js';
 import { openSettings, applyTheme } from './settings.js';
 import * as tools from './tools.js';
 import { renderMarkdown } from './markdown.js';
+import { bootPdfWindow } from './pdfwin.js';
+import { TOKEN } from './api.js';
 
 export const S = {
   hello: null,
@@ -26,6 +28,7 @@ export const S = {
   lastSummary: null,
   settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true },
   cursor: { line: 1, col: 1, words: 0 },
+  detached: new Set(), // PDFs shown in their own window
 };
 
 const app = {};
@@ -76,6 +79,7 @@ function buildLayout() {
   });
   app.bottomGutter = bottomGutter;
   app.sideGutter = sideGutter;
+  app.pdfGutter = pdfGutter;
   app.panes = h('div', { class: 'panes' }, app.editorGroup, pdfGutter, app.pdfGroup);
   app.workspace = h('div', { class: 'workspace' }, app.panes, bottomGutter, app.bottomEl);
   root.append(app.topbar, h('div', { class: 'main' }, app.activity, app.sidebarEl, sideGutter, app.workspace), app.statusEl);
@@ -98,7 +102,15 @@ function applyLayoutSizes() {
   app.bottomGutter.classList.toggle('hidden', !S.settings.bottomOpen);
   app.sidebarEl.classList.toggle('hidden', !!S.settings.sidebarHidden);
   app.sideGutter.classList.toggle('hidden', !!S.settings.sidebarHidden);
-  document.documentElement.style.setProperty('--editor-size', S.settings.editorSize + 'px');
+  const st = document.documentElement.style;
+  st.setProperty('--editor-size', S.settings.editorSize + 'px');
+  st.setProperty('--editor-lh', String(S.settings.editorLineHeight || 1.6));
+  if (S.settings.editorFont) st.setProperty('--editor-font', `'${S.settings.editorFont}', var(--mono)`);
+  else st.removeProperty('--editor-font');
+  st.setProperty('--md-size', (S.settings.mdSize || 15) + 'px');
+  st.setProperty('--md-lh', String(S.settings.mdLineHeight || 1.65));
+  const mdFonts = { sans: 'var(--ui)', serif: "'Iowan Old Style', 'Palatino', Georgia, serif", mono: 'var(--mono)' };
+  st.setProperty('--md-font', mdFonts[S.settings.mdFont || 'sans']);
 }
 app.applyLayoutSizes = applyLayoutSizes;
 
@@ -672,7 +684,7 @@ function wireBuildEvents() {
       if (!d.pdf) continue;
       const tab = S.pdfTabs.find((p) => p.path === d.pdf);
       if (tab) reloadPdf(tab);
-      else if (d.requested && (wantPdf === d.doc || !S.pdfTabs.length)) openPdf(d.pdf, { doc: d.doc, activate: true });
+      else if (d.requested && !S.detached.has(d.pdf) && (wantPdf === d.doc || !S.pdfTabs.length)) openPdf(d.pdf, { doc: d.doc, activate: true });
     }
     if (wantPdf) {
       const pdf = wantPdf.replace(/\.tex$/, '.pdf');
@@ -741,6 +753,7 @@ app.applyDiagnostics = applyDiagnostics;
 
 // ---------------------------------------------------------------- PDF
 function openPdf(path, { doc, activate: act = true } = {}) {
+  if (S.detached.has(path)) return;
   let p = S.pdfTabs.find((x) => x.path === path);
   if (!p) {
     const viewer = new PdfTab(path, { onInverse: inverseSync, onState: () => p === pdfActive() && renderPdfTools() });
@@ -862,8 +875,53 @@ function renderPdfTools() {
     h('button', { class: 'icon-btn' + (S.settings.followCursor ? ' on' : ''), title: 'O PDF acompanha o cursor do editor', onclick: () => ((S.settings.followCursor = !S.settings.followCursor), saveSettingsSoon(), renderPdfTools()) }, icon('target')),
     h('button', { class: 'icon-btn' + (S.settings.invertPdf ? ' on' : ''), title: 'PDF escuro (só na tela)', onclick: toggleInvert }, icon('invert')),
     p.doc ? h('button', { class: 'icon-btn', title: 'Ir ao trecho no código (ou dê 2 cliques no PDF)', onclick: () => toast('Dê dois cliques num trecho do PDF para ir à linha do código.', 'info') }, icon('sync')) : null,
+    h('button', { class: 'icon-btn', title: 'Abrir este PDF numa janela separada (outro monitor)', onclick: () => detachPdf(p) }, icon('columns')),
     h('button', { class: 'icon-btn', title: 'Abrir no Preview', onclick: () => call('openExternal', { path: p.path }) }, icon('external')),
   );
+}
+
+function detachPdf(p) {
+  const url = `/?t=${encodeURIComponent(TOKEN)}&pdfwin=${encodeURIComponent(p.path)}&root=${encodeURIComponent(S.project.root)}`;
+  const w = window.open(url, '_blank', 'popup,width=900,height=1000');
+  if (!w && !native) return toast('O navegador bloqueou a janela nova. Permita pop-ups para este endereço.', 'warn');
+  S.detached.add(p.path);
+  closePdf(p.path);
+  applyPdfPane();
+}
+
+// The PDF pane hides when every PDF lives in its own window.
+function applyPdfPane() {
+  const hide = !S.pdfTabs.length && S.detached.size > 0;
+  app.pdfGroup.classList.toggle('hidden', hide);
+  app.pdfGutter.classList.toggle('hidden', hide);
+}
+
+function wireWindowEvents() {
+  on('pdfwin:open', (e) => {
+    if (!S.project || e.root !== S.project.root) return;
+    S.detached.add(e.pdf);
+    if (S.pdfTabs.some((x) => x.path === e.pdf)) closePdf(e.pdf);
+    applyPdfPane();
+  });
+  // Closing a PDF window (its button or the red dot) brings the PDF back.
+  on('pdfwin:close', (e) => {
+    if (!S.project || e.root !== S.project.root) return;
+    S.detached.delete(e.pdf);
+    openPdf(e.pdf, { activate: true });
+    applyPdfPane();
+  });
+  on('pdfwin:dock', (e) => {
+    if (!S.project || e.root !== S.project.root) return;
+    S.detached.delete(e.pdf);
+    openPdf(e.pdf, { activate: true });
+    applyPdfPane();
+  });
+  on('open-request', async (e) => {
+    if (!S.project || e.root !== S.project.root) return;
+    await openFile(e.file, { line: e.line });
+    if (native && native.focus) native.focus();
+    else window.focus();
+  });
 }
 
 function isSlides(p) {
@@ -884,6 +942,16 @@ const followSoon = debounce(() => syncForward({ quiet: true }), 500);
 async function syncForward({ quiet = false } = {}) {
   const t = activeTab();
   if (!t || !t.root) return;
+  {
+    const pdf = t.root.replace(/\.tex$/, '.pdf');
+    if (S.detached.has(pdf)) {
+      try {
+        const r = await call('syncForward', { file: t.path, line: S.cursor.line, column: S.cursor.col, pdf });
+        if (r.ok) call('broadcast', { msg: { type: 'sync-show', pdf, hit: r.hits[0] } });
+      } catch {}
+      return;
+    }
+  }
   if (quiet) {
     // Following the cursor: only when the PDF is already open and current.
     const pdf = t.root.replace(/\.tex$/, '.pdf');
@@ -1044,9 +1112,13 @@ async function openProject(root) {
   else if (S.pdfTabs[0]) activatePdf(S.pdfTabs[0].path);
   else {
     // Show existing PDFs of the open documents right away.
-    for (const t of S.tabs) if (t.root) {
-      const pdf = t.root.replace(/\.tex$/, '.pdf');
-      if (!S.pdfTabs.some((x) => x.path === pdf)) openPdf(pdf, { doc: t.root, activate: false });
+    // Roots are resolved asynchronously; a tab that is itself a document
+    // is its own root, so do not wait for that.
+    for (const t of S.tabs) {
+      const root = t.root || (p.docs.some((d) => d.path === t.path) ? t.path : null);
+      if (!root) continue;
+      const pdf = root.replace(/\.tex$/, '.pdf');
+      if (!S.pdfTabs.some((x) => x.path === pdf)) openPdf(pdf, { doc: root, activate: false });
     }
     if (S.pdfTabs[0]) activatePdf(S.pdfTabs[0].path);
   }
@@ -1057,6 +1129,8 @@ async function openProject(root) {
   renderActivity();
   refreshSymbolsSoon();
   refreshGit();
+  // PDF windows of this project that are already open announce themselves.
+  call('broadcast', { msg: { type: 'pdfwin:ping' } }).catch(() => {});
   // Previous results from this app session (other window or reopen).
   try {
     const res = await call('lastResults', { docs: p.docs.map((d) => d.path) });
@@ -1257,6 +1331,8 @@ app.pickAndOpen = async function () {
 
 // ---------------------------------------------------------------- boot
 async function boot() {
+  const qs = new URLSearchParams(location.search);
+  if (qs.get('pdfwin')) return bootPdfWindow(qs.get('pdfwin'), qs.get('root'));
   try {
     S.hello = await call('hello');
   } catch (err) {
@@ -1273,8 +1349,9 @@ async function boot() {
   wireBuildEvents();
   wireFsEvents();
   wireKeys();
+  wireWindowEvents();
   connect();
-  on('ws:open', () => S.project && (refreshGit(), checkDiskSoon()));
+  on('ws:open', () => S.project && (refreshGit(), checkDiskSoon(), call('broadcast', { msg: { type: 'pdfwin:ping' } }).catch(() => {})));
   window.addEventListener('focus', () => checkDiskSoon());
   renderTopbar();
   renderActivity();
