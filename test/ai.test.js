@@ -22,7 +22,7 @@ test('prompt: task, read-only tools, markers, project style wins', () => {
   assert.match(p, /Use British spelling/);
   assert.doesNotMatch(p, /House style/);
   assert.match(p, /must be in English/);
-  assert.equal(Object.keys(ACTIONS).length, 7);
+  assert.equal(Object.keys(ACTIONS).length, 8);
   assert.throws(() => buildPrompt({ action: 'nope', text: 'x', file, root }));
 });
 
