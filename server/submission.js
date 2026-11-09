@@ -1,16 +1,24 @@
 // Submission helpers: a ZIP that compiles on its own (arXiv, journals) and a
 // double-blind check that looks for author traces in sources and PDF.
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { includeClosure, docInfo } from './project.js';
+import { parseLog } from './logparse.js';
 import { readText, run, stripComments } from './util.js';
 
 const stem = (d) => d.replace(/\.tex$/, '');
 
-// Files the document actually read, from latexmk's .fls (-recorder), limited
-// to the document folder and its subfolders. Falls back to the include
-// closure when there is no .fls yet.
-export function sourceFiles(doc, outside = []) {
+const SYSTEM_TEX = /\/(texmf|texlive|TeX)[^/]*\//i;
+const GENERATED = /\.(aux|out|toc|lof|lot|nav|snm|vrb|fls|log|synctex\.gz|bcf|run\.xml|fdb_latexmk|blg)$/;
+// Staged text files whose paths may point outside the document folder.
+const REWRITABLE = /\.(tex|ltx|sty|cls|cfg|def|tikz|pgf)$/i;
+
+// Files the document needs: what it actually read, from latexmk's .fls
+// (-recorder), plus the include closure and figures for documents compiled
+// without -recorder. Includes project files outside the document folder
+// (../analysis/fig.pdf); system TeX files are left out.
+export function sourceFiles(doc) {
   const dir = path.dirname(doc);
   const files = new Set();
   const fls = readText(stem(doc) + '.fls');
@@ -22,28 +30,19 @@ export function sourceFiles(doc, outside = []) {
       const i = line.match(/^INPUT (.+)$/);
       if (!i) continue;
       const p = path.resolve(pwd, i[1]);
-      if (!p.startsWith(dir + path.sep)) {
-        // Project files outside the document folder (../analysis/fig.pdf)
-        // break a standalone ZIP; system TeX files are fine.
-        if (!/\/(texmf|texlive|TeX)[^/]*\//i.test(p) && !p.startsWith('/dev/') && !outside.includes(p)) outside.push(p);
-        continue;
-      }
-      if (/\.(aux|out|toc|lof|lot|nav|snm|vrb|fls|log|synctex\.gz|bcf|run\.xml)$/.test(p)) continue;
+      if (GENERATED.test(p) || SYSTEM_TEX.test(p) || p.startsWith('/dev/')) continue;
       files.add(p);
     }
   }
   for (const f of includeClosure(doc)) {
     files.add(f);
-    // Figures, for documents compiled without -recorder (no .fls).
     const body = stripComments(readText(f) || '');
     const re = /\\includegraphics\s*(\[[^\]]*\])?\s*\{([^}]+)\}/g;
     let m;
     while ((m = re.exec(body))) {
       const base = path.resolve(dir, m[2].trim());
       const hit = ['', '.pdf', '.png', '.jpg', '.jpeg', '.eps'].map((e) => base + e).find((p) => fs.existsSync(p) && fs.statSync(p).isFile());
-      if (!hit) continue;
-      if (hit.startsWith(dir + path.sep)) files.add(hit);
-      else if (!outside.includes(hit)) outside.push(hit);
+      if (hit) files.add(hit);
     }
   }
   files.add(doc);
@@ -55,16 +54,135 @@ export function sourceFiles(doc, outside = []) {
   return [...files].filter((f) => fs.existsSync(f) && fs.statSync(f).isFile()).sort();
 }
 
-export async function exportZip(doc) {
+const isInDir = (dir, f) => f.startsWith(dir + path.sep);
+const stripUp = (rel) => {
+  const parts = rel.split('/');
+  while (parts[0] === '..') parts.shift();
+  return parts.join('/');
+};
+
+// Where each file goes inside the ZIP. Files in the document folder keep
+// their path; files outside lose the leading ../ (../analysis/fig.pdf ->
+// analysis/fig.pdf), or go under externos/ when that would clash with a
+// file already there.
+export function zipLayout(doc, files) {
   const dir = path.dirname(doc);
-  const outside = [];
-  const files = sourceFiles(doc, outside).map((f) => path.relative(dir, f));
-  const outName = `${path.basename(stem(doc))}-submissao.zip`;
-  const out = path.join(dir, outName);
-  fs.rmSync(out, { force: true });
-  const r = await run('zip', ['-X', '-q', out, ...files], { cwd: dir, timeout: 120000 });
-  if (r.code !== 0) throw new Error('zip falhou: ' + (r.stderr || r.stdout));
-  return { zip: out, files, outside, size: fs.statSync(out).size };
+  const inside = files.filter((f) => isInDir(dir, f));
+  const outside = files.filter((f) => !isInDir(dir, f));
+  const taken = new Set(inside.map((f) => path.relative(dir, f)));
+  let prefix = '';
+  const plain = outside.map((f) => stripUp(path.relative(dir, f)));
+  const clash = plain.some((p, k) => taken.has(p) || fs.existsSync(path.join(dir, p)) || plain.indexOf(p) !== k);
+  if (clash) prefix = 'externos/';
+  const map = new Map(inside.map((f) => [f, path.relative(dir, f)]));
+  outside.forEach((f, k) => map.set(f, prefix + plain[k]));
+  // Maps an absolute path (a moved file, one of its folders, or a file
+  // given without extension) to its place in the ZIP, or null.
+  const target = (abs) => {
+    if (map.has(abs) && !isInDir(dir, abs)) return map.get(abs);
+    const related = outside.some((f) => f.startsWith(abs + path.sep) || f.startsWith(abs + '.'));
+    if (!related || isInDir(dir, abs) || abs === dir) return null;
+    return prefix + stripUp(path.relative(dir, abs)) || '.';
+  };
+  return { map, outside, prefix, target };
+}
+
+// Rewrites, in one staged file, every path that points to a moved file or
+// folder: relative ones starting with ../ and absolute ones.
+export function rewritePaths(text, dir, target) {
+  let changed = 0;
+  const re = /(^|[^\w./-])((?:\.\.\/)+[^\s{}\[\],%"]*|\/(?:[^\s{}\[\],%"/]+\/)*[^\s{}\[\],%"]+)/gm;
+  const out = text.replace(re, (all, lead, p) => {
+    const slash = p.endsWith('/');
+    const t = target(path.resolve(dir, p.replace(/\/+$/, '')));
+    if (t == null) return all;
+    changed++;
+    return lead + t + (slash && !t.endsWith('/') ? '/' : '');
+  });
+  return { text: out, changed };
+}
+
+// Builds the ZIP in a temporary folder: copies, moves the outside files in,
+// fixes their paths in the copies (the originals stay as they are).
+export async function exportZip(doc, { check = true } = {}) {
+  const dir = path.dirname(doc);
+  const files = sourceFiles(doc);
+  const { map, outside, target } = zipLayout(doc, files);
+  const stage = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-zip-'));
+  const rewritten = [];
+  try {
+    for (const [src, rel] of map) {
+      const dst = path.join(stage, rel);
+      fs.mkdirSync(path.dirname(dst), { recursive: true });
+      if (outside.length && REWRITABLE.test(src)) {
+        const { text, changed } = rewritePaths(readText(src) || '', dir, target);
+        fs.writeFileSync(dst, text);
+        if (changed) rewritten.push({ file: rel, changed });
+      } else fs.copyFileSync(src, dst);
+    }
+    const names = [...map.values()].sort();
+    const outName = `${path.basename(stem(doc))}-submissao.zip`;
+    const out = path.join(dir, outName);
+    fs.rmSync(out, { force: true });
+    const r = await run('zip', ['-X', '-q', out, ...names], { cwd: stage, timeout: 120000 });
+    if (r.code !== 0) throw new Error('zip falhou: ' + (r.stderr || r.stdout));
+    const moved = outside.map((f) => ({ from: f, to: map.get(f) }));
+    const result = { zip: out, files: names, moved, rewritten, size: fs.statSync(out).size };
+    if (check) result.check = await checkZip(out, path.relative(dir, doc), docInfo(doc).engine, stem(doc) + '.log');
+    return result;
+  } finally {
+    fs.rmSync(stage, { recursive: true, force: true });
+  }
+}
+
+// Proof that the ZIP compiles alone: extract it into an empty folder and run
+// the engine directly, as arXiv does (no BibTeX, no latexmk), until labels
+// settle. Then look for errors, ??, missing files, and any file read from
+// outside the extracted folder (an absolute path left in the sources).
+export async function checkZip(zip, mainRel, engine = 'pdflatex', origLog = null) {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-check-'));
+  try {
+    const u = await run('unzip', ['-q', zip, '-d', tmp], { timeout: 120000 });
+    if (u.code !== 0) return { ok: false, fatal: 'unzip falhou: ' + (u.stderr || u.stdout) };
+    const main = path.join(tmp, mainRel);
+    const cwd = path.dirname(main);
+    let parsed = null;
+    let runs = 0;
+    for (; runs < 4; ) {
+      runs++;
+      await run(engine, ['-interaction=nonstopmode', '-file-line-error', '-recorder', path.basename(main)], { cwd, timeout: 300000 });
+      const log = readText(stem(main) + '.log');
+      if (!log) return { ok: false, fatal: `${engine} não gerou log.`, runs };
+      parsed = parseLog(log, cwd);
+      if (!parsed.rerun || parsed.errors.length) break;
+    }
+    const leaks = [];
+    for (const line of (readText(stem(main) + '.fls') || '').split('\n')) {
+      const i = line.match(/^INPUT (.+)$/);
+      if (!i) continue;
+      const p = path.resolve(cwd, i[1]);
+      if (isInDir(tmp, p) || SYSTEM_TEX.test(p) || p.startsWith('/dev/') || leaks.includes(p)) continue;
+      leaks.push(p);
+    }
+    const rel = (f) => (f && isInDir(tmp, f) ? path.relative(tmp, f) : f);
+    const orig = origLog && readText(origLog);
+    const origPages = orig ? parseLog(orig, path.dirname(origLog)).pages : null;
+    const out = {
+      runs,
+      pages: parsed.pages,
+      origPages,
+      errors: parsed.errors.slice(0, 20).map((e) => ({ ...e, file: rel(e.file) })),
+      undefinedRefs: parsed.undefinedRefs.map((r) => r.key),
+      undefinedCites: parsed.undefinedCites.map((c) => c.key),
+      missingFiles: [...new Set(parsed.missingFiles)],
+      leaks,
+      pdf: fs.existsSync(stem(main) + '.pdf'),
+    };
+    out.ok = out.pdf && !out.errors.length && !out.undefinedRefs.length && !out.undefinedCites.length && !out.missingFiles.length && !leaks.length;
+    return out;
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 }
 
 // Double-blind check. Returns findings with file and line where possible.

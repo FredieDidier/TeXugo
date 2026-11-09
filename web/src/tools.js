@@ -11,9 +11,36 @@ function docOf(app) {
   return t.root;
 }
 
+const mono = { fontFamily: 'var(--mono)', fontSize: '11.5px' };
+
+// What the test compile of the extracted ZIP found.
+function zipCheckView(c) {
+  if (!c) return null;
+  if (c.fatal) return h('div', { class: 'qq-banner' }, icon('warn'), h('div', {}, h('b', {}, 'Não deu para testar o ZIP. '), c.fatal));
+  if (c.ok) {
+    const pages = c.pages && c.origPages && c.pages !== c.origPages ? ` Atenção: ${c.pages} páginas no teste, ${c.origPages} no PDF original.` : '';
+    return h('p', { style: { color: 'var(--ok)' } }, icon('checkCircle'), ` Testado: o ZIP compila sozinho, sem nada de fora${c.pages ? ` (${c.pages} página${c.pages > 1 ? 's' : ''})` : ''}.${pages}`);
+  }
+  const items = [
+    ...c.errors.map((e) => `${e.file ? e.file + (e.line ? ':' + e.line : '') + ': ' : ''}${e.message}`),
+    ...c.missingFiles.map((f) => `Arquivo não encontrado: ${f}`),
+    ...c.leaks.map((f) => `Lido de fora do ZIP: ${f}`),
+    ...c.undefinedRefs.map((k) => `Referência indefinida: ${k}`),
+    ...c.undefinedCites.map((k) => `Citação indefinida: ${k}`),
+  ];
+  if (!c.pdf && !items.length) items.push('Nenhum PDF gerado.');
+  return h(
+    'div',
+    { class: 'qq-banner' },
+    icon('warn'),
+    h('div', {}, h('b', {}, 'O ZIP não compila sozinho'), ' (testado numa pasta vazia, como o arXiv faz):', h('ul', {}, items.slice(0, 12).map((t) => h('li', { style: mono }, t)))),
+  );
+}
+
 export async function exportZip(app, S) {
   const doc = docOf(app);
   if (!doc) return;
+  toast('Montando o ZIP e testando se compila sozinho…', 'info', 2500);
   try {
     const r = await call('exportZip', { doc });
     modal({
@@ -22,20 +49,15 @@ export async function exportZip(app, S) {
         'div',
         {},
         h('p', {}, h('b', {}, basename(r.zip)), ` (${(r.size / 1024).toFixed(0)} KB, ${r.files.length} arquivos), na pasta do documento. Leva o .bbl no lugar do .bib, como o arXiv pede.`),
-        r.outside.length
+        zipCheckView(r.check),
+        r.moved.length
           ? h(
               'div',
-              { class: 'qq-banner' },
-              icon('warn'),
-              h(
-                'div',
-                {},
-                h('b', {}, `${r.outside.length} arquivo${r.outside.length > 1 ? 's' : ''} fora da pasta do documento ficou de fora`),
-                ' (o ZIP não compila sozinho sem eles). Copie para dentro da pasta e ajuste o caminho:',
-                h('ul', {}, r.outside.slice(0, 12).map((f) => h('li', { style: { fontFamily: 'var(--mono)', fontSize: '11.5px' } }, relPath(S.project.root, f)))),
-              ),
+              {},
+              h('p', {}, `${r.moved.length} arquivo${r.moved.length > 1 ? 's' : ''} de fora da pasta do documento entr${r.moved.length > 1 ? 'aram' : 'ou'} no ZIP, e os caminhos foram ajustados só nas cópias (seus arquivos não mudaram):`),
+              h('ul', {}, r.moved.slice(0, 12).map((m) => h('li', { style: mono }, `${relPath(S.project.root, m.from)} → ${m.to}`))),
             )
-          : h('p', { style: { color: 'var(--ok)' } }, icon('checkCircle'), ' Todos os arquivos usados estão dentro do ZIP.'),
+          : null,
         h('details', {}, h('summary', { class: 'muted' }, 'Arquivos incluídos'), h('pre', { style: { fontSize: '11.5px' } }, r.files.join('\n'))),
       ),
       footer: [h('button', { class: 'btn', onclick: () => call('reveal', { path: r.zip }) }, icon('folder'), 'Mostrar no Finder')],
