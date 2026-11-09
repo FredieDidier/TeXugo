@@ -1,0 +1,88 @@
+% !TEX program = pdflatex
+% Projeto de pesquisa para edital (CNPq, CAPES, fundações estaduais) ou
+% projeto de tese. Ajuste as seções ao que o edital pede e ao limite de páginas.
+\documentclass[12pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazilian]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{amsmath}
+\usepackage{booktabs,tabularx}
+\usepackage{enumitem}
+\usepackage[authoryear,round]{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\title{{{TITLE}}}
+\author{{{AUTHOR}}\\{{INSTITUTION}}}
+\date{{{DATE}}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Em até 250 palavras: o problema, por que importa, o que o projeto faz, com que dados e método, e o que entrega.
+
+\medskip
+\noindent\textbf{Palavras-chave:} palavra um; palavra dois; palavra três.
+\end{abstract}
+
+\section{Problema e justificativa}
+Qual é a pergunta, por que ainda não tem resposta e quem ganha com ela. A literatura entra aqui só para mostrar a lacuna \citep{doleac2015under}.
+
+\section{Objetivos}
+\paragraph{Objetivo geral.} Uma frase.
+\paragraph{Objetivos específicos.}
+\begin{enumerate}[nosep]
+  \item Primeiro objetivo, verificável.
+  \item Segundo objetivo.
+\end{enumerate}
+
+\section{Dados e metodologia}
+Fontes de dados, unidade de observação, período e estratégia de identificação.
+\begin{equation}
+  y_{it} = \beta\, D_{it} + \alpha_i + \gamma_t + \varepsilon_{it}
+\end{equation}
+
+\section{Resultados esperados e impacto}
+Produtos (artigos, bases de dados, notas técnicas) e quem os usa.
+
+\section{Cronograma}
+\begin{table}[h]
+  \centering
+  \begin{tabular}{lcccc}
+    \toprule
+    Atividade & Sem.~1 & Sem.~2 & Sem.~3 & Sem.~4 \\
+    \midrule
+    Montagem dos dados & $\bullet$ & $\bullet$ & & \\
+    Estimação & & $\bullet$ & $\bullet$ & \\
+    Redação e submissão & & & $\bullet$ & $\bullet$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Orçamento}
+\begin{table}[h]
+  \centering
+  \begin{tabularx}{0.8\textwidth}{Xr}
+    \toprule
+    Item & Valor (R\$) \\
+    \midrule
+    Bolsa de iniciação científica (12 meses) & 0,00 \\
+    Software e computação & 0,00 \\
+    Participação em congresso & 0,00 \\
+    \midrule
+    \textbf{Total} & \textbf{0,00} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Equipe}
+Quem faz o quê.
+
+\bibliographystyle{aer}
+\bibliography{references}
+
+\end{document}

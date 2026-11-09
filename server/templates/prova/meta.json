@@ -1,1 +1,1 @@
-{"name": "Prova", "description": "Prova com cabeçalho, pontos somados sozinhos, quadro de notas e gabarito com uma linha.", "icon": "syllabus", "order": 5, "main": "prova.tex", "mainEn": "exam.tex"}
+{"name": "Prova", "description": "Prova com cabeçalho, pontos somados sozinhos, quadro de notas e gabarito com uma linha.", "icon": "syllabus", "order": 9, "main": "prova.tex", "mainEn": "exam.tex"}

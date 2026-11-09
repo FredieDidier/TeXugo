@@ -95,7 +95,17 @@ export async function newProjectDialog(app, S, tpl) {
   });
   folder.addEventListener('input', () => (folder.dataset.touched = '1'));
   const grid = h('div', { class: 'tpl-grid', style: { marginBottom: '14px' } });
-  const renderGrid = () =>
+  // Templates with journal formats (Artigo: AEA, Elsevier, Econometrica...).
+  const formatSel = h('select', { style: { width: '100%' } });
+  const formatField = h('div', { class: 'field' }, h('label', {}, 'Formato do periódico'), formatSel);
+  const renderFormats = () => {
+    const list = chosen.formats || [];
+    formatField.style.display = list.length ? '' : 'none';
+    const keep = S.settings.lastFormat;
+    clear(formatSel, list.map((f) => h('option', { value: f.id, selected: f.id === keep }, f.name)));
+  };
+  const renderGrid = () => (renderFormats(), renderGrid0());
+  const renderGrid0 = () =>
     clear(
       grid,
       templates.map((tp) =>
@@ -114,9 +124,10 @@ export async function newProjectDialog(app, S, tpl) {
     S.settings.author = author.value;
     S.settings.institution = inst.value;
     S.settings.lastParent = parent.value;
+    if (chosen.formats) S.settings.lastFormat = formatSel.value;
     app.saveSettingsSoon();
     try {
-      const p = await call('createProject', { template: chosen.id, parent: parent.value, name, fields: { title: title.value, author: author.value, institution: inst.value }, lang: S.settings.lang || 'pt' });
+      const p = await call('createProject', { template: chosen.id, parent: parent.value, name, fields: { title: title.value, author: author.value, institution: inst.value, format: chosen.formats ? formatSel.value : undefined }, lang: S.settings.lang || 'pt' });
       m.close();
       document.querySelector('.welcome')?.remove();
       await app.openProject(p.root);
@@ -132,6 +143,7 @@ export async function newProjectDialog(app, S, tpl) {
       'div',
       {},
       grid,
+      formatField,
       h('div', { class: 'field' }, h('label', {}, 'Título'), title),
       h('div', { style: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' } }, h('div', { class: 'field' }, h('label', {}, 'Autor'), author), h('div', { class: 'field' }, h('label', {}, 'Instituição'), inst)),
       h(

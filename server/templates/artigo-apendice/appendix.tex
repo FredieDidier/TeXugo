@@ -1,6 +1,6 @@
 % !TEX program = pdflatex
 % Online appendix. Labels of the paper come from paper.aux.
-\documentclass[12pt]{article}
+\documentclass{{CLASS}}
 \input{preamble}
 \externaldocument{paper}
 \renewcommand{\thetable}{A\arabic{table}}
@@ -11,7 +11,9 @@
 \date{}
 
 \begin{document}
-\maketitle
+{{FRONTBEGIN}}
+{{MAKETITLE}}
+{{FRONTEND}}
 \appendix
 
 \section{Data}\label{app:data}

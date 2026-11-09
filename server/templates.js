@@ -34,12 +34,20 @@ export function createFromTemplate(id, target, fields, lang = 'pt') {
     DATE: english ? now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : `${now.getDate()} de ${months[now.getMonth()]} de ${now.getFullYear()}`,
     YEAR: String(now.getFullYear()),
   };
-  const fill = (text) => text.replace(/\{\{(\w+)\}\}/g, (m, k) => (k in values ? escapeTex(values[k]) : m));
+  // A journal format (Artigo: AEA, Elsevier, Econometrica...) sets raw LaTeX
+  // variables and/or swaps whole files.
+  const meta = JSON.parse(fs.readFileSync(path.join(DIR, id, 'meta.json'), 'utf8'));
+  const formats = meta.formats || [];
+  const format = formats.find((f) => f.id === fields.format) || formats[0] || {};
+  const vars = format.vars || {};
+  const swaps = format.files || {};
+  const fill = (text) => text.replace(/\{\{(\w+)\}\}/g, (m, k) => (k in vars ? vars[k] : k in values ? escapeTex(values[k]) : m));
   (function copy(from, to) {
     fs.mkdirSync(to, { recursive: true });
     for (const e of fs.readdirSync(from, { withFileTypes: true })) {
-      if (e.name === 'meta.json' || (from === path.join(DIR, id) && e.name === 'en')) continue;
-      const a = path.join(from, e.name);
+      if (e.name === 'meta.json' || (from === path.join(DIR, id) && (e.name === 'en' || e.name === 'formats'))) continue;
+      const rel = path.relative(src, path.join(from, e.name));
+      const a = swaps[rel] ? path.join(DIR, id, swaps[rel]) : path.join(from, e.name);
       const b = path.join(to, e.name);
       if (e.isDirectory()) copy(a, b);
       else if (/\.(tex|bib|sty|cls|md|txt|latexmkrc)$/.test(e.name) || e.name === 'latexmkrc') fs.writeFileSync(b, fill(fs.readFileSync(a, 'utf8')));

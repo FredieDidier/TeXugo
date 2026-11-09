@@ -1,0 +1,88 @@
+% !TEX program = pdflatex
+% Research proposal for a grant call or a dissertation prospectus. Match the
+% sections to what the call asks for and to its page limit.
+\documentclass[12pt,letterpaper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{setspace}\onehalfspacing
+\usepackage{amsmath}
+\usepackage{booktabs,tabularx}
+\usepackage{enumitem}
+\usepackage[authoryear,round]{natbib}
+\usepackage[hidelinks]{hyperref}
+
+\title{{{TITLE}}}
+\author{{{AUTHOR}}\\{{INSTITUTION}}}
+\date{{{DATE}}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent In at most 250 words: the problem, why it matters, what the project does, with which data and method, and what it delivers.
+
+\medskip
+\noindent\textbf{Keywords:} keyword one; keyword two; keyword three.
+\end{abstract}
+
+\section{Problem and motivation}
+The question, why it is still open, and who gains from an answer. The literature appears here only to show the gap \citep{doleac2015under}.
+
+\section{Aims}
+\paragraph{Main aim.} One sentence.
+\paragraph{Specific aims.}
+\begin{enumerate}[nosep]
+  \item First aim, checkable.
+  \item Second aim.
+\end{enumerate}
+
+\section{Data and methods}
+Data sources, unit of observation, period and identification strategy.
+\begin{equation}
+  y_{it} = \beta\, D_{it} + \alpha_i + \gamma_t + \varepsilon_{it}
+\end{equation}
+
+\section{Expected results and impact}
+Outputs (papers, datasets, policy notes) and who uses them.
+
+\section{Timeline}
+\begin{table}[h]
+  \centering
+  \begin{tabular}{lcccc}
+    \toprule
+    Activity & Q1 & Q2 & Q3 & Q4 \\
+    \midrule
+    Building the data & $\bullet$ & $\bullet$ & & \\
+    Estimation & & $\bullet$ & $\bullet$ & \\
+    Writing and submission & & & $\bullet$ & $\bullet$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Budget}
+\begin{table}[h]
+  \centering
+  \begin{tabularx}{0.8\textwidth}{Xr}
+    \toprule
+    Item & Amount (US\$) \\
+    \midrule
+    Research assistant (12 months) & 0.00 \\
+    Software and computing & 0.00 \\
+    Conference travel & 0.00 \\
+    \midrule
+    \textbf{Total} & \textbf{0.00} \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\section{Team}
+Who does what.
+
+\bibliographystyle{aer}
+\bibliography{references}
+
+\end{document}
