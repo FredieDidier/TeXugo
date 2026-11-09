@@ -24,6 +24,7 @@ import * as doctor from './doctor.js';
 import * as refs from './refs.js';
 import * as compare from './compare.js';
 import * as refcheck from './refcheck.js';
+import * as zotero from './zotero.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -490,6 +491,19 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async refApply({ bib, fixes }) {
       if (!/\.bib$/.test(bib || '')) throw httpError(400, 'Escolha um arquivo .bib.');
       return refcheck.applyFixes(mustAllow(bib), Array.isArray(fixes) ? fixes : []);
+    },
+    // Zotero and other reference managers.
+    async zoteroLibrary() {
+      return zotero.library();
+    },
+    async zoteroAdd({ bib, refs: list }) {
+      if (!/\.bib$/.test(bib || '')) throw httpError(400, 'Escolha um arquivo .bib.');
+      return zotero.addItems(mustAllow(bib), Array.isArray(list) ? list.slice(0, 500) : []);
+    },
+    async importBib({ bib, source }) {
+      if (!/\.bib$/.test(bib || '') || !/\.bib$/i.test(source || '')) throw httpError(400, 'Escolha um arquivo .bib.');
+      if (!fs.existsSync(source)) throw httpError(404, 'Arquivo não encontrado: ' + source);
+      return zotero.importBib(mustAllow(bib), path.resolve(source));
     },
     async refBibs({ doc }) {
       return refs.bibsOf(mustAllow(doc)).filter(allowed);

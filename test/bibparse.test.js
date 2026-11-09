@@ -39,6 +39,10 @@ test('a multi-line author never runs into the next entry', () => {
   assert.equal(c.author, 'Müller, Hans');
 });
 
+test('ordinals and unknown commands', () => {
+  assert.equal(texToText('Lei n\\textsuperscript{o} 6.015 e 1\\textsuperscript{a} \\url{x.org} \\textcolor{red}{Red}'), 'Lei nº 6.015 e 1ª x.org redRed');
+});
+
 test('LaTeX accents become Unicode', () => {
   assert.equal(texToText("Desch{\\^e}nes and Gon\\c{c}alves and {\\o}stergaard and Garc\\'{\\i}a"), 'Deschênes and Gonçalves and østergaard and García');
 });

@@ -6,6 +6,7 @@ import { h, clear, icon, basename, relPath, toast } from './dom.js';
 import { symbols } from './editor.js';
 import { focusedTarget } from './ai.js';
 import { addReference, cite } from './refs.js';
+import { zoteroDialog } from './zotero.js';
 
 const st = { query: '', filter: 'all', open: null, checks: new Map(), checking: false, checkedAt: null };
 
@@ -163,6 +164,7 @@ export function renderRefs(app, S, el) {
       { class: 'sidebar-head' },
       h('span', { class: 'title' }, `Referências (${all.length})`),
       h('button', { class: 'icon-btn', title: 'Adicionar referência por DOI, arXiv ou título (⌥⌘R)', onclick: () => addReference(app, S) }, icon('plus')),
+      h('button', { class: 'icon-btn', title: 'Importar do Zotero ou de um .bib exportado (Mendeley, Paperpile…)', onclick: () => zoteroDialog(app, S) }, icon('down')),
       h('button', { class: 'icon-btn', title: 'Verificar no Crossref: ano, periódico, volume, páginas e DOI', disabled: st.checking, onclick: () => runCheck(app, S, el) }, icon(st.checking ? 'refresh' : 'checkCircle')),
     ),
     h(

@@ -15,7 +15,11 @@ export function texToText(s) {
     .replace(/~/g, ' ')
     .replace(/---/g, '—')
     .replace(/--/g, '–')
+    .replace(/\\textsuperscript\s*\{\s*o\s*\}/g, 'º')
+    .replace(/\\textsuperscript\s*\{\s*a\s*\}/g, 'ª')
     .replace(/\\(?:emph|textit|textbf|textsc|mbox)\s*/g, '')
+    // Any other command: drop the name, keep what its braces held.
+    .replace(/\\[a-zA-Z]+\*?\s*/g, '')
     .replace(/[{}]/g, '')
     .replace(/\s+/g, ' ')
     .trim();

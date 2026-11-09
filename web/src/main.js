@@ -23,6 +23,7 @@ import { setBaseline } from './changes.js';
 import { addReference } from './refs.js';
 import { compareDialog } from './compare.js';
 import { shortcutsDialog } from './shortcuts.js';
+import { zoteroDialog } from './zotero.js';
 import { insertGrid } from './table.js';
 
 export const S = {
@@ -222,6 +223,7 @@ app.activeTab = activeTab;
 app.addReference = () => addReference(app, S);
 app.compare = () => compareDialog(app, S);
 app.shortcuts = shortcutsDialog;
+app.zotero = () => zoteroDialog(app, S);
 
 function tablePasted(r) {
   const what = r.rowsOnly ? `${r.rows} linhas coladas na tabela` : `Tabela ${r.rows}×${r.cols} colada em LaTeX`;

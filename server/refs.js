@@ -95,6 +95,8 @@ export function toBibtex(ref, key) {
     ['archiveprefix', ref.eprint && 'arXiv'],
     ['primaryclass', ref.primaryClass],
     ['doi', ref.doi],
+    ['url', !ref.doi && ref.url],
+    ['school', ref.school && tex(ref.school)],
   ].filter(([k, v]) => k && v);
   const w = Math.max(...fields.map(([k]) => k.length));
   return `@${ref.type}{${key},\n${fields.map(([k, v]) => `  ${k.padEnd(w)} = {${v}}`).join(',\n')}\n}\n`;
