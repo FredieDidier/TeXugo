@@ -286,7 +286,7 @@ export class BuildManager extends EventEmitter {
           // latexmk announces each tool it runs; surface them as steps.
           const m = l.match(/^Run number (\d+) of rule '([^']+)'/);
           if (m) this.emit('event', { type: 'build:step', id, doc, rule: m[2], run: Number(m[1]) });
-          else if (/^Latexmk: All targets .* are up-to-date|^Latexmk: Nothing to do/.test(l)) this.emit('event', { type: 'build:step', id, doc, rule: 'em dia', run: 0 });
+          else if (/^Latexmk: All targets .* are up-to-date|^Latexmk: Nothing to do/.test(l)) this.emit('event', { type: 'build:step', id, doc, rule: 'atualizado', run: 0 });
         }
       };
       child.stdout.on('data', onData);

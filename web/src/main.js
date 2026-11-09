@@ -134,9 +134,9 @@ function renderTopbar() {
         ? h('button', { class: 'btn', onclick: () => call('cancelBuild'), title: 'Parar a compilação' }, icon('stop'), 'Parar')
         : h(
             'button',
-            { class: 'btn', onclick: () => compileAll(), disabled: !openRoots.length, title: 'Compila todos os documentos das abas abertas (⌘⇧↵)' },
+            { class: 'btn', onclick: () => compileAll(), disabled: !openRoots.length, title: openRoots.length ? `Compila os documentos das abas abertas (⌘⇧↵):\n${openRoots.map((d) => relPath(S.project.root, d)).join('\n')}` : 'Compila os documentos das abas abertas (⌘⇧↵)' },
             icon('playAll'),
-            `Compilar tudo${openRoots.length ? ` (${openRoots.length})` : ''}`,
+            openRoots.length > 1 ? `Compilar os ${openRoots.length} documentos` : 'Compilar tudo',
           )
       : null,
     h('button', { class: 'icon-btn', title: 'Tema claro/escuro', onclick: cycleTheme }, icon(isDark() ? 'sun' : 'moon')),

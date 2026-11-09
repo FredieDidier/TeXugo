@@ -392,3 +392,24 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border);
 .set-h { margin: 14px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .set-h:first-child { margin-top: 0; }
 .font-preview { margin: 0 0 6px; padding: 10px 12px; border-radius: 6px; background: var(--bg); border: 1px solid var(--border); font-family: var(--editor-font, var(--mono)); font-size: var(--editor-size); line-height: var(--editor-lh); white-space: pre-wrap; }
+
+/* Never let content widen the window: grid and flex children may shrink
+   below their content, and the document bar drops its least important
+   parts first instead of pushing the PDF off screen. */
+#app { grid-template-columns: minmax(0, 1fr); }
+.main, .workspace, .panes, .editor-group, .pdf-group { min-width: 0; }
+.editor-group { min-width: 260px; flex: 1 1 0; }
+.topbar { min-width: 0; overflow: hidden; }
+.topbar .quick { flex: 0 1 300px; min-width: 120px; }
+.doc-bar { min-width: 0; overflow: hidden; }
+.doc-bar > * { flex-shrink: 0; }
+.doc-bar .crumbs { flex: 1 1 0; min-width: 30px; }
+.doc-bar select { max-width: 180px; text-overflow: ellipsis; }
+.pdf-tools { min-width: 0; overflow: hidden; }
+.doc-bar { container-type: inline-size; }
+.doc-bar .split-btn { margin-left: auto; }
+.doc-bar .root-pick select { max-width: 140px; }
+@container (max-width: 620px) { .doc-bar > .chip:not(.ok):not(.error):not(.undefined) { display: none; } .doc-bar .root-pick > :not(select) { display: none; } }
+@container (max-width: 520px) { .doc-bar > .toggle { display: none; } }
+@container (max-width: 430px) { .doc-bar > .chip { display: none; } .doc-bar .crumbs { display: none; } }
+@container (max-width: 330px) { .doc-bar .root-pick { display: none; } }
