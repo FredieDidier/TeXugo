@@ -3,6 +3,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText, stripComments } from './util.js';
+import { parseBib, bibSummary } from './bibparse.js';
 
 export const ARTIFACT_EXT = new Set([
   '.aux', '.log', '.fls', '.fdb_latexmk', '.bbl', '.blg', '.out', '.toc', '.lof', '.lot',
@@ -240,22 +241,7 @@ export function projectSymbols(projectRoot) {
     }
   })(projectRoot, 0);
   for (const b of bibs) {
-    const text = readText(b) || '';
-    const re = /@(\w+)\s*\{\s*([^,\s]+)\s*,/g;
-    let m;
-    while ((m = re.exec(text))) {
-      if (/^(comment|string|preamble)$/i.test(m[1])) continue;
-      const after = text.slice(m.index, m.index + 1500);
-      const title = (after.match(/title\s*=\s*[{"](.+?)[}"]\s*,?\s*\n/i) || [])[1];
-      const author = (after.match(/author\s*=\s*[{"](.+?)[}"]\s*,?\s*\n/i) || [])[1];
-      const year = (after.match(/year\s*=\s*[{"]?(\d{4})/i) || [])[1];
-      const venue = (after.match(/(?:journal|booktitle|institution|school)\s*=\s*[{"](.+?)[}"]\s*,?\s*\n/i) || [])[1];
-      const doi = (after.match(/\bdoi\s*=\s*[{"]\s*(?:https?:\/\/(?:dx\.)?doi\.org\/)?([^}"\s]+)/i) || [])[1];
-      const url = (after.match(/\burl\s*=\s*[{"]\s*([^}"\s]+)/i) || [])[1];
-      const eprint = (after.match(/\beprint\s*=\s*[{"]\s*([^}"\s]+)/i) || [])[1];
-      const line = text.slice(0, m.index).split('\n').length;
-      bibKeys.push({ key: m[2], type: m[1].toLowerCase(), title, author, year, venue, doi, url, eprint, file: b, line });
-    }
+    for (const e of parseBib(readText(b) || '')) bibKeys.push(bibSummary(e, b));
   }
   return { labels, bibKeys };
 }
