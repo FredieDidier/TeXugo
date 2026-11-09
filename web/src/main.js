@@ -1195,6 +1195,7 @@ function renderActivity() {
     ['files', 'files', 'Arquivos (⌘⇧E)'],
     ['outline', 'outline', 'Estrutura do documento'],
     ['search', 'search', 'Buscar no projeto (⌘⇧F)'],
+    ['refs', 'book', 'Referências: o .bib do projeto, citar, verificar no Crossref'],
     ['git', 'git', 'Git e GitHub'],
     ['claude', 'claude', 'Claude: converse com o seu Claude Code sobre o projeto'],
   ];
@@ -1333,8 +1334,11 @@ const refreshSymbolsSoon = debounce(async () => {
     const s = await call('symbols', { root: S.project.root });
     symbols.labels = s.labels;
     symbols.bibKeys = s.bibKeys;
+    if (S.sidebarView === 'refs') app.sidebar.render();
   } catch {}
 }, 700);
+app.refreshSymbolsSoon = refreshSymbolsSoon;
+app.tabByPath = tabByPath;
 
 async function refreshGit() {
   if (!S.project) return;

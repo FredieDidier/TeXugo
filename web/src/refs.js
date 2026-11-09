@@ -11,7 +11,7 @@ const authorsLine = (r) => {
 };
 
 // Inside \cite...{a,b|} add the key to the list; otherwise insert a citation.
-function cite(view, key, natbib) {
+export function cite(view, key, natbib) {
   const pos = view.state.selection.main.head;
   const before = view.state.doc.sliceString(Math.max(0, pos - 300), pos);
   const m = before.match(/\\\w*cite\w*\*?(?:\[[^\]]*\])*\{([^}]*)$/);

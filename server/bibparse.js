@@ -130,3 +130,42 @@ export function bibSummary(e, file) {
     line: e.line,
   };
 }
+
+// Sets (or adds) one field of one entry, leaving the rest of the file as the
+// user wrote it. Returns the new text, or null when the key is not there.
+export function setField(text, key, field, value) {
+  const head = new RegExp(`@\\s*\\w+\\s*[{(]\\s*${key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*,`, 'g');
+  const m = head.exec(text);
+  if (!m) return null;
+  // End of the entry: the brace that closes the one after @type.
+  let depth = 0;
+  let end = -1;
+  for (let j = text.indexOf('{', m.index); j < text.length; j++) {
+    if (text[j] === '\\') {
+      j++;
+      continue;
+    }
+    if (text[j] === '{') depth++;
+    else if (text[j] === '}' && --depth === 0) {
+      end = j;
+      break;
+    }
+  }
+  if (end < 0) return null;
+  const body = text.slice(m.index, end);
+  const f = new RegExp(`([,\\s])(${field})(\\s*=\\s*)`, 'i').exec(body);
+  if (f) {
+    const start = m.index + f.index + f[0].length;
+    const [, after] = readValue(text, start);
+    return text.slice(0, start) + `{${value}}` + text.slice(after);
+  }
+  // Add a new line before the closing brace, indented like the last field.
+  const indent = (body.match(/\n([ \t]+)\w+\s*=/) || [, '  '])[1];
+  // Align '=' with the other fields when the entry is aligned.
+  const widths = [...body.matchAll(/\n[ \t]+([\w:.+-]+[ \t]*)=/g)].map((x) => x[1].length);
+  const aligned = widths.length > 1 && widths.every((w) => w === widths[0]);
+  const name = aligned && widths[0] > field.length ? field.padEnd(widths[0]) : field + ' ';
+  let before = text.slice(0, end).replace(/\s*$/, '');
+  if (!before.endsWith(',')) before += ',';
+  return `${before}\n${indent}${name}= {${value}}\n${text.slice(end)}`;
+}

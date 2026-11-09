@@ -1,6 +1,7 @@
 // Sidebar views: files, outline, project search, git.
 import { call } from './api.js';
 import { h, clear, icon, fileIcon, fileKind, basename, relPath, debounce, toast, menu, prompt, confirmBox, modal } from './dom.js';
+import { renderRefs } from './references.js';
 
 export class Sidebar {
   constructor(app, S) {
@@ -48,6 +49,7 @@ export class Sidebar {
     else if (v === 'outline') this.renderOutline();
     else if (v === 'search') this.renderSearch();
     else if (v === 'git') this.renderGit();
+    else if (v === 'refs') renderRefs(this.app, this.S, this.el);
     else if (v === 'claude') {
       if (this.app.agent && this.app.agent.el.parentNode !== this.el) clear(this.el, this.app.agent.el);
       this.app.agent && this.app.agent.focus();

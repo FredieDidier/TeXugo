@@ -22,6 +22,7 @@ import { Agents, claudeFlags } from './agent.js';
 import * as doctor from './doctor.js';
 import * as refs from './refs.js';
 import * as compare from './compare.js';
+import * as refcheck from './refcheck.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -469,6 +470,14 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     // References: look up a DOI / arXiv id / title and append it to a .bib.
     async refLookup({ q }) {
       return refs.lookup(q);
+    },
+    async refCheck({ bib, keys }) {
+      if (!/\.bib$/.test(bib || '')) throw httpError(400, 'Escolha um arquivo .bib.');
+      return refcheck.checkBib(mustAllow(bib), { keys });
+    },
+    async refApply({ bib, fixes }) {
+      if (!/\.bib$/.test(bib || '')) throw httpError(400, 'Escolha um arquivo .bib.');
+      return refcheck.applyFixes(mustAllow(bib), Array.isArray(fixes) ? fixes : []);
     },
     async refBibs({ doc }) {
       return refs.bibsOf(mustAllow(doc)).filter(allowed);

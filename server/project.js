@@ -216,12 +216,16 @@ export function listDocuments(projectRoot) {
 export function projectSymbols(projectRoot) {
   const labels = [];
   const bibKeys = [];
+  const cites = {}; // key -> number of \cite uses in the project
   for (const f of listTexFiles(projectRoot)) {
     const lines = (readText(f) || '').split('\n');
     lines.forEach((line, i) => {
+      const clean = line.replace(/(^|[^\\])%.*$/, '$1');
       const re = /\\label\s*\{([^}]+)\}/g;
       let m;
-      while ((m = re.exec(line.replace(/(^|[^\\])%.*$/, '$1')))) labels.push({ key: m[1], file: f, line: i + 1 });
+      while ((m = re.exec(clean))) labels.push({ key: m[1], file: f, line: i + 1 });
+      const rc = /\\[a-zA-Z]*cite[a-zA-Z]*\*?(?:\[[^\]]*\])*\{([^}]*)\}/g;
+      while ((m = rc.exec(clean))) for (const k of m[1].split(',')) if (k.trim()) cites[k.trim()] = (cites[k.trim()] || 0) + 1;
     });
   }
   const bibs = [];
@@ -243,6 +247,7 @@ export function projectSymbols(projectRoot) {
   for (const b of bibs) {
     for (const e of parseBib(readText(b) || '')) bibKeys.push(bibSummary(e, b));
   }
+  for (const b of bibKeys) b.uses = cites[b.key] || 0;
   return { labels, bibKeys };
 }
 

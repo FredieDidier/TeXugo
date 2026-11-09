@@ -24,6 +24,7 @@ function commands(app, S) {
     { t: 'Mostrar arquivos', k: '⌘⇧E', i: 'files', run: () => app.sidebar.show('files') },
     { t: 'Estrutura do documento', i: 'outline', run: () => app.sidebar.show('outline') },
     { t: 'Buscar no projeto', k: '⌘⇧F', i: 'search', run: () => app.sidebar.show('search') },
+    { t: 'Referências do projeto (.bib, verificar no Crossref)', kw: 'bib bibtex citar crossref doi papers bibliografia verificar checar', i: 'book', run: () => app.sidebar.show('refs') },
     { t: 'Git: commit, pull, push', i: 'git', run: () => app.sidebar.show('git') },
     { t: 'Problemas da compilação', i: 'alert', run: () => app.bottom.show('problems') },
     { t: 'Log da compilação', i: 'panel', run: () => app.bottom.show('log') },

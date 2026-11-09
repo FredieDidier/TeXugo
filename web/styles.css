@@ -564,3 +564,29 @@ body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-d
 .agent-modlog { font: 11px/1.4 var(--mono); color: var(--faint); margin: 2px 0; }
 .agent-picks { gap: 6px; font-size: 11.5px; margin-bottom: 6px; }
 .agent-picks .agent-pick { max-width: none; flex: 1; min-width: 0; }
+
+/* Aba Referências */
+.refs-chips { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }
+.refs-chip { font: 11px var(--ui); padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; }
+.refs-chip.on { background: var(--accent-soft); color: var(--text); border-color: var(--accent); }
+.refs-banner { margin: 0 10px 8px; padding: 6px 8px; border-radius: 6px; background: var(--sunken); font-size: 12px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.refs-item { padding: 6px 10px 6px 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
+.refs-item:hover { background: var(--sunken); }
+.refs-item.open { background: var(--sunken); cursor: default; }
+.refs-top { display: flex; gap: 6px; align-items: flex-start; }
+.refs-title { flex: 1; font-size: 12.5px; font-weight: 600; line-height: 1.35; }
+.refs-meta { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.refs-uses { font-size: 10.5px; color: var(--faint); margin-top: 2px; }
+.refs-uses.none { color: var(--warn, var(--accent)); }
+.refs-st svg { width: 14px; height: 14px; }
+.refs-st.ok { color: var(--ok); } .refs-st.warn { color: var(--accent); } .refs-st.err { color: var(--err); } .refs-st.muted { color: var(--faint); }
+.refs-details { margin-top: 6px; display: flex; flex-direction: column; gap: 6px; }
+.refs-key { font: 11px var(--mono); color: var(--faint); }
+.refs-note { font-size: 11.5px; } .refs-note.err { color: var(--err); } .refs-note.muted { color: var(--muted); }
+.refs-diff { display: grid; grid-template-columns: 56px 1fr auto; gap: 6px; align-items: center; font-size: 11.5px; }
+.refs-diff .f { color: var(--muted); } .refs-diff .v { word-break: break-all; }
+.refs-actions { display: flex; flex-wrap: wrap; gap: 4px; }
+.refs-actions a.btn { text-decoration: none; }
+.refs-foot { padding: 6px 12px; font-size: 11px; border-top: 1px solid var(--border); }
+.sidebar-head .icon-btn[disabled] svg { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
