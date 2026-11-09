@@ -347,10 +347,10 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       }
       return api.openProject({ root: target });
     },
-    async createProject({ template, parent, name, fields }) {
+    async createProject({ template, parent, name, fields, lang }) {
       const target = path.join(path.resolve(parent), name);
       if (fs.existsSync(target) && fs.readdirSync(target).length) throw httpError(409, 'A pasta já existe e não está vazia.');
-      createFromTemplate(template, target, fields || {});
+      createFromTemplate(template, target, fields || {}, lang);
       return api.openProject({ root: target });
     },
     async texDoctor() {

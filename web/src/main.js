@@ -1154,7 +1154,7 @@ async function openProject(root) {
     });
     if (ui.active && tabByPath(ui.active)) activate(ui.active);
   } else if (p.docs.length) {
-    const main = p.docs.find((d) => /^(main|paper|slides|ementa)\.tex$/.test(d.name)) || p.docs[0];
+    const main = p.docs.find((d) => /^(main|paper|slides|ementa|syllabus|prova|exam|lista|problems|carta|letter|relatorio|report)\.tex$/.test(d.name)) || p.docs[0];
     await openFile(main.path);
   }
   for (const pdf of ui.pdfs || []) openPdf(pdf, { activate: false });

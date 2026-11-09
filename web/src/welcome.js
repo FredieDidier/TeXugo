@@ -121,7 +121,7 @@ export async function newProjectDialog(app, S, tpl) {
     S.settings.lastParent = parent.value;
     app.saveSettingsSoon();
     try {
-      const p = await call('createProject', { template: chosen.id, parent: parent.value, name, fields: { title: title.value || 'Título', author: author.value, institution: inst.value } });
+      const p = await call('createProject', { template: chosen.id, parent: parent.value, name, fields: { title: title.value, author: author.value, institution: inst.value }, lang: S.settings.lang || 'pt' });
       m.close();
       document.querySelector('.welcome')?.remove();
       await app.openProject(p.root);

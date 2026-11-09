@@ -1,0 +1,96 @@
+% !TEX program = pdflatex
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{booktabs,longtable,tabularx,array}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{tocaInk}{HTML}{1E2127}
+\definecolor{tocaHoney}{HTML}{C47E12}
+\definecolor{tocaGrey}{HTML}{6B7280}
+\titleformat{\section}{\large\bfseries\color{tocaInk}}{}{0pt}{}[{\color{tocaHoney}\titlerule[1pt]}]
+\titlespacing*{\section}{0pt}{1.4em}{0.6em}
+\setlist{itemsep=2pt,topsep=4pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
+
+\newcommand{\disciplina}{{{TITLE}}}
+\newcommand{\docente}{{{AUTHOR}}}
+
+\begin{document}
+
+{\color{tocaGrey}\small {{INSTITUTION}}}\par
+{\LARGE\bfseries\color{tocaInk}\disciplina}\par
+\vspace{0.3em}
+{\color{tocaHoney}\rule{2.5cm}{3pt}}
+
+\vspace{0.8em}
+\begin{tabularx}{\linewidth}{@{}>{\bfseries}l X >{\bfseries}l X@{}}
+  Instructor & \docente & Term & Spring {{YEAR}} \\
+  Hours & 60 h (4 credits) & Schedule & Tue and Thu, 10am--12pm \\
+  Contact & email@institution.edu & Office hours & Wed, 2--4pm (room 000) \\
+  Prerequisites & None & Code & ECON 000 \\
+\end{tabularx}
+
+\section{Course description}
+Official course description: the main topics in one paragraph.
+
+\section{Learning goals}
+By the end of the course, students will be able to:
+\begin{enumerate}
+  \item explain ...;
+  \item apply ...;
+  \item critically assess ....
+\end{enumerate}
+
+\section{Topics}
+\begin{enumerate}[label=\textbf{Unit \arabic*.},leftmargin=*,align=left]
+  \item \textbf{Introduction.} Topics of the first unit.
+  \item \textbf{Methods.} Topics of the second unit.
+  \item \textbf{Applications.} Topics of the third unit.
+\end{enumerate}
+
+\section{Schedule}
+\begin{longtable}{@{}c l p{0.5\linewidth} l@{}}
+  \toprule
+  Class & Date & Topic & Reading \\
+  \midrule
+  \endhead
+  1 & 03/03 & Course introduction & -- \\
+  2 & 05/03 & Unit 1: introduction & Ch. 1 \\
+  3 & 10/03 & Unit 1: continued & Ch. 2 \\
+  4 & 12/03 & Unit 2: methods & Ch. 3 \\
+  5 & 17/03 & \textbf{Exam 1} & -- \\
+  \bottomrule
+\end{longtable}
+
+\section{Grading}
+\begin{tabular}{@{}lr@{}}
+  Exam 1 & 30\% \\
+  Exam 2 & 30\% \\
+  Final paper & 30\% \\
+  Participation & 10\% \\
+  \midrule
+  \textbf{Total} & \textbf{100\%} \\
+\end{tabular}
+
+Passing requires a final grade of 70\% or more and at least 75\% attendance.
+
+\section{Readings}
+\textbf{Required}
+\begin{itemize}
+  \item Lastname, First. \textit{Book Title}. City: Publisher, year.
+\end{itemize}
+\textbf{Recommended}
+\begin{itemize}
+  \item Lastname, First. ``Article Title.'' \textit{Journal} 1 (1): 1--20, year.
+\end{itemize}
+
+\end{document}

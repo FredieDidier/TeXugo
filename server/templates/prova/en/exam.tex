@@ -1,0 +1,80 @@
+% !TEX program = pdflatex
+% For the ANSWER KEY, remove the % on the line below and compile.
+% \printanswers
+\documentclass[11pt,a4paper,addpoints]{exam}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{xcolor}
+\definecolor{tocaHoney}{HTML}{C47E12}
+
+\renewcommand{\solutiontitle}{\noindent\textbf{Answer:}\enspace}
+\shadedsolutions
+\definecolor{SolutionColor}{HTML}{FBF1DF}
+\qformat{\textbf{Question \thequestion} \hfill (\totalpoints\ \points)}
+
+\pagestyle{headandfoot}
+\firstpageheader{{{INSTITUTION}}}{}{{{DATE}}}
+\runningheader{{{TITLE}}}{}{Page \thepage\ of \numpages}
+\firstpagefooter{}{}{}
+\runningfooter{}{}{}
+
+\begin{document}
+
+\begin{center}
+  {\Large\bfseries {{TITLE}}}\par\medskip
+  Instructor: {{AUTHOR}}\par
+  {\color{tocaHoney}\rule{3cm}{2pt}}
+\end{center}
+
+\vspace{0.5em}
+\noindent\makebox[0.65\textwidth]{Name:\enspace\hrulefill}\hfill\makebox[0.3\textwidth]{ID:\enspace\hrulefill}
+
+\vspace{1em}
+\begin{center}
+  \gradetable[h][questions]
+\end{center}
+
+\noindent\textbf{Instructions.} The exam is worth \numpoints\ points and has \numquestions\ questions. Justify your answers. Time: 2 hours.
+
+\begin{questions}
+
+\question[2] Define opportunity cost and give an example.
+\begin{solution}
+  The value of the best alternative given up when making a choice.
+\end{solution}
+\vspace{4cm}
+
+\question Consider the demand $Q = 100 - 2P$.
+\begin{parts}
+  \part[1] Compute the quantity demanded when $P = 10$.
+  \begin{solution}$Q = 80$.\end{solution}
+  \vspace{2.5cm}
+  \part[2] Compute the price elasticity at that point.
+  \begin{solution}$\varepsilon = -2 \cdot 10/80 = -0.25$.\end{solution}
+  \vspace{2.5cm}
+\end{parts}
+
+\question[1] Choose the correct option: a Giffen good is one whose demand
+\begin{checkboxes}
+  \choice falls when income rises.
+  \CorrectChoice rises when its own price rises.
+  \choice does not depend on the price.
+  \choice rises when the price of a substitute falls.
+\end{checkboxes}
+
+\question[2] True or false? Explain: ``Every inferior good is a Giffen good.''
+\begin{solution}
+  False. Every Giffen good is inferior, but not the other way around.
+\end{solution}
+\vspace{4cm}
+
+\bonusquestion[1] Bonus: explain the diamond-water paradox.
+\vspace{3cm}
+
+\end{questions}
+
+\end{document}

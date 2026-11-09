@@ -1,1 +1,1 @@
-{ "name": "Slides (Beamer)", "description": "Apresentação 16:9 com o tema Toca: limpo, legível, com seções, colunas e destaque.", "icon": "slides", "order": 3, "main": "slides.tex" }
+{"name": "Slides (Beamer)", "description": "Apresentação 16:9 com o tema Toca: limpo, legível, com seções, colunas e destaque.", "icon": "slides", "order": 3, "main": "slides.tex", "mainEn": "slides.tex"}

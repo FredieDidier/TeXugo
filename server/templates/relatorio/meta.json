@@ -1,1 +1,1 @@
-{ "name": "Relatório", "description": "Relatório técnico ou para empresa: capa, sumário executivo, índice, gráfico, tabela e recomendações.", "icon": "paper", "order": 9, "main": "relatorio.tex" }
+{"name": "Relatório", "description": "Relatório técnico ou para empresa: capa, sumário executivo, índice, gráfico, tabela e recomendações.", "icon": "paper", "order": 9, "main": "relatorio.tex", "mainEn": "report.tex"}

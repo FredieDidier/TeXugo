@@ -1,0 +1,76 @@
+% !TEX program = pdflatex
+\documentclass[aspectratio=169,11pt]{beamer}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{lmodern}
+\usepackage{booktabs}
+\usetheme{toca}
+
+\title{{{TITLE}}}
+\subtitle{Presentation subtitle}
+\author{{{AUTHOR}}}
+\institute{{{INSTITUTION}}}
+\date{{{DATE}}}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+\section{Motivation}
+
+\begin{frame}{The question}
+  \begin{itemize}
+    \item One sentence on what the work answers.
+    \item Why the answer matters for policy.
+    \item \alert{What is new} relative to the literature.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Two columns}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \begin{block}{Design}
+        Triple difference: treated $\times$ window $\times$ post.
+      \end{block}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \begin{exampleblock}{Result}
+        $\hat\beta = 0.12$ (0.04)
+      \end{exampleblock}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\section{Results}
+
+\begin{frame}{Table}
+  \centering
+  \begin{tabular}{lcc}
+    \toprule
+    & (1) & (2) \\
+    \midrule
+    Treated $\times$ post & 0.12 & 0.10 \\
+                         & (0.04) & (0.05) \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}{Step by step}
+  \begin{enumerate}
+    \item<1-> First this appears.
+    \item<2-> Then this.
+    \item<3-> \alert{And finally the conclusion.}
+  \end{enumerate}
+\end{frame}
+
+\begin{frame}[plain]
+  \centering\vfill
+  {\Huge\bfseries Thank you!}\par\vspace{0.5cm}
+  {\color{tocaGrey}email@institution.edu}
+  \vfill
+\end{frame}
+
+\end{document}

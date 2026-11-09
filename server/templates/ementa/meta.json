@@ -1,1 +1,1 @@
-{ "name": "Ementa de disciplina", "description": "Ementa com objetivos, conteúdo, cronograma de aulas, avaliação e bibliografia.", "icon": "syllabus", "order": 4, "main": "ementa.tex" }
+{"name": "Ementa de disciplina", "description": "Ementa com objetivos, conteúdo, cronograma de aulas, avaliação e bibliografia.", "icon": "syllabus", "order": 4, "main": "ementa.tex", "mainEn": "syllabus.tex"}
