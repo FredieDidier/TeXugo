@@ -13,6 +13,18 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { toolEnv, which } from './util.js';
 
+// Model and effort picked in the panel (or Preferências). The CLI gets the
+// full id; an older Claude Code that does not know it says so, and we explain.
+export const MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-fable-5-1', 'claude-haiku-5-5'];
+export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+export const DEFAULT_MODEL = 'claude-opus-5-5';
+export const DEFAULT_EFFORT = 'medium';
+export function claudeFlags({ model, effort } = {}) {
+  const m = /^[\w.-]+(\[1m\])?$/.test(model || '') ? model : DEFAULT_MODEL;
+  const e = EFFORTS.includes(effort) ? effort : DEFAULT_EFFORT;
+  return ['--model', m, '--effort', e];
+}
+
 const FREE = ['Read', 'Grep', 'Glob', 'LS', 'TodoWrite', 'Skill'];
 
 const SYSTEM = `You are running inside TeXugo, a LaTeX editor for academic writing, as the assistant in its side panel.
@@ -32,12 +44,13 @@ export class Agents {
     this.broadcast({ type: 'agent:event', root, ...ev });
   }
 
-  async start(root) {
+  async start(root, opts = {}) {
     const claude = await which('claude');
     if (!claude) throw new Error('Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash');
-    const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--permission-prompt-tool', 'stdio', '--allowedTools', FREE.join(','), '--append-system-prompt', SYSTEM];
+    const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--permission-prompt-tool', 'stdio', '--allowedTools', FREE.join(','), '--append-system-prompt', SYSTEM, ...claudeFlags(opts)];
+    if (opts.resume) args.push('--resume', opts.resume);
     const child = spawn(claude, args, { cwd: root, env: toolEnv() });
-    const s = { root, child, buf: '', pending: new Map(), running: false, sessionId: null, err: '' };
+    const s = { root, child, buf: '', pending: new Map(), running: false, sessionId: opts.resume || null, err: '', flags: claudeFlags(opts).join(' ') };
     this.sessions.set(root, s);
     child.stdout.on('data', (d) => {
       s.buf += d;
@@ -71,9 +84,14 @@ export class Agents {
     if (m.type === 'system' && m.subtype === 'init') {
       s.sessionId = m.session_id;
       this.emit(root, { kind: 'init', model: m.model, sessionId: m.session_id });
+    } else if (m.type === 'system' && (m.subtype === 'ui_log' || m.subtype === 'ui_status')) {
+      // Lines from the user's Claude Code mods, such as jev-model-router
+      // reporting the model and effort it picked for this message.
+      this.emit(root, { kind: m.subtype === 'ui_log' ? 'mod-log' : 'mod-status', plugin: String(m.plugin || ''), text: m.text == null ? null : String(m.text).slice(0, 2000) });
     } else if (m.type === 'assistant') {
       for (const c of m.message.content || []) {
-        if (c.type === 'text' && c.text.trim()) this.emit(root, { kind: 'text', text: c.text });
+        if (c.type === 'text' && /does not support this model|requires? (?:Claude Code )?(?:version )?[\d.]+ or newer/i.test(c.text)) this.emit(root, { kind: 'error', text: `${c.text.trim()}\n\nSeu Claude Code está desatualizado para este modelo. Rode "claude update" no terminal (ou escolha outro modelo).` });
+        else if (c.type === 'text' && c.text.trim()) this.emit(root, { kind: 'text', text: c.text });
         else if (c.type === 'tool_use') this.emit(root, { kind: 'tool', id: c.id, name: c.name, input: brief(c.input) });
       }
     } else if (m.type === 'user') {
@@ -132,9 +150,17 @@ export class Agents {
     if (s.child.stdin.writable) s.child.stdin.write(JSON.stringify(obj) + '\n');
   }
 
-  async send(root, text) {
+  async send(root, text, opts = {}) {
     let s = this.sessions.get(root);
-    if (!s) s = await this.start(root);
+    // A different model or effort needs a new process; --resume keeps the
+    // conversation.
+    if (s && !s.running && s.flags !== claudeFlags(opts).join(' ')) {
+      const resume = s.sessionId;
+      this.reset(root);
+      s = null;
+      opts = { ...opts, resume };
+    }
+    if (!s) s = await this.start(root, opts);
     s.running = true;
     this.emit(root, { kind: 'status', running: true });
     this.write(s, { type: 'user', message: { role: 'user', content: text }, parent_tool_use_id: null, session_id: s.sessionId || '' });

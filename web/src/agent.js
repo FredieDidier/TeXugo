@@ -8,6 +8,28 @@ import { call, on } from './api.js';
 import { h, clear, icon, toast, basename, relPath } from './dom.js';
 import { fileDiff } from './ide.js';
 
+// What the panel and the Claude terminal run with. Default: Opus 5.5, medium.
+export const CLAUDE_MODELS = [
+  { id: 'claude-opus-5-5', label: 'Opus 5.5' },
+  { id: 'claude-sonnet-5-5', label: 'Sonnet 5.5' },
+  { id: 'claude-fable-5-1', label: 'Fable 5.1' },
+  { id: 'claude-haiku-5-5', label: 'Haiku 5.5' },
+];
+export const CLAUDE_EFFORTS = [
+  { id: 'low', label: 'Baixo' },
+  { id: 'medium', label: 'Médio' },
+  { id: 'high', label: 'Alto' },
+  { id: 'xhigh', label: 'Extra' },
+  { id: 'max', label: 'Máximo' },
+];
+export function claudeChoice(S) {
+  const st = S.settings || {};
+  return {
+    model: CLAUDE_MODELS.some((m) => m.id === st.claudeModel) ? st.claudeModel : 'claude-opus-5-5',
+    effort: CLAUDE_EFFORTS.some((e) => e.id === st.claudeEffort) ? st.claudeEffort : 'medium',
+  };
+}
+
 const TOOL_PT = {
   Read: 'Leu', Grep: 'Buscou', Glob: 'Listou arquivos', LS: 'Listou', Edit: 'Editou', MultiEdit: 'Editou', Write: 'Escreveu', Bash: 'Rodou',
   WebSearch: 'Pesquisou na web', WebFetch: 'Abriu', Skill: 'Carregou a skill', TodoWrite: 'Atualizou a lista de tarefas', Task: 'Delegou uma tarefa',
@@ -43,6 +65,25 @@ export class AgentPanel {
     this.attachEl = h('div', { class: 'agent-attachments' });
     this.withSel = h('input', { type: 'checkbox', checked: true });
     this.withErr = h('input', { type: 'checkbox', checked: true });
+    const choice = claudeChoice(S);
+    const pick = (key, list, value, title) =>
+      h(
+        'select',
+        {
+          class: 'agent-pick',
+          title,
+          onchange: (e) => {
+            S.settings[key] = e.target.value;
+            app.saveSettingsSoon && app.saveSettingsSoon();
+          },
+        },
+        list.map((x) => h('option', { value: x.id, selected: x.id === value }, x.label)),
+      );
+    this.modelSel = pick('claudeModel', CLAUDE_MODELS, choice.model, 'Modelo do Claude (vale para o painel e o terminal do Claude)');
+    this.effortSel = pick('claudeEffort', CLAUDE_EFFORTS, choice.effort, 'Esforço de raciocínio: quanto o Claude pensa antes de responder');
+    // One pinned line per Claude Code mod (jev-model-router says here what it chose).
+    this.modStatus = new Map();
+    this.modEl = h('div', { class: 'agent-mods' });
     this.sendBtn = h('button', { class: 'btn primary sm', onclick: () => (this.running ? this.stop() : this.send()) });
     this.el = h(
       'div',
@@ -57,10 +98,12 @@ export class AgentPanel {
         h('button', { class: 'btn sm ghost', title: 'Abrir o Claude Code completo no terminal', onclick: () => app.terminals.open('claude') }, icon('command'), 'Terminal'),
       ),
       this.log,
+      this.modEl,
       h(
         'div',
         { class: 'agent-compose' },
         this.attachEl,
+        h('div', { class: 'agent-row agent-picks' }, this.modelSel, this.effortSel),
         this.input,
         h(
           'div',
@@ -164,7 +207,7 @@ export class AgentPanel {
     this.setRunning(true);
     this.thinking = this.add(h('div', { class: 'agent-thinking muted' }, h('span', { class: 'status-dot building' }), ' Claude está trabalhando…'));
     try {
-      await call('agentSend', { root: this.S.project.root, text: ctx + text });
+      await call('agentSend', { root: this.S.project.root, text: ctx + text, ...claudeChoice(this.S) });
     } catch (err) {
       this.setRunning(false);
       this.thinking?.remove();
@@ -189,6 +232,12 @@ export class AgentPanel {
       return;
     }
     if (e.kind === 'init') return;
+    if (e.kind === 'mod-status') {
+      if (e.text) this.modStatus.set(e.plugin, e.text);
+      else this.modStatus.delete(e.plugin);
+      clear(this.modEl, [...this.modStatus].map(([p, t]) => h('div', { class: 'agent-mod', title: p }, t)));
+      return;
+    }
     // Keep the "working" line at the bottom while Claude goes on.
     const keep = this.thinking && this.thinking.isConnected;
     if (keep) this.thinking.remove();
@@ -200,6 +249,7 @@ export class AgentPanel {
       const el = this.tools.get(e.id);
       if (el && e.error) el.classList.add('failed'), el.setAttribute('title', e.text);
     } else if (e.kind === 'permission') this.add(this.permissionCard(e));
+    else if (e.kind === 'mod-log') this.add(h('div', { class: 'agent-modlog', title: e.plugin }, e.text.replace(/^\[[\w@.-]+\]\s*/, '')));
     else if (e.kind === 'permission-closed') this.log.querySelector(`[data-req="${e.reqId}"]`)?.classList.add('closed');
     else if (e.kind === 'result') {
       if (!e.ok && e.text && !this.log.lastElementChild?.textContent.includes(e.text)) this.add(h('div', { class: 'agent-error' }, e.text));

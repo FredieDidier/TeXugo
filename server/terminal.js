@@ -33,14 +33,17 @@ export class Terminals {
     this.seq = 0;
   }
 
-  create({ cwd, kind = 'shell', cols = 100, rows = 30, env = {}, title }) {
+  create({ cwd, kind = 'shell', cols = 100, rows = 30, env = {}, title, claudeArgs = [] }) {
     const P = loadPty();
     const shell = process.env.SHELL || '/bin/zsh';
     const dir = cwd && fs.existsSync(cwd) ? cwd : os.homedir();
     // A login shell reads the user's profile, so PATH, nvm and the like match
     // Terminal.app. Claude Code runs inside that shell: quitting it leaves a
     // usable prompt instead of a dead tab.
-    const args = kind === 'claude' ? ['-l', '-i', '-c', 'claude; exec "$SHELL" -l'] : ['-l'];
+    // claudeArgs are fixed flags (--model id --effort level), checked by
+    // claudeFlags, so quoting each one is enough.
+    const flags = claudeArgs.map((a) => `'${String(a).replace(/'/g, '')}'`).join(' ');
+    const args = kind === 'claude' ? ['-l', '-i', '-c', `claude ${flags}; exec "$SHELL" -l`] : ['-l'];
     const p = P.spawn(shell, args, {
       name: 'xterm-256color',
       cols,

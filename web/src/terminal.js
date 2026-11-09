@@ -7,6 +7,7 @@ import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
 import { call, on, wsSend } from './api.js';
 import { h, clear, icon, toast } from './dom.js';
+import { claudeChoice } from './agent.js';
 
 const css = (name, fallback) => getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback;
 
@@ -138,7 +139,7 @@ export class TerminalPanel {
     const dims = this.guessSize();
     let info;
     try {
-      info = await call('termCreate', { root: this.S.project.root, kind, ...dims });
+      info = await call('termCreate', { root: this.S.project.root, kind, ...dims, ...(kind === 'claude' ? claudeChoice(this.S) : {}) });
     } catch (err) {
       return toast(err.message, 'error', 8000);
     }

@@ -18,7 +18,7 @@ import { exportZip, blindCheck } from './submission.js';
 import * as ai from './ai.js';
 import { Terminals } from './terminal.js';
 import { IdeBridge } from './ide.js';
-import { Agents } from './agent.js';
+import { Agents, claudeFlags } from './agent.js';
 import * as doctor from './doctor.js';
 import * as refs from './refs.js';
 
@@ -404,7 +404,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       return doctor.formatLatex(text, mustAllow(p));
     },
     // Terminals and the Claude Code bridge.
-    async termCreate({ root, kind, cols, rows }) {
+    async termCreate({ root, kind, cols, rows, model, effort }) {
       mustAllow(root);
       let env = {};
       if (kind === 'claude') {
@@ -412,7 +412,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
         ide.setFolders([...openProjects]);
         env = ide.env();
       }
-      return terminals.create({ cwd: root, kind, cols, rows, env });
+      return terminals.create({ cwd: root, kind, cols, rows, env, claudeArgs: kind === 'claude' ? claudeFlags({ model, effort }) : [] });
     },
     async termList() {
       return terminals.list();
@@ -439,10 +439,10 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       return true;
     },
     // Claude chat panel.
-    async agentSend({ root, text }) {
+    async agentSend({ root, text, model, effort }) {
       mustAllow(root);
       if (!text || !text.trim()) throw httpError(400, 'Mensagem vazia.');
-      return agents.send(path.resolve(root), text);
+      return agents.send(path.resolve(root), text, { model, effort });
     },
     async agentAnswer({ root, reqId, allow, note }) {
       return agents.answer(path.resolve(mustAllow(root)), reqId, !!allow, note);
@@ -453,11 +453,11 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async agentReset({ root }) {
       return agents.reset(path.resolve(mustAllow(root)));
     },
-    async aiRewrite({ root, path: p, action, text, before, after, hints, lang }) {
+    async aiRewrite({ root, path: p, action, text, before, after, hints, lang, model, effort }) {
       mustAllow(p);
       mustAllow(root);
       if (!text || text.length > 12000) throw httpError(400, 'Selecione um trecho de até 12 mil caracteres.');
-      return ai.rewrite({ root, file: p, action, text, before, after, hints: hints || [], lang });
+      return ai.rewrite({ root, file: p, action, text, before, after, hints: hints || [], lang, model, effort });
     },
     async aiCancel() {
       return ai.cancelAi();

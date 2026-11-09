@@ -6,6 +6,7 @@ import { h, icon, toast, modal, basename } from './dom.js';
 import { detect, kindOf } from './vicios/core.js';
 import { hitInfo } from './vicios/cm.js';
 import { wordDiff } from './diff.js';
+import { claudeChoice } from './agent.js';
 
 export const AI_ACTIONS = [
   { id: 'revisar', label: 'Revisar', hint: 'Gramática, clareza e afirmações exageradas' },
@@ -63,7 +64,7 @@ export async function runAiAction(app, S, action, target = focusedTarget(app)) {
   });
   let r;
   try {
-    r = await call('aiRewrite', { root: S.project.root, path: tab.path, action, text, before, after, hints, lang });
+    r = await call('aiRewrite', { root: S.project.root, path: tab.path, action, text, before, after, hints, lang, ...claudeChoice(S) });
   } catch (err) {
     if (!cancelled) {
       wait.close();

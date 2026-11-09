@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { toolEnv, which } from './util.js';
+import { claudeFlags } from './agent.js';
 
 export const ACTIONS = {
   revisar: 'Revise the passage: fix grammar, wording, clarity and any claim the wording overstates. Keep the meaning, the structure and the length roughly the same.',
@@ -81,7 +82,7 @@ export async function rewrite(opts) {
   const prompt = buildPrompt(opts);
   const t0 = Date.now();
   const out = await new Promise((resolve) => {
-    const child = spawn(claude, ['-p', '--output-format', 'json', '--tools', 'Skill,Read', '--no-session-persistence'], { cwd: opts.root, env: toolEnv() });
+    const child = spawn(claude, ['-p', '--output-format', 'json', '--tools', 'Skill,Read', '--no-session-persistence', ...claudeFlags(opts)], { cwd: opts.root, env: toolEnv() });
     current = child;
     let stdout = '';
     let stderr = '';
