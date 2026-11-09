@@ -21,6 +21,7 @@ TeXugo é um editor LaTeX local para Mac. Os arquivos ficam no seu disco, a comp
 - **Formatar documento** (⌥⇧F) com o `latexindent` do TeX Live, numa edição só que o ⌘Z desfaz. Funciona mesmo no MacTeX, cujo `latexindent` costuma quebrar por falta do módulo Perl `File::HomeDir`: o TeXugo traz um substituto mínimo. Um `localSettings.yaml` na pasta do documento tem prioridade.
 - **Médico do TeX:** mostra o estado da instalação e, quando a compilação reclama de um `.sty` ou `.cls` que falta, descobre o pacote do TeX Live que tem o arquivo e o instala com um clique. A senha de administrador é digitada na janela do próprio macOS. Se o TeX Live for de um ano anterior (congelado), usa o arquivo final daquele ano, o único que ainda aceita instalações.
 - **Markdown** abre renderizado como no GitHub (Visualizar / Lado a lado / Código).
+- **Editor dividido** (⌘⌥\\ ou o botão de colunas na barra do documento): outro arquivo ao lado, como o artigo e o apêndice, ou dois trechos do mesmo arquivo. O que se digita de um lado aparece no outro na hora; ⌘S, ⌘↵ e ⌘J funcionam nos dois.
 - **PDF numa janela separada**, para outro monitor, com SyncTeX entre as janelas.
 - **Clonar do GitHub** direto como projeto novo.
 - **Modelos (10):** artigo, artigo + apêndice online, slides Beamer (tema "Toca"), ementa de disciplina, prova (pontos somados, quadro de notas e gabarito com uma linha), lista de exercícios (soluções só na versão do professor), parecer, carta, relatório (capa, sumário executivo, gráfico e tabela) e documento em branco. Com a interface em inglês, os modelos saem em inglês.
@@ -70,6 +71,7 @@ npm test
 | ⌘K | Paleta de comandos |
 | ⌘⇧F | Busca no projeto |
 | ⌘\\ | Mostra ou esconde a barra lateral |
+| ⌘⌥\\ | Divide o editor ou fecha a divisão |
 | ⌃Tab | Próxima aba |
 
 ## Como funciona

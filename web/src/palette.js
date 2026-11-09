@@ -26,6 +26,7 @@ function commands(app, S) {
     { t: 'Git: commit, pull, push', i: 'git', run: () => app.sidebar.show('git') },
     { t: 'Problemas da compilação', i: 'alert', run: () => app.bottom.show('problems') },
     { t: 'Log da compilação', i: 'panel', run: () => app.bottom.show('log') },
+    { t: 'Dividir o editor / fechar a divisão', k: '⌘⌥\\', i: 'columns', run: () => app.split.toggle() },
     { t: 'Mostrar/esconder painel inferior', i: 'panel', run: () => app.toggleBottom() },
     { t: 'Preferências', k: '⌘,', i: 'gear', run: () => openSettings(app, S) },
     { t: 'Parar compilação', i: 'stop', run: () => call('cancelBuild') },

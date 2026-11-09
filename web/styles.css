@@ -163,7 +163,13 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border);
 .toggle input:checked + .sw { background: var(--accent); }
 .toggle input:checked + .sw::after { transform: translateX(11px); }
 
-.editor-host { flex: 1; min-height: 0; position: relative; }
+.editor-row { flex: 1; min-height: 0; display: flex; }
+.editor-host { flex: 1; min-height: 0; min-width: 0; position: relative; }
+.split-pane { flex: 1 1 0; min-width: 160px; display: flex; flex-direction: column; border-left: 1px solid var(--border); }
+.split-head { display: flex; align-items: center; gap: 6px; padding: 3px 6px; border-bottom: 1px solid var(--border); background: var(--panel); }
+.split-select { font: inherit; font-size: 12px; max-width: 70%; background: transparent; color: var(--text); border: 1px solid var(--border); border-radius: 5px; padding: 1px 4px; }
+.split-host { flex: 1; min-height: 0; position: relative; }
+.split-host .cm-editor { height: 100%; }
 .editor-host .cm-editor { height: 100%; }
 .empty-editor { position: absolute; inset: 0; display: grid; place-items: center; color: var(--faint); text-align: center; }
 .empty-editor img { width: 84px; opacity: 0.9; margin-bottom: 10px; }

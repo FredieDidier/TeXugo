@@ -13,6 +13,7 @@ import { renderMarkdown } from './markdown.js';
 import { bootPdfWindow } from './pdfwin.js';
 import { TOKEN } from './api.js';
 import { setLang, tr } from './i18n.js';
+import { SplitEditor } from './split.js';
 
 export const S = {
   hello: null,
@@ -44,7 +45,8 @@ function buildLayout() {
   app.tabsEl = h('div', { class: 'tabs' });
   app.docBar = h('div', { class: 'doc-bar' });
   app.editorHost = h('div', { class: 'editor-host' });
-  app.editorGroup = h('div', { class: 'editor-group' }, app.tabsEl, app.docBar, app.editorHost);
+  app.editorRow = h('div', { class: 'editor-row' }, app.editorHost);
+  app.editorGroup = h('div', { class: 'editor-group' }, app.tabsEl, app.docBar, app.editorRow);
   app.pdfTabsEl = h('div', { class: 'tabs' });
   app.pdfTools = h('div', { class: 'pdf-tools' });
   app.pdfStack = h('div', { class: 'pdf-stack' });
@@ -90,6 +92,8 @@ function buildLayout() {
   app.binaryView = h('div', { class: 'binary-view hidden' });
   app.mdView = h('div', { class: 'md-view hidden' }, (app.mdBody = h('article', { class: 'markdown-body' })));
   app.editorHost.append(app.emptyEditor, app.binaryView, app.mdView);
+  app.split = new SplitEditor(app, S);
+  app.editorRow.append(app.split.gutter, app.split.el);
   app.sidebar = new Sidebar(app, S);
   app.bottom = new BottomPanel(app, S);
   applyLayoutSizes();
@@ -197,7 +201,8 @@ const editorHooks = (t) => ({
   compileAll: () => compileAll(),
   syncForward: () => syncForward(),
   format: () => tools.formatDoc(app, S),
-  onChange: () => {
+  onChange: (u) => {
+    if (u && u.transactions) app.split.fromMain(t, u);
     if (!t.dirty) {
       t.dirty = true;
       renderTabs();
@@ -234,7 +239,8 @@ export async function openFile(path, { line, col, focus = true, preview = false 
       return;
     }
     t = { path, name: basename(path), kind, dirty: false, mtime: data.mtime, binary: data.binary || kind === 'image', roots: [], root: null, autoCompile: S.settings.autoCompile };
-    if (!t.binary) t.state = createState(data.text, path, editorHooks(t), S.settings);
+    t.hooks = editorHooks(t);
+    if (!t.binary) t.state = createState(data.text, path, t.hooks, S.settings);
     const idx = S.tabs.findIndex((x) => x.path === S.active);
     S.tabs.splice(idx >= 0 ? idx + 1 : S.tabs.length, 0, t);
     refreshRoots(t);
@@ -327,6 +333,7 @@ async function closeTab(path) {
     if (choice === 'cancel') return;
     if (choice === 'save' && !(await saveTab(t, { quiet: true }))) return;
   }
+  app.split.tabClosed(t);
   const idx = S.tabs.indexOf(t);
   S.tabs.splice(idx, 1);
   if (S.active === path) {
@@ -385,6 +392,7 @@ function renderTabs() {
       return el;
     }),
   );
+  app.split.render();
   const act = app.tabsEl.querySelector('.tab.active');
   if (act) act.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
@@ -522,6 +530,14 @@ function renderDocBar() {
   } else if (/\.tex$/.test(t.path)) {
     items.push(h('span', { class: 'chip', title: 'Nenhum documento do projeto faz \\input deste arquivo. Adicione "% !TEX root = ../paper.tex" no topo para dizer qual é.' }, icon('info'), 'fora de qualquer documento'));
   }
+  if (!t.binary)
+    items.push(
+      h(
+        'button',
+        { class: 'icon-btn' + (app.split.open ? ' on' : ''), title: app.split.open ? 'Fechar a divisão (⌘⌥\\)' : 'Dividir o editor: outro arquivo ou outro trecho ao lado (⌘⌥\\)', onclick: () => app.split.toggle() },
+        icon('columns'),
+      ),
+    );
   clear(app.docBar, items);
 }
 app.renderDocBar = renderDocBar;
@@ -966,14 +982,17 @@ function toggleInvert() {
 
 const followSoon = debounce(() => syncForward({ quiet: true }), 500);
 
-async function syncForward({ quiet = false } = {}) {
-  const t = activeTab();
+// From the split pane, `tab`, `line` and `col` say where its cursor is.
+async function syncForward({ quiet = false, tab, line, col } = {}) {
+  const t = tab || activeTab();
+  const ln = line || S.cursor.line;
+  const cl = col || S.cursor.col;
   if (!t || !t.root) return;
   {
     const pdf = t.root.replace(/\.tex$/, '.pdf');
     if (S.detached.has(pdf)) {
       try {
-        const r = await call('syncForward', { file: t.path, line: S.cursor.line, column: S.cursor.col, pdf });
+        const r = await call('syncForward', { file: t.path, line: ln, column: cl, pdf });
         if (r.ok) call('broadcast', { msg: { type: 'sync-show', pdf, hit: r.hits[0] } });
       } catch {}
       return;
@@ -986,7 +1005,7 @@ async function syncForward({ quiet = false } = {}) {
     if (!p || p.missing || S.building) return;
     if (S.activePdf !== pdf) activatePdf(pdf);
     try {
-      const r = await call('syncForward', { file: t.path, line: S.cursor.line, column: S.cursor.col, pdf });
+      const r = await call('syncForward', { file: t.path, line: ln, column: cl, pdf });
       if (r.ok) p.viewer.showSync(r.hits[0]);
     } catch {}
     return;
@@ -1001,7 +1020,7 @@ async function syncForward({ quiet = false } = {}) {
   activatePdf(pdf);
   if (!(await ensureSynctex(pdf))) return;
   try {
-    const r = await call('syncForward', { file: t.path, line: S.cursor.line, column: S.cursor.col, pdf });
+    const r = await call('syncForward', { file: t.path, line: ln, column: cl, pdf });
     if (r.ok) p.viewer.showSync(r.hits[0]);
     else toast('Sem posição no PDF para esta linha. Compile de novo.', 'warn');
   } catch (err) {
@@ -1135,6 +1154,7 @@ async function openProject(root) {
     return;
   }
   // Close the previous project's tabs.
+  app.split.close();
   for (const pt of S.pdfTabs) pt.viewer.destroy();
   S.tabs = [];
   S.pdfTabs = [];
@@ -1156,6 +1176,7 @@ async function openProject(root) {
       if (tab) tab.autoCompile = !!t.autoCompile;
     });
     if (ui.active && tabByPath(ui.active)) activate(ui.active);
+    if (ui.split && tabByPath(ui.split)) app.split.show(tabByPath(ui.split));
   } else if (p.docs.length) {
     const main = p.docs.find((d) => /^(main|paper|slides|ementa|syllabus|prova|exam|lista|problems|carta|letter|relatorio|report)\.tex$/.test(d.name)) || p.docs[0];
     await openFile(main.path);
@@ -1203,6 +1224,7 @@ const saveUiSoon = debounce(() => {
       pdfs: S.pdfTabs.map((p) => p.path),
       activePdf: S.activePdf,
       roots: S.savedRoots,
+      split: app.split.tab ? app.split.tab.path : null,
     },
   }).catch(() => {});
 }, 500);
@@ -1262,6 +1284,7 @@ async function checkDisk() {
       const tr = est.update({ changes: { from: 0, to: est.doc.length, insert: data.text }, selection: { anchor: head } });
       if (t.path === S.active) app.view.dispatch(tr);
       else t.state = tr.state;
+      app.split.resync(t);
       t.dirty = false;
       t.mtime = data.mtime;
       renderTabs();
@@ -1329,6 +1352,9 @@ function wireKeys() {
     } else if (k === 'j' && !e.defaultPrevented && document.activeElement && !document.activeElement.closest('.cm-editor')) {
       e.preventDefault();
       syncForward();
+    } else if (e.code === 'Backslash' && e.altKey) {
+      e.preventDefault();
+      app.split.toggle();
     } else if (k === '\\') {
       e.preventDefault();
       S.settings.sidebarHidden = !S.settings.sidebarHidden;

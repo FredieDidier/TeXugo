@@ -107,6 +107,9 @@ const EN = {
   ' No PDF elas aparecem como ??. Abaixo, cada uma diz o motivo provável.': ' In the PDF they show as ??. Below, each one gives the likely reason.',
   ' Zero ?? e nenhum erro na última compilação.': ' Zero ?? and no errors in the last build.', 'Compile um documento para ver os problemas aqui.': 'Compile a document to see its problems here.',
   'Sem log ainda.': 'No log yet.', 'Recompilado porque ': 'Recompiled because ', 'pedido': 'requested', 'dependência': 'dependency',
+  // split editor
+  'Arquivo mostrado no lado direito': 'File shown on the right', 'Fechar a divisão (⌘⌥\\)': 'Close the split (⌘⌥\\)',
+  'Dividir o editor: outro arquivo ou outro trecho ao lado (⌘⌥\\)': 'Split the editor: another file or another part side by side (⌘⌥\\)', 'Dividir o editor / fechar a divisão': 'Split the editor / close the split',
   // tools
   'Abra um arquivo que pertença a um documento.': 'Open a file that belongs to a document.', ' ZIP para submissão': ' Submission ZIP',
   'Montando o ZIP e testando se compila sozinho…': 'Building the ZIP and testing that it compiles on its own…', 'Não deu para testar o ZIP. ': 'Could not test the ZIP. ',
