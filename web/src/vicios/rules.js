@@ -5,6 +5,16 @@
 // each pattern also occurs in human prose, and the counts matter more than
 // any single hit. Update VERSION and the sources when the list is revised.
 //
+// TWIN DOCUMENT: the same catalogue, written for a writer rather than for a
+// regex, is section 1 of the applied-micro-paper-writing skill
+// (~/.claude/skills/applied-micro-paper-writing/SKILL.md, "The catalogue of
+// tells is dated"). They are kept as two documents on purpose. When one
+// changes, change the other in the same session and move both dates.
+//
+// Left out on purpose: "does not by itself establish" (a 2026 chatbot hedge
+// per Wikipedia, but also correct econometrics after a test); the skill says
+// how to judge it in context.
+//
 // Fields: id, cat (category), lang ('en' | 'pt' | '*'), re (applied to the
 // prose layer named by `layer`, default 'words'), pt/en (what and why),
 // fix/fixEn (what to do instead), src (keys of SOURCES), era (when the

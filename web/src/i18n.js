@@ -218,7 +218,7 @@ const PATTERNS = [
   [/^Frases: mediana de (\d+) palavras, 90% até (\d+), (\d+) acima de 55$/, 'Sentences: median $1 words, 90% up to $2, $3 over 55'],
   [/^Tríades \(listas de três\): (\d+) \((.+) por mil palavras\)$/, (m, n, r) => `Triads (lists of three): ${n} (${r.replace(',', '.')} per thousand words)`],
   [/^linha (\d+)$/, 'line $1'],
-  [/^Fontes da lista \(versão (.+)\)$/, 'Sources of the list (version $1)'],
+  [/^Fontes de todas as regras \(versão (.+)\)$/, 'Sources of all the rules (version $1)'],
   [/^Lido de fora do ZIP: (.+)$/, 'Read from outside the ZIP: $1'],
   [/^ Anonimato de (.+)$/, ' Anonymity of $1'],
   [/^(\d+) possíve(?:l|is) pistas? de autoria\.$/, (m, n) => `${n} possible authorship clue${n > 1 ? 's' : ''}.`],

@@ -106,7 +106,7 @@ const tooltip = hoverTooltip((view, pos) => {
         if (info.sources.length) {
           const s = document.createElement('div');
           s.className = 'vicio-tip-src';
-          s.textContent = (getLang() === 'en' ? 'Source: ' : 'Fonte: ') + info.sources.map((x) => x.t.split(',')[0].split(':')[0]).join('; ');
+          s.textContent = (getLang() === 'en' ? (info.sources.length > 1 ? 'Sources of this rule: ' : 'Source of this rule: ') : info.sources.length > 1 ? 'Fontes desta regra: ' : 'Fonte desta regra: ') + info.sources.map((x) => x.t.split(',')[0].split(':')[0]).join('; ');
           box.append(s);
         }
         dom.append(box);

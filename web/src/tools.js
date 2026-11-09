@@ -357,7 +357,7 @@ export async function viciosReport(app, S) {
       h(
         'details',
         { class: 'vicios-cat' },
-        h('summary', { class: 'muted' }, `Fontes da lista (versão ${VERSION})`),
+        h('summary', { class: 'muted' }, `Fontes de todas as regras (versão ${VERSION})`),
         h(
           'ul',
           {},
