@@ -1,0 +1,63 @@
+% !TEX program = pdflatex
+% Response to referees for a revise-and-resubmit. Each \referee comment is
+% quoted in a box; the reply follows; \change says what moved in the paper.
+\documentclass[11pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=1in]{geometry}
+\usepackage{xcolor}
+\usepackage[most]{tcolorbox}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\usepackage[authoryear,round]{natbib}
+
+\definecolor{refbg}{RGB}{243,240,232}
+\newcounter{comment}[section]
+\renewcommand{\thecomment}{\thesection.\arabic{comment}}
+% \referee{text of the comment}
+\newcommand{\referee}[1]{\refstepcounter{comment}\par\medskip
+  \begin{tcolorbox}[colback=refbg,colframe=refbg,arc=2pt,left=6pt,right=6pt,top=4pt,bottom=4pt]
+  \textbf{Comment \thecomment.} \itshape #1
+  \end{tcolorbox}}
+% \change{what changed, with page or section}
+\newcommand{\change}[1]{\par\smallskip\noindent\textcolor{teal!70!black}{\textbf{Change in the paper:} #1}\par}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
+
+\begin{document}
+\begin{center}
+{\Large\bfseries Response to the Editor and Referees}\\[4pt]
+``{{TITLE}}''\\[2pt]
+\today
+\end{center}
+
+Dear Editor,
+
+Thank you for the opportunity to revise the paper. We are grateful to you and to the referees for their careful reading. Below we reply to each comment in turn; the comments are in shaded boxes and our replies follow. Page numbers refer to the revised manuscript.
+
+The main changes are:
+\begin{enumerate}[nosep]
+  \item First main change.
+  \item Second main change.
+\end{enumerate}
+
+\section{Editor}
+\referee{Text of the editor's first point.}
+Our reply.
+\change{New Section 5.2 (p.~18) and Table A3.}
+
+\section{Referee 1}
+\referee{Text of the referee's first point.}
+Our reply.
+\change{Footnote 12 (p.~9).}
+
+\referee{Second point.}
+Our reply.
+
+\section{Referee 2}
+\referee{Text of the referee's first point.}
+Our reply.
+
+\end{document}

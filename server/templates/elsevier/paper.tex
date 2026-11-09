@@ -1,0 +1,63 @@
+% !TEX program = pdflatex
+% Elsevier journals (Journal of Development Economics, Journal of Public
+% Economics, Journal of Urban Economics, JEEM...): elsarticle in review mode
+% (double spacing, line numbers off), author-year references.
+\documentclass[review,12pt,authoryear]{elsarticle}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs,threeparttable}
+\usepackage[hidelinks]{hyperref}
+\pdfstringdefDisableCommands{\def\corref#1{}\def\cnotenum{}}
+\usepackage[capitalise,noabbrev]{cleveref}
+
+\journal{Journal of Development Economics}
+
+\begin{document}
+\begin{frontmatter}
+
+\title{{{TITLE}}}
+
+\author[inst1]{{{AUTHOR}}\corref{cor1}}
+\ead{author@example.org}
+\cortext[cor1]{Corresponding author.}
+\affiliation[inst1]{organization={{{INSTITUTION}}}}
+
+\begin{abstract}
+One paragraph of at most 250 words: the question, the source of variation, the main estimate with its magnitude, and why it matters.
+\end{abstract}
+
+\begin{highlights}
+\item First finding, at most 85 characters
+\item Second finding
+\item Third finding
+\end{highlights}
+
+\begin{keyword}
+keyword one \sep keyword two
+\JEL I18 \sep R41
+\end{keyword}
+
+\end{frontmatter}
+
+\section{Introduction}\label{sec:intro}
+Ambient light changes behavior \citep{doleac2015under}, and the clock decides how much light falls on the evening commute \citep{smith2016spring}.
+
+\section{Data}\label{sec:data}
+
+\section{Empirical strategy}\label{sec:strategy}
+\begin{equation}\label{eq:main}
+  y_{it} = \beta \, D_{it} + \alpha_i + \gamma_t + \varepsilon_{it}
+\end{equation}
+
+\section{Results}\label{sec:results}
+
+\section{Conclusion}\label{sec:conclusion}
+
+\bibliographystyle{elsarticle-harv}
+\bibliography{references}
+
+\end{document}

@@ -1,0 +1,74 @@
+% !TEX program = pdflatex
+% Submission format for AEA journals (AER, AEJs, AER: Insights): 12pt,
+% double spacing, 1-inch margins, author-year citations with aer.bst.
+% The AEA's own class (AEA.cls) is needed only after acceptance.
+\documentclass[12pt]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=1in]{geometry}
+\usepackage{setspace}\doublespacing
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs,threeparttable}
+\usepackage[authoryear]{natbib}
+\usepackage[hidelinks]{hyperref}
+\usepackage[capitalise,noabbrev]{cleveref}
+
+\title{{{TITLE}}\thanks{{{AUTHOR}}: {{INSTITUTION}}. Acknowledgments and funding go here. The author declares no relevant or material financial interests that relate to the research described in this paper.}}
+\author{{{AUTHOR}}}
+\date{\today}
+
+\begin{document}
+\begin{singlespace}
+\maketitle
+\begin{abstract}
+\noindent At most 100 words: the question, the source of variation, the main estimate with its magnitude, and why it matters.
+\end{abstract}
+\noindent\textit{JEL codes:} I18, R41. \\
+\noindent\textit{Keywords:} keyword one, keyword two.
+\end{singlespace}
+\clearpage
+
+\section{Introduction}\label{sec:intro}
+Ambient light changes behavior \citep{doleac2015under}, and the clock decides how much light falls on the evening commute \citep{smith2016spring}.
+
+\section{Data}\label{sec:data}
+
+\section{Empirical strategy}\label{sec:strategy}
+\begin{equation}\label{eq:main}
+  y_{it} = \beta \, D_{it} + \alpha_i + \gamma_t + \varepsilon_{it}
+\end{equation}
+
+\section{Results}\label{sec:results}
+\Cref{tab:main} reports the estimates of \cref{eq:main}.
+
+\begin{table}[t]
+  \centering
+  \begin{threeparttable}
+  \caption{Main estimates}\label{tab:main}
+  \begin{tabular}{lcc}
+    \toprule
+    & (1) & (2) \\
+    \midrule
+    Treated $\times$ post & 0.12 & 0.10 \\
+                          & (0.04) & (0.05) \\
+    \midrule
+    Observations & 12{,}345 & 12{,}345 \\
+    \bottomrule
+  \end{tabular}
+  \begin{tablenotes}\footnotesize
+    \item \textit{Notes:} Standard errors clustered by unit in parentheses.
+  \end{tablenotes}
+  \end{threeparttable}
+\end{table}
+
+\section{Conclusion}\label{sec:conclusion}
+
+\clearpage
+\singlespacing
+\bibliographystyle{aer}
+\bibliography{references}
+
+\end{document}
