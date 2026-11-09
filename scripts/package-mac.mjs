@@ -42,3 +42,12 @@ set('CFBundleExecutable', 'TeXugo');
 execFileSync('xattr', ['-cr', appDir]);
 execFileSync('codesign', ['--force', '--deep', '--sign', '-', appDir], { stdio: 'inherit' });
 console.log('Pronto:', appDir);
+
+// Keep the copy in /Applications current, so opening TeXugo from the Dock
+// or Launchpad never runs an old build.
+const installed = '/Applications/TeXugo.app';
+if (fs.existsSync(installed)) {
+  fs.rmSync(installed, { recursive: true, force: true });
+  execFileSync('ditto', [appDir, installed]);
+  console.log('Atualizado:', installed);
+}
