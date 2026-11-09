@@ -1,6 +1,7 @@
 // Welcome screen and the "new project from template" dialog.
 import { call, native } from './api.js';
 import { h, clear, icon, wordmark, toast, modal } from './dom.js';
+import { shortcutsDialog } from './shortcuts.js';
 
 export async function showWelcome(app, S) {
   document.querySelector('.welcome')?.remove();
@@ -47,6 +48,7 @@ export async function showWelcome(app, S) {
             { style: { display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' } },
             h('button', { class: 'btn primary', onclick: () => app.pickAndOpen() }, icon('folderOpen'), 'Abrir pasta…'),
             h('button', { class: 'btn', onclick: () => cloneDialog(app, S) }, icon('github'), 'Clonar do GitHub…'),
+            h('button', { class: 'btn ghost', title: 'Todos os atalhos e onde achar cada comando (⌘?)', onclick: () => shortcutsDialog() }, icon('command'), 'Atalhos (⌘?)'),
           ),
           recents.length ? h('h3', { style: { marginTop: '8px' } }, 'Recentes') : null,
           recents.map((r) =>

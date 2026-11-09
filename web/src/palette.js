@@ -30,6 +30,7 @@ function commands(app, S) {
     { t: 'Log da compilação', i: 'panel', run: () => app.bottom.show('log') },
     { t: 'Dividir o editor / fechar a divisão', k: '⌘⌥\\', i: 'columns', run: () => app.split.toggle() },
     { t: 'Mostrar/esconder painel inferior', i: 'panel', run: () => app.toggleBottom() },
+    { t: 'Atalhos e comandos (manual)', kw: 'ajuda help teclado atalho keyboard shortcuts manual onde fica', k: '⌘?', i: 'command', run: () => app.shortcuts() },
     { t: 'Preferências', k: '⌘,', i: 'gear', run: () => openSettings(app, S) },
     { t: 'Parar compilação', i: 'stop', run: () => call('cancelBuild') },
     { t: 'Comparar com outra versão (PDF com mudanças)', kw: 'latexdiff diff coautor overleaf zip commit revisão mudanças marcadas', i: 'columns', run: () => app.compare() },

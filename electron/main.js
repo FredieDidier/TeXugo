@@ -73,6 +73,7 @@ function send(action) {
 
 // Native menu labels in English; the page translates itself (web/src/i18n.js).
 const MENU_EN = {
+  'Ajuda': 'Help', 'Atalhos e comandos': 'Shortcuts and commands',
   'Sobre o TeXugo': 'About TeXugo', 'Preferências…': 'Settings…', 'Ocultar TeXugo': 'Hide TeXugo', 'Encerrar TeXugo': 'Quit TeXugo', 'Arquivo': 'File',
   'Novo projeto…': 'New project…', 'Abrir pasta…': 'Open folder…', 'Nova janela': 'New window', 'Tela inicial': 'Start screen', 'Abrir arquivo rápido': 'Quick open',
   'Salvar': 'Save', 'Salvar todos': 'Save all', 'Fechar aba': 'Close tab', 'Fechar janela': 'Close window', 'Editar': 'Edit', 'Compilar': 'Build',
@@ -115,6 +116,7 @@ function buildMenu() {
       submenu: [item('Paleta de comandos', 'Cmd+K', 'palette'), item('Painel inferior', 'Cmd+Shift+Y', 'toggleBottom'), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools', label: L('Ferramentas de desenvolvedor') }],
     },
     { role: 'windowMenu', label: L('Janela') },
+    { role: 'help', label: L('Ajuda'), submenu: [item('Atalhos e comandos', 'Cmd+Shift+/', 'shortcuts')] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }

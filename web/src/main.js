@@ -22,6 +22,7 @@ import { AgentPanel } from './agent.js';
 import { setBaseline } from './changes.js';
 import { addReference } from './refs.js';
 import { compareDialog } from './compare.js';
+import { shortcutsDialog } from './shortcuts.js';
 import { insertGrid } from './table.js';
 
 export const S = {
@@ -220,6 +221,7 @@ function activeTab() {
 app.activeTab = activeTab;
 app.addReference = () => addReference(app, S);
 app.compare = () => compareDialog(app, S);
+app.shortcuts = shortcutsDialog;
 
 function tablePasted(r) {
   const what = r.rowsOnly ? `${r.rows} linhas coladas na tabela` : `Tabela ${r.rows}×${r.cols} colada em LaTeX`;
@@ -1452,6 +1454,10 @@ function wireKeys() {
     const mod = e.metaKey || e.ctrlKey;
     if (!mod) return;
     const k = e.key.toLowerCase();
+    if (e.key === '?' || (e.code === 'Slash' && e.shiftKey)) {
+      e.preventDefault();
+      return shortcutsDialog();
+    }
     if (k === 'k' || (k === 'p' && e.shiftKey)) {
       e.preventDefault();
       if (S.project) openPalette(app, S, 'commands');
@@ -1524,6 +1530,7 @@ function wireKeys() {
         syncForward: () => syncForward(),
         toggleBottom: () => toggleBottom(),
         welcome: () => showWelcome(app, S),
+        shortcuts: () => shortcutsDialog(),
       };
       map[action] && map[action]();
     });
