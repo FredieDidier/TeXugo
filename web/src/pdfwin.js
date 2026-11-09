@@ -25,9 +25,11 @@ export async function bootPdfWindow(pdf, root) {
   const v = new PdfTab(pdf, {
     onInverse: async (a) => {
       try {
-        const r = await call('syncInverse', a);
+        let r = await call('syncInverse', { pdf: a.pdf, page: a.page, x: a.x, y: a.y }).catch(() => ({ ok: false }));
+        // No .synctex.gz (PDF built outside TeXugo): go by the text.
+        if (!r.ok && a.viewer) r = await call('syncTextInverse', { doc: a.pdf.replace(/\.pdf$/, '.tex'), text: await a.viewer.textAt(a.page, a.x, a.y) });
         if (r.ok) send({ type: 'open-request', root, file: r.file, line: r.line });
-        else toast('Não achei a linha. Se o PDF foi compilado fora do TeXugo, compile uma vez pela janela principal (isso cria o SyncTeX).', 'warn', 7000);
+        else toast('Não achei esse trecho no código (pode ser tabela, figura ou texto gerado).', 'warn', 7000);
       } catch (err) {
         toast(err.message, 'error');
       }

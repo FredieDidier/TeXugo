@@ -11,6 +11,7 @@ import { WebSocketServer } from 'ws';
 import * as project from './project.js';
 import * as gitOps from './git.js';
 import * as sync from './synctex.js';
+import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
 import { isInside, dataDir, run, which, toolEnv } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
@@ -352,6 +353,10 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       mustAllow(root);
       return gitOps.commit(root, message, { all });
     },
+    async gitSync({ root, message }) {
+      mustAllow(root);
+      return gitOps.sync(root, message);
+    },
     async gitPull({ root }) {
       mustAllow(root);
       return gitOps.pull(root);
@@ -470,6 +475,13 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     // References: look up a DOI / arXiv id / title and append it to a .bib.
     async refLookup({ q }) {
       return refs.lookup(q);
+    },
+    // SyncTeX by text, for PDFs built without a .synctex.gz.
+    async syncTextInverse({ doc, text }) {
+      return textsync.findInSource(mustAllow(doc), String(text || '').slice(0, 2000));
+    },
+    async syncLineWords({ file, line }) {
+      return textsync.sourceLineWords(mustAllow(file), Number(line) || 1);
     },
     async refCheck({ bib, keys }) {
       if (!/\.bib$/.test(bib || '')) throw httpError(400, 'Escolha um arquivo .bib.');

@@ -368,14 +368,13 @@ export class Sidebar {
         ),
       );
     }
-    const msg = h('textarea', { rows: 3, placeholder: 'Mensagem do commit (o que mudou e por quê)', style: { width: '100%', resize: 'vertical' } });
+    const msg = h('textarea', { rows: 2, placeholder: 'Mensagem do commit (opcional: vazia, o TeXugo escreve uma a partir dos arquivos)', style: { width: '100%', resize: 'vertical' } });
     const staged = g.files.filter((f) => f.staged);
     const unstaged = g.files.filter((f) => !f.staged || f.work !== ' ');
     const doCommit = async () => {
       const m = msg.value.trim();
-      if (!m) return toast('Escreva a mensagem do commit.', 'warn');
       const r = await call('gitCommit', { root: S.project.root, message: m, all: staged.length === 0 });
-      if (r.code === 0) toast('Commit feito.', 'ok');
+      if (r.code === 0) toast(`Commit feito: “${r.message}”.`, 'ok');
       else toast(r.stderr || r.stdout, 'error', 8000);
       this.app.refreshGit();
     };
@@ -416,6 +415,24 @@ export class Sidebar {
             'div',
             { style: { display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' } },
             h('button', { class: 'btn primary sm', onclick: doCommit, disabled: !g.files.length }, icon('commit'), staged.length ? `Commit (${staged.length})` : 'Commit de tudo'),
+            g.remote
+              ? h(
+                  'button',
+                  {
+                    class: 'btn sm',
+                    title: 'Commit do que mudou (se houver), pull e push, num clique',
+                    onclick: async () => {
+                      toast('Sincronizando…', 'info', 1500);
+                      const r = await call('gitSync', { root: S.project.root, message: msg.value.trim() });
+                      if (r.code === 0) toast(r.steps.length ? `Sincronizado: ${r.steps.join(', ')}.` : 'Já estava tudo sincronizado.', 'ok', 6000);
+                      else toast((r.stderr || '').trim().split('\n').slice(-3).join(' '), 'error', 10000);
+                      this.app.refreshGit();
+                    },
+                  },
+                  icon('refresh'),
+                  'Sincronizar',
+                )
+              : null,
             h('button', { class: 'btn sm', onclick: () => remoteAction('gitPull', 'Pull') }, icon('down'), 'Pull', g.behind ? ` ${g.behind}` : ''),
             h('button', { class: 'btn sm', onclick: () => remoteAction('gitPush', 'Push') }, icon('up'), 'Push', g.ahead ? ` ${g.ahead}` : ''),
             g.webUrl ? h('button', { class: 'btn sm ghost', title: 'Abrir no GitHub', onclick: () => call('openUrl', { url: g.webUrl }) }, icon('github')) : null,

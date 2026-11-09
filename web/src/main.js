@@ -1083,7 +1083,19 @@ async function syncForward({ quiet = false, tab, line, col } = {}) {
     await new Promise((r) => setTimeout(r, 700));
   }
   activatePdf(pdf);
-  if (!(await ensureSynctex(pdf))) return;
+  if (!(await hasSynctex(pdf))) {
+    try {
+      const words = await call('syncLineWords', { file: t.path, line: ln });
+      const hit = p && p.viewer && words.length >= 3 ? await p.viewer.findWords(words) : null;
+      if (hit) {
+        noteTextSync(pdf);
+        p.viewer.showSync(hit);
+      } else toast('Não achei esta linha no PDF (sem SyncTeX, a busca é pelo texto; tente uma linha com frase).', 'warn');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+    return;
+  }
   try {
     const r = await call('syncForward', { file: t.path, line: ln, column: cl, pdf });
     if (r.ok) p.viewer.showSync(r.hits[0]);
@@ -1095,32 +1107,41 @@ async function syncForward({ quiet = false, tab, line, col } = {}) {
 app.syncForward = syncForward;
 
 // A PDF built outside TeXugo (terminal, Lattice, plain pdflatex) may have no
-// .synctex.gz, the map between PDF and source. Say so and offer a build.
-async function ensureSynctex(pdf) {
-  const map = pdf.replace(/\.pdf$/, '.synctex.gz');
+// .synctex.gz, the map between PDF and source. Then sync goes by the text:
+// the words around the click are looked up in the source, and the words of
+// the source line in the PDF. Said once per PDF.
+const textSyncNoted = new Set();
+async function hasSynctex(pdf) {
   let st = [];
   try {
-    st = await call('stat', { paths: [map] });
+    st = await call('stat', { paths: [pdf.replace(/\.pdf$/, '.synctex.gz')] });
   } catch {}
-  if (st[0] && st[0].mtime != null) return true;
-  const doc = pdf.replace(/\.pdf$/, '.tex');
-  const isDoc = (S.project.docs || []).some((d) => d.path === doc);
-  const ok = await confirmBox(
-    'Este PDF não tem SyncTeX',
-    `${basename(pdf)} foi compilado fora do TeXugo, sem o mapa que liga o PDF ao código (${basename(map)}). ${isDoc ? 'Compile uma vez pelo TeXugo e o clique duplo passa a funcionar.' : ''}`,
-    { ok: isDoc ? 'Compilar agora' : 'OK' },
-  );
-  if (ok && isDoc) {
-    wantPdf = doc;
-    compileDocs([doc]);
-  }
-  return false;
+  return !!(st[0] && st[0].mtime != null);
+}
+function noteTextSync(pdf) {
+  if (textSyncNoted.has(pdf)) return;
+  textSyncNoted.add(pdf);
+  toast(`${basename(pdf)} não tem SyncTeX (foi compilado fora do TeXugo): a posição vem pelo texto e pode ser aproximada. Compilar pelo TeXugo deixa exato.`, 'info', 7000);
 }
 
 async function inverseSync(args) {
-  if (!(await ensureSynctex(args.pdf))) return;
+  if (!(await hasSynctex(args.pdf))) {
+    if (!args.viewer) return toast('Este PDF não tem SyncTeX. Compile pelo TeXugo.', 'warn');
+    const doc = args.pdf.replace(/\.pdf$/, '.tex');
+    try {
+      const text = await args.viewer.textAt(args.page, args.x, args.y);
+      const r = await call('syncTextInverse', { doc, text });
+      if (r.ok) {
+        noteTextSync(args.pdf);
+        await openFile(r.file, { line: r.line });
+      } else toast('Não achei esse trecho no código (pode ser tabela, figura ou texto gerado).', 'warn');
+    } catch (err) {
+      toast(err.message, 'error');
+    }
+    return;
+  }
   try {
-    const r = await call('syncInverse', args);
+    const r = await call('syncInverse', { pdf: args.pdf, page: args.page, x: args.x, y: args.y });
     if (r.ok) await openFile(r.file, { line: r.line });
     else toast('Não achei a linha correspondente (o PDF foi compilado com SyncTeX?).', 'warn');
   } catch (err) {

@@ -72,7 +72,55 @@ export async function unstage(root, files) {
 
 export async function commit(root, message, { all = false } = {}) {
   if (all) await git(root, ['add', '-A']);
-  return git(root, ['commit', '-m', message]);
+  if (!message || !message.trim()) message = await autoMessage(root);
+  const r = await git(root, ['commit', '-m', message]);
+  return { ...r, message };
+}
+
+// A message from the staged files, for a commit without one, the way GitHub
+// Desktop does: "Atualiza paper.tex e refs.bib", "Adiciona fig1.pdf".
+export async function autoMessage(root) {
+  const r = await git(root, ['diff', '--cached', '--name-status', '-z']);
+  const parts = r.stdout.split('\0').filter(Boolean);
+  const groups = { A: [], M: [], D: [], R: [] };
+  for (let i = 0; i < parts.length; i++) {
+    const st = parts[i][0];
+    const file = st === 'R' || st === 'C' ? (i += 2, parts[i]) : parts[++i];
+    (groups[st] || groups.M).push(path.basename(file || ''));
+  }
+  const list = (names) => (names.length === 1 ? names[0] : names.length === 2 ? `${names[0]} e ${names[1]}` : `${names[0]}, ${names[1]} e mais ${names.length - 2}`);
+  const out = [];
+  if (groups.M.length) out.push(`Atualiza ${list(groups.M)}`);
+  if (groups.A.length) out.push(`${out.length ? 'adiciona' : 'Adiciona'} ${list(groups.A)}`);
+  if (groups.D.length) out.push(`${out.length ? 'remove' : 'Remove'} ${list(groups.D)}`);
+  if (groups.R.length) out.push(`${out.length ? 'renomeia' : 'Renomeia'} ${list(groups.R)}`);
+  return out.join('; ') || 'Atualiza o projeto';
+}
+
+// One click: commit what changed (if anything), bring the remote's commits
+// (rebase, so no merge commit), send ours. Stops and explains on conflict.
+export async function sync(root, message) {
+  const steps = [];
+  const st = await status(root);
+  if (st.files.length) {
+    const c = await commit(root, message, { all: !st.files.some((f) => f.staged) });
+    if (c.code !== 0) return { code: c.code, stderr: c.stderr || c.stdout, steps };
+    steps.push(`commit “${c.message}”`);
+  }
+  if (st.remote) {
+    if (st.upstream) {
+      const p = await git(root, ['pull', '--rebase']);
+      if (p.code !== 0) {
+        await git(root, ['rebase', '--abort']);
+        return { code: p.code, stderr: 'O pull achou mudanças que conflitam com as suas; nada foi perdido (o commit está feito). Resolva pelo GitHub Desktop ou pelo terminal. ' + (p.stderr || '').trim().split('\n').slice(-2).join(' '), steps };
+      }
+      steps.push('pull');
+    }
+    const u = await push(root);
+    if (u.code !== 0) return { code: u.code, stderr: u.stderr || u.stdout, steps };
+    steps.push('push');
+  }
+  return { code: 0, steps };
 }
 
 export async function pull(root) {
