@@ -607,3 +607,17 @@ body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-d
 .math-tip { padding: 8px 14px; background: var(--raised); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); color: var(--text); max-width: min(720px, 70vw); overflow-x: auto; font-size: 15px; }
 .math-tip .katex-display { margin: 0; }
 .math-tip.error { font: 12px var(--mono); color: var(--err); }
+
+/* Parecer */
+.review-panel { padding: 6px 12px 12px; }
+.review-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; position: sticky; top: 0; background: var(--bg, var(--raised)); padding: 4px 0; }
+.review-summary { margin: 6px 0 8px; font-size: 12.5px; color: var(--muted); }
+.review-pt { display: flex; gap: 8px; align-items: flex-start; padding: 6px 4px; border-top: 1px solid var(--border); cursor: pointer; font-size: 12.5px; }
+.review-pt:hover { background: var(--sunken); }
+.review-pt.done { opacity: 0.5; }
+.review-pt .kind { font-size: 10.5px; padding: 1px 6px; border-radius: 4px; flex-shrink: 0; border: 1px solid currentColor; }
+.review-pt .kind.err { color: var(--err); } .review-pt .kind.warn { color: var(--accent); } .review-pt .kind.muted { color: var(--muted); }
+.review-pt .txt { flex: 1; line-height: 1.45; }
+.review-pt .sug { color: var(--muted); margin-top: 2px; }
+.review-pt .where { font: 11px var(--mono); color: var(--faint); flex-shrink: 0; }
+.review-summary { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; } .review-summary.open { display: block; }

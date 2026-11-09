@@ -75,18 +75,19 @@ export function buildPrompt({ action, text, before = '', after = '', file, root,
     .join('\n\n');
 }
 
-export async function rewrite(opts) {
+// One headless Claude Code run in the project folder, read-only tools.
+// Returns the final text. Used by the selection actions, the referee review
+// and the response to referees.
+export async function runClaude(prompt, opts) {
   const claude = await which('claude');
   if (!claude) throw new Error('Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash (e entre na sua conta com "claude" no Terminal).');
   if (current) throw new Error('Já há uma ação de IA em andamento.');
-  const prompt = buildPrompt(opts);
-  const t0 = Date.now();
   const out = await new Promise((resolve) => {
-    const child = spawn(claude, ['-p', '--output-format', 'json', '--tools', 'Skill,Read', '--no-session-persistence', ...claudeFlags(opts)], { cwd: opts.root, env: toolEnv() });
+    const child = spawn(claude, ['-p', '--output-format', 'json', '--tools', opts.tools || 'Skill,Read', '--no-session-persistence', ...claudeFlags(opts)], { cwd: opts.root, env: toolEnv() });
     current = child;
     let stdout = '';
     let stderr = '';
-    const timer = setTimeout(() => child.kill('SIGTERM'), 300000);
+    const timer = setTimeout(() => child.kill('SIGTERM'), opts.timeout || 300000);
     child.stdout.on('data', (d) => (stdout += d));
     child.stderr.on('data', (d) => (stderr += d));
     child.on('error', (err) => resolve({ code: -1, stdout, stderr: String(err) }));
@@ -97,7 +98,7 @@ export async function rewrite(opts) {
     });
     child.stdin.end(prompt);
   });
-  if (out.signal === 'SIGTERM' && !out.stdout) throw new Error('Cancelado.');
+  if (out.signal === 'SIGTERM' && !out.stdout) throw new Error('Cancelado (ou passou do tempo).');
   let data;
   try {
     data = JSON.parse(out.stdout);
@@ -106,7 +107,14 @@ export async function rewrite(opts) {
     throw new Error(/log ?in|auth|credential/i.test(msg) ? 'O Claude Code não está logado. Abra o Terminal, rode "claude" e entre na sua conta.' : 'O Claude Code falhou: ' + (msg || `código ${out.code}`));
   }
   if (data.is_error) throw new Error('O Claude Code respondeu com erro: ' + String(data.result || '').slice(0, 300));
-  const res = String(data.result || '');
+  return String(data.result || '');
+}
+
+export async function rewrite(opts) {
+  const prompt = buildPrompt(opts);
+  const t0 = Date.now();
+  const result = await runClaude(prompt, opts);
+  const res = result;
   const m = res.match(/<texugo>\n?([\s\S]*?)\n?<\/texugo>/);
   if (!m) throw new Error('A resposta veio sem o trecho reescrito. Tente de novo.');
   const note = (res.match(/<nota>([\s\S]*?)<\/nota>/) || [])[1];

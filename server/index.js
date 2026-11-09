@@ -25,6 +25,7 @@ import * as refs from './refs.js';
 import * as compare from './compare.js';
 import * as refcheck from './refcheck.js';
 import * as zotero from './zotero.js';
+import * as reviewer from './review.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -491,6 +492,29 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async refApply({ bib, fixes }) {
       if (!/\.bib$/.test(bib || '')) throw httpError(400, 'Escolha um arquivo .bib.');
       return refcheck.applyFixes(mustAllow(bib), Array.isArray(fixes) ? fixes : []);
+    },
+    // Referee-style review of the whole paper by the user's Claude Code.
+    async reviewRun({ root, doc, journal, focus, lang, model, effort }) {
+      mustAllow(root);
+      return reviewer.review({ root, doc: path.resolve(mustAllow(doc)), journal, focus, lang, model, effort });
+    },
+    async reviewLast({ doc }) {
+      return reviewer.lastReview(path.resolve(mustAllow(doc)));
+    },
+    async reviewMark({ doc, id, done }) {
+      const r = reviewer.lastReview(path.resolve(mustAllow(doc)));
+      if (!r) return null;
+      const p = r.points.find((x) => x.id === id);
+      if (p) p.done = !!done;
+      fs.writeFileSync(path.join(path.dirname(doc), '.texugo', 'review', path.basename(doc, '.tex') + '.json'), JSON.stringify(r, null, 2));
+      return r;
+    },
+    async reviewSaveMd({ root, doc }) {
+      const r = reviewer.lastReview(path.resolve(mustAllow(doc)));
+      if (!r) throw httpError(404, 'Nenhum parecer gerado ainda.');
+      const target = path.join(path.dirname(doc), path.basename(doc, '.tex') + '-parecer.md');
+      fs.writeFileSync(target, reviewer.toMarkdown(r, mustAllow(root)));
+      return target;
     },
     // Zotero and other reference managers.
     async zoteroLibrary() {

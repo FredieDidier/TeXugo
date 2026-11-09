@@ -1,6 +1,7 @@
 // Bottom panel: build timeline (what is being compiled and why), problems
 // (errors, ?? and warnings, with plain-language hints), and the raw log.
 import { h, clear, icon, basename, relPath } from './dom.js';
+import { renderReviewPanel } from './review.js';
 
 export class BottomPanel {
   constructor(app, S) {
@@ -43,6 +44,7 @@ export class BottomPanel {
       tab('problems', 'Problemas', errs + qq + warns, errs ? 'err' : qq ? 'warn' : ''),
       tab('log', 'Log'),
       tab('terminal', 'Terminal', this.app.terminals ? this.app.terminals.count : 0),
+      this.S.review || this.view === 'parecer' ? tab('parecer', 'Parecer', this.S.review && this.S.review.report ? this.S.review.report.points.filter((p) => !p.done).length : 0) : null,
       h('span', { style: { flex: 1 } }),
       this.view === 'terminal'
         ? h('button', { class: 'icon-btn', title: this.S.tallBottom ? 'Painel menor' : 'Painel maior (para o Claude Code)', onclick: () => this.app.toggleTallBottom() }, icon(this.S.tallBottom ? 'down' : 'up'))
@@ -56,6 +58,7 @@ export class BottomPanel {
       }
       return;
     }
+    if (this.view === 'parecer') return renderReviewPanel(this.app, this.S, this.body);
     if (this.view === 'build') this.renderBuild(true);
     else if (this.view === 'problems') this.renderProblems(true);
     else this.renderLog();

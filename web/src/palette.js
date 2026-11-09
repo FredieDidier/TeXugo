@@ -33,6 +33,8 @@ function commands(app, S) {
     { t: 'Atalhos e comandos (manual)', kw: 'ajuda help teclado atalho keyboard shortcuts manual onde fica', k: '⌘?', i: 'command', run: () => app.shortcuts() },
     { t: 'Preferências', k: '⌘,', i: 'gear', run: () => openSettings(app, S) },
     { t: 'Parar compilação', i: 'stop', run: () => call('cancelBuild') },
+    { t: 'Revisar como parecerista (parecer do Claude)', kw: 'referee report parecer revisão claude ia ai review', i: 'review', run: () => app.review() },
+    { t: 'Parecer: ver o último', kw: 'referee report parecer', i: 'review', run: async () => (await app.loadLastReview(), app.bottom.show('parecer')) },
     { t: 'Comparar com outra versão (PDF com mudanças)', kw: 'latexdiff diff coautor overleaf zip commit revisão mudanças marcadas', i: 'columns', run: () => app.compare() },
     { t: 'Importar do Zotero (ou .bib do Mendeley, Paperpile)', kw: 'zotero mendeley paperpile bib bibtex biblioteca importar referências', i: 'down', run: () => app.zotero() },
     { t: 'Adicionar referência (DOI, arXiv, título)', kw: 'bib bibtex citar cite crossref paper doi arxiv', k: '⌥⌘R', i: 'plus', run: () => app.addReference() },

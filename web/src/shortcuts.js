@@ -77,6 +77,7 @@ export const SECTIONS = [
   {
     title: 'Revisar e submeter',
     rows: [
+      ['Revisar como parecerista (parecer do Claude, ponto a ponto)', '', 'Seta ao lado de Compilar; resultados na aba Parecer do painel inferior'],
       ['Comparar com outra versão (PDF com mudanças marcadas)', '', 'Seta ao lado de Compilar'],
       ['Checar antes de submeter (anonimato, fontes Type 3)', '', 'Seta ao lado de Compilar'],
       ['Exportar ZIP para submissão', '', 'Seta ao lado de Compilar'],

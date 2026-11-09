@@ -25,6 +25,7 @@ import { compareDialog } from './compare.js';
 import { shortcutsDialog } from './shortcuts.js';
 import { zoteroDialog } from './zotero.js';
 import { mathPreview } from './mathpreview.js';
+import { reviewDialog, loadLastReview } from './review.js';
 import { insertGrid } from './table.js';
 
 export const S = {
@@ -225,6 +226,8 @@ app.addReference = () => addReference(app, S);
 app.compare = () => compareDialog(app, S);
 app.shortcuts = shortcutsDialog;
 app.zotero = () => zoteroDialog(app, S);
+app.review = () => reviewDialog(app, S);
+app.loadLastReview = () => loadLastReview(app, S);
 
 function tablePasted(r) {
   const what = r.rowsOnly ? `${r.rows} linhas coladas na tabela` : `Tabela ${r.rows}×${r.cols} colada em LaTeX`;
@@ -568,6 +571,7 @@ function renderDocBar() {
                 { label: 'Abrir PDF fora do app', icon: 'external', action: () => call('openExternal', { path: t.root.replace(/\.tex$/, '.pdf') }).catch((e) => toast(e.message, 'error')) },
                 { label: 'Limpar arquivos auxiliares', icon: 'trash', action: () => call('cleanAux', { doc: t.root }).then(() => toast('Auxiliares removidos.', 'ok')) },
                 'sep',
+                { label: 'Revisar como parecerista…', title: 'O seu Claude Code lê o paper inteiro e escreve um parecer, cada ponto ligado à linha', icon: 'review', action: () => reviewDialog(app, S) },
                 { label: 'Comparar com outra versão…', title: 'PDF com as mudanças marcadas (latexdiff): versão do coautor, do Overleaf ou de um commit', icon: 'columns', action: () => compareDialog(app, S) },
                 { label: 'Adicionar referência…', title: 'Por DOI, arXiv ou título, direto no .bib', icon: 'plus', kb: '⌥⌘R', action: () => addReference(app, S) },
                 { label: 'Formatar documento', title: 'Arruma a indentação com o latexindent do TeX Live', icon: 'wrap', kb: '⌥⇧F', action: () => tools.formatDoc(app, S) },
