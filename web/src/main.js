@@ -177,6 +177,7 @@ const editorHooks = (t) => ({
   compile: () => compileTab(t),
   compileAll: () => compileAll(),
   syncForward: () => syncForward(),
+  format: () => tools.formatDoc(app, S),
   onChange: () => {
     if (!t.dirty) {
       t.dirty = true;
@@ -481,6 +482,8 @@ function renderDocBar() {
                 { label: 'Abrir PDF fora do app', icon: 'external', action: () => call('openExternal', { path: t.root.replace(/\.tex$/, '.pdf') }).catch((e) => toast(e.message, 'error')) },
                 { label: 'Limpar arquivos auxiliares', icon: 'trash', action: () => call('cleanAux', { doc: t.root }).then(() => toast('Auxiliares removidos.', 'ok')) },
                 'sep',
+                { label: 'Formatar documento (latexindent)', icon: 'wrap', kb: '⌥⇧F', action: () => tools.formatDoc(app, S) },
+                { label: 'Médico do TeX', icon: 'info', action: () => tools.texDoctor(app, S) },
                 { label: 'Exportar ZIP para submissão', icon: 'down', action: () => tools.exportZip(app, S) },
                 { label: 'Checar anonimato (double-blind)', icon: 'eye', action: () => tools.blindCheck(app, S) },
                 { label: 'Revisar estilo (ChkTeX)', icon: 'check', action: () => tools.chktex(app, S) },
@@ -724,7 +727,10 @@ export function allProblems() {
   for (const [, st] of S.docState) {
     const r = st.result;
     if (!r) continue;
-    for (const e of r.errors) out.push({ severity: 'error', doc: r.doc, file: e.file, line: e.line, message: e.message, hint: e.hint, context: e.context });
+    for (const e of r.errors) {
+      const miss = (e.message.match(/File `([^']+\.(?:sty|cls|def|bst|cfg|fd))' not found/) || [])[1];
+      out.push({ severity: 'error', doc: r.doc, file: e.file, line: e.line, message: e.message, hint: e.hint, context: e.context, missing: miss || null });
+    }
     for (const u of r.undefinedRefs) out.push({ severity: 'undefined', doc: r.doc, file: u.file, line: u.line, message: `Referência indefinida: ${u.key}`, hint: u.explain, key: u.key });
     for (const u of r.undefinedCites) out.push({ severity: 'undefined', doc: r.doc, file: u.file, line: u.line, message: `Citação indefinida: ${u.key}`, hint: u.explain, key: u.key });
     for (const m of r.missingExternal || []) out.push({ severity: 'error', doc: r.doc, file: r.doc, line: null, message: `\\externaldocument aponta para ${basename(m.external)}, que não existe.` });

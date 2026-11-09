@@ -222,6 +222,7 @@ export class BuildManager extends EventEmitter {
         undefinedRefs: parsed ? parsed.undefinedRefs : [],
         undefinedCites: parsed ? parsed.undefinedCites : [],
         multiplyDefined: parsed ? parsed.multiplyDefined : [],
+        missingFiles: parsed ? [...new Set(parsed.missingFiles)] : [],
         missingExternal: missingExternal.filter((m) => m.doc === doc),
       };
       this.lastResults.set(doc, out);

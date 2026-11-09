@@ -197,6 +197,7 @@ export class BottomPanel {
                   h('div', { class: 'msg' }, p.message),
                   p.context ? h('div', { class: 'sub', style: { fontFamily: 'var(--mono)', whiteSpace: 'pre-wrap' } }, p.context.split('\n').slice(0, 3).join('\n')) : null,
                   p.hint ? h('div', { class: 'hint' }, p.hint) : null,
+                  p.missing ? h('button', { class: 'btn sm primary', style: { marginTop: '6px' }, onclick: (e) => (e.stopPropagation(), this.app.tools.texDoctor(this.app, this.S, { files: [p.missing] })) }, icon('down'), `Instalar o pacote que tem ${p.missing}`) : null,
                 ),
                 h('span', { class: 'where' }, p.file ? relPath(S.project.root, p.file) + (p.line ? ':' + p.line : '') : ''),
               ),

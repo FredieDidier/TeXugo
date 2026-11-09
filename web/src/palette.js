@@ -28,6 +28,8 @@ function commands(app, S) {
     { t: 'Mostrar/esconder painel inferior', i: 'panel', run: () => app.toggleBottom() },
     { t: 'Preferências', k: '⌘,', i: 'gear', run: () => openSettings(app, S) },
     { t: 'Parar compilação', i: 'stop', run: () => call('cancelBuild') },
+    { t: 'Formatar documento (latexindent)', k: '⌥⇧F', i: 'wrap', run: () => app.tools.formatDoc(app, S) },
+    { t: 'Médico do TeX (pacotes, instalação)', i: 'info', run: () => app.tools.texDoctor(app, S) },
     { t: 'Exportar ZIP para submissão (arXiv)', i: 'down', run: () => app.tools.exportZip(app, S) },
     { t: 'Checar anonimato (double-blind)', i: 'eye', run: () => app.tools.blindCheck(app, S) },
     { t: 'Revisar estilo (ChkTeX)', i: 'check', run: () => app.tools.chktex(app, S) },

@@ -18,6 +18,11 @@ TeXugo é um editor LaTeX local para Mac. Os arquivos ficam no seu disco, a comp
 - **Git e GitHub.** Status, diff, commit, pull e push no painel lateral, usando o git do sistema e as credenciais que o GitHub Desktop já configurou.
 - **Slides:** botão "Apresentar" para Beamer (tela cheia, um slide por vez, setas e clique) e um modo em que o PDF acompanha o cursor do editor.
 - **Submissão:** ZIP que compila sozinho (leva o `.bbl` no lugar do `.bib`, como o arXiv pede, e avisa quando uma figura está fora da pasta do documento); checagem de anonimato para double-blind (nomes, e-mails, `\thanks`, agradecimentos, links do GitHub/OSF, comentários com nome, metadado de autor do PDF); revisão de estilo com ChkTeX; contagem de palavras com texcount.
+- **Formatar documento** (⌥⇧F) com o `latexindent` do TeX Live, numa edição só que o ⌘Z desfaz. Funciona mesmo no MacTeX, cujo `latexindent` costuma quebrar por falta do módulo Perl `File::HomeDir`: o TeXugo traz um substituto mínimo. Um `localSettings.yaml` na pasta do documento tem prioridade.
+- **Médico do TeX:** mostra o estado da instalação e, quando a compilação reclama de um `.sty` ou `.cls` que falta, descobre o pacote do TeX Live que tem o arquivo e o instala com um clique. A senha de administrador é digitada na janela do próprio macOS. Se o TeX Live for de um ano anterior (congelado), usa o arquivo final daquele ano, o único que ainda aceita instalações.
+- **Markdown** abre renderizado como no GitHub (Visualizar / Lado a lado / Código).
+- **PDF numa janela separada**, para outro monitor, com SyncTeX entre as janelas.
+- **Clonar do GitHub** direto como projeto novo.
 - **Modelos:** artigo, artigo + apêndice online, slides Beamer (tema "Toca"), ementa de disciplina, parecer, carta e documento em branco.
 - Busca no projeto, estrutura do documento (seções, slides, rótulos), paleta de comandos (⌘K), abertura rápida (⌘P), contagem de palavras, temas claro e escuro.
 

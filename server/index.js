@@ -15,6 +15,7 @@ import { BuildManager } from './build.js';
 import { isInside, dataDir, run, which, toolEnv } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
+import * as doctor from './doctor.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -350,6 +351,18 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       if (fs.existsSync(target) && fs.readdirSync(target).length) throw httpError(409, 'A pasta já existe e não está vazia.');
       createFromTemplate(template, target, fields || {});
       return api.openProject({ root: target });
+    },
+    async texDoctor() {
+      return doctor.texInfo({ refresh: true });
+    },
+    async findPackages({ files }) {
+      return doctor.findPackages(files);
+    },
+    async installPackages({ pkgs }) {
+      return doctor.installPackages(pkgs);
+    },
+    async format({ path: p, text }) {
+      return doctor.formatLatex(text, mustAllow(p));
     },
     async exportZip({ doc }) {
       return exportZip(mustAllow(doc));

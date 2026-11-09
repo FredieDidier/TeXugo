@@ -1,6 +1,6 @@
 // Document tools: submission ZIP, double-blind check, ChkTeX, word count.
 import { call } from './api.js';
-import { h, icon, basename, relPath, toast, modal, prompt } from './dom.js';
+import { h, clear, icon, basename, relPath, toast, modal, prompt } from './dom.js';
 
 function docOf(app) {
   const t = app.activeTab();
@@ -121,4 +121,109 @@ export async function wordCount(app) {
   } catch (err) {
     toast(err.message, 'error');
   }
+}
+
+// Formats the active .tex file with latexindent, as one undoable edit that
+// only touches the lines that changed.
+export async function formatDoc(app) {
+  const t = app.activeTab();
+  if (!t || t.binary || !/\.(tex|sty|cls)$/.test(t.path)) return toast('Abra um arquivo .tex para formatar.', 'warn');
+  const view = app.view;
+  const before = view.state.doc.toString();
+  let r;
+  try {
+    r = await call('format', { path: t.path, text: before });
+  } catch (err) {
+    return toast(err.message, 'error', 8000);
+  }
+  if (view.state.doc.toString() !== before) return toast('O texto mudou durante a formatação; tente de novo.', 'warn');
+  const after = r.text;
+  if (after === before) return toast('Já estava formatado.', 'ok', 2000);
+  let a = 0;
+  while (a < before.length && a < after.length && before[a] === after[a]) a++;
+  let b = 0;
+  while (b < before.length - a && b < after.length - a && before[before.length - 1 - b] === after[after.length - 1 - b]) b++;
+  view.dispatch({ changes: { from: a, to: before.length - b, insert: after.slice(a, after.length - b) }, userEvent: 'format' });
+  toast(r.settings ? `Formatado com as regras de ${r.settings}. ⌘Z desfaz.` : 'Formatado. ⌘Z desfaz.', 'ok', 3000);
+}
+
+// TeX doctor: the state of the TeX installation and one-click installs of
+// the packages a build reported missing.
+export async function texDoctor(app, S, { files = [] } = {}) {
+  const missing = new Set(files);
+  for (const [, st] of S.docState) for (const f of (st.result && st.result.missingFiles) || []) if (/\.(sty|cls|def|bst|cfg|fd)$/.test(f)) missing.add(f);
+  const body = h('div', {}, h('p', { class: 'muted' }, 'Examinando o TeX…'));
+  const m = modal({ title: [icon('info'), ' Médico do TeX'], wide: true, body });
+  let info;
+  try {
+    info = await call('texDoctor');
+  } catch (err) {
+    clear(body, h('p', { style: { color: 'var(--err)' } }, err.message));
+    return;
+  }
+  const tools = S.hello.tools || {};
+  const manual = h('input', { placeholder: 'tikzducks.sty', style: { flex: 1 } });
+  const results = h('div', {});
+  const lookup = async (list) => {
+    if (!list.length) return;
+    clear(results, h('p', { class: 'muted' }, `Procurando no TeX Live ${list.join(', ')}… (pode levar até um minuto na primeira vez)`));
+    let found;
+    try {
+      found = await call('findPackages', { files: list });
+    } catch (err) {
+      clear(results, h('p', { style: { color: 'var(--err)' } }, err.message));
+      return;
+    }
+    const pkgs = [...new Set(found.filter((f) => f.package).map((f) => f.package))];
+    const btn = h('button', { class: 'btn primary', disabled: !pkgs.length }, icon('down'), pkgs.length ? `Instalar ${pkgs.join(', ')}` : 'Nada para instalar');
+    btn.onclick = async () => {
+      btn.disabled = true;
+      btn.textContent = info.writable ? 'Instalando…' : 'Instalando… (digite sua senha na janela do macOS)';
+      const r = await call('installPackages', { pkgs }).catch((err) => ({ ok: false, output: err.message }));
+      if (r.cancelled) {
+        btn.disabled = false;
+        btn.textContent = `Instalar ${pkgs.join(', ')}`;
+        return toast('Instalação cancelada.', 'warn');
+      }
+      clear(
+        results,
+        r.ok
+          ? h('p', { style: { color: 'var(--ok)', fontWeight: 600 } }, icon('checkCircle'), ` Instalado: ${pkgs.join(', ')}. Compile de novo.`)
+          : h('p', { style: { color: 'var(--err)' } }, 'A instalação não terminou bem. Veja a saída abaixo.'),
+        h('details', { open: !r.ok }, h('summary', { class: 'muted' }, 'Saída do tlmgr'), h('pre', { style: { fontSize: '11px', whiteSpace: 'pre-wrap' } }, r.output || '')),
+        r.ok ? h('button', { class: 'btn', onclick: () => (m.close(), app.compileAll()) }, icon('playAll'), 'Compilar tudo agora') : null,
+      );
+    };
+    clear(
+      results,
+      found.map((f) => h('div', { class: 'prob ' + (f.package ? 'warning' : 'error') }, h('span', { class: 'ico' }, icon(f.package ? 'down' : 'error')), h('div', { class: 'msg' }, f.package ? `${f.file} vem no pacote ` : `${f.file}: nenhum pacote do TeX Live tem este arquivo (erro de digitação?)`, f.package ? h('b', {}, f.package) : null), h('span'))),
+      h('div', { style: { marginTop: '10px' } }, btn),
+    );
+  };
+  clear(
+    body,
+    h('h4', { class: 'set-h' }, 'Instalação'),
+    h(
+      'div',
+      { class: 'tools-check', style: { marginTop: 0 } },
+      info.year ? h('span', { class: 'chip ' + (info.frozen ? 'warn' : 'ok') }, `TeX Live ${info.year}${info.frozen ? ' (congelado)' : ''}`) : h('span', { class: 'chip error' }, 'TeX Live não encontrado'),
+      ['latexmk', 'pdflatex', 'xelatex', 'lualatex', 'bibtex', 'biber', 'synctex'].map((k) => h('span', { class: 'chip ' + (tools[k] ? 'ok' : 'error') }, tools[k] ? icon('check') : icon('x'), k)),
+      h('span', { class: 'chip ' + (info.latexindent.ok ? 'ok' : 'error'), title: info.latexindent.reason || info.latexindent.version }, info.latexindent.ok ? icon('check') : icon('x'), 'latexindent'),
+    ),
+    info.frozen
+      ? h(
+          'p',
+          { class: 'muted', style: { fontSize: '12.5px' } },
+          `O TeX Live ${info.year} não recebe mais atualizações. O TeXugo instala pacotes do arquivo final de ${info.year}, que continua no ar. Para pacotes novos, instale o MacTeX deste ano: `,
+          h('a', { href: '#', onclick: (e) => (e.preventDefault(), call('openUrl', { url: 'https://tug.org/mactex/' })) }, 'tug.org/mactex'),
+          '.',
+        )
+      : null,
+    h('h4', { class: 'set-h' }, 'Pacotes que faltam'),
+    missing.size ? h('p', {}, `A última compilação não achou: ${[...missing].join(', ')}.`) : h('p', { class: 'muted' }, 'Nenhuma compilação desta sessão reclamou de pacote faltando.'),
+    h('div', { class: 'field' }, h('label', {}, 'Ou procure pelo nome do arquivo'), h('div', { class: 'row' }, manual, h('button', { class: 'btn', onclick: () => manual.value.trim() && lookup([manual.value.trim()]) }, icon('search'), 'Procurar'))),
+    results,
+  );
+  manual.addEventListener('keydown', (e) => e.key === 'Enter' && manual.value.trim() && lookup([manual.value.trim()]));
+  if (missing.size) lookup([...missing]);
 }

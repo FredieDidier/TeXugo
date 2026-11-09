@@ -179,7 +179,7 @@ function hintFor(message, context) {
   if (/File `([^']+)' not found/.test(msg)) {
     const f = msg.match(/File `([^']+)' not found/)[1];
     return /\.(sty|cls)$/.test(f)
-      ? `O pacote ${f} não está instalado no TeX Live. Instale com: sudo tlmgr install ${f.replace(/\.(sty|cls)$/, '')}`
+      ? `${f} não está instalado no seu TeX Live. O botão abaixo descobre qual pacote tem esse arquivo e instala (Médico do TeX).`
       : `Arquivo ${f} não encontrado. Confira o caminho (é relativo à pasta do documento raiz).`;
   }
   if (/Missing \$ inserted/.test(msg)) return 'Um símbolo de matemática (_, ^, \\alpha...) ficou fora de $...$, ou um $ não foi fechado.';
