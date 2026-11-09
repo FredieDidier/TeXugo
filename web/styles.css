@@ -461,3 +461,6 @@ body > .cm-tooltip { z-index: 40; }
 .ai-diff del { background: color-mix(in srgb, var(--err) 18%, transparent); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--err) 70%, transparent); }
 .ai-diff ins { background: color-mix(in srgb, var(--ok) 22%, transparent); text-decoration: none; }
 .ai-diff del + ins, .ai-diff ins + del { margin-left: 3px; }
+/* The selection layer sits behind the text by default, where the active-line
+   background hides it; draw it on top (the colour is translucent). */
+.cm-selectionLayer { z-index: 1 !important; pointer-events: none; }
