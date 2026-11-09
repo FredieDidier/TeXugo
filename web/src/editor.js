@@ -183,11 +183,11 @@ function selectionBar(path, hooks) {
           btn('B', tex ? 'Negrito: \\textbf{} (⌘B)' : 'Negrito (⌘B)', (v) => wrapSelection(tex ? '\\textbf{' : '**', tex ? '}' : '**')(v), 'b');
           btn('I', tex ? 'Itálico: \\emph{} (⌘I)' : 'Itálico (⌘I)', (v) => wrapSelection(tex ? '\\emph{' : '*', tex ? '}' : '*')(v), 'i');
           if (tex) btn('%', 'Comentar ou descomentar as linhas (⌘/)', (v) => toggleComment(v));
-          if (hooks.ask) btn('✻ Claude', 'Perguntar ao Claude sobre o trecho', (v) => hooks.ask(v), 'claude');
-          if (hooks.ai) btn('IA ▾', 'Revisar, polir, humanizar, encurtar, traduzir…', (v, e) => {
+          // One Claude button: ask about the passage, or rewrite it.
+          if (hooks.ai) btn('✻ Claude ▾', 'Perguntar ao Claude sobre o trecho, ou revisar, humanizar, encurtar, traduzir…', (v, e) => {
             const r = e.currentTarget.getBoundingClientRect();
             hooks.ai(v, r.left, r.bottom + 4);
-          });
+          }, 'claude');
           return { dom };
         },
       },

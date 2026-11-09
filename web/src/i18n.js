@@ -143,6 +143,7 @@ const EN = {
   'Marcar na margem as linhas alteradas desde a última compilação': 'Mark in the margin the lines changed since the last build',
   'Perguntar ao Claude sobre o trecho': 'Ask Claude about the passage', 'Anexa o trecho à mensagem no painel Claude': 'Attaches the passage to the message in the Claude panel',
   'Perguntar ao Claude sobre a seleção': 'Ask Claude about the selection', 'Tirar': 'Remove', 'Ir para o trecho': 'Go to the passage',
+  'Perguntar sobre o trecho…': 'Ask about the passage…', 'Perguntar ao Claude sobre o trecho, ou revisar, humanizar, encurtar, traduzir…': 'Ask Claude about the passage, or review, humanize, shorten, translate…',
   // split editor
   'Arquivo mostrado no lado direito': 'File shown on the right', 'Fechar a divisão (⌘⌥\\)': 'Close the split (⌘⌥\\)',
   'Dividir o editor: outro arquivo ou outro trecho ao lado (⌘⌥\\)': 'Split the editor: another file or another part side by side (⌘⌥\\)', 'Dividir o editor / fechar a divisão': 'Split the editor / close the split',
