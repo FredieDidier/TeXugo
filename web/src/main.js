@@ -12,6 +12,7 @@ import * as tools from './tools.js';
 import { renderMarkdown } from './markdown.js';
 import { bootPdfWindow } from './pdfwin.js';
 import { TOKEN } from './api.js';
+import { setLang, tr } from './i18n.js';
 
 export const S = {
   hello: null,
@@ -1389,6 +1390,7 @@ async function boot() {
     return;
   }
   Object.assign(S.settings, S.hello.settings || {});
+  setLang(S.settings.lang);
   applyTheme(S.settings.theme);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
     renderTopbar();

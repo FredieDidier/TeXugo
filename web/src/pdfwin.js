@@ -5,12 +5,14 @@ import { call, connect, on, fileUrl } from './api.js';
 import { h, clear, icon, basename, debounce, toast } from './dom.js';
 import { PdfTab } from './pdfview.js';
 import { applyTheme } from './settings.js';
+import { setLang } from './i18n.js';
 
 export async function bootPdfWindow(pdf, root) {
   let hello = { settings: {} };
   try {
     hello = await call('hello');
   } catch {}
+  setLang(hello.settings.lang);
   applyTheme(hello.settings.theme);
   document.title = `${basename(pdf)} — TeXugo`;
   const appEl = document.getElementById('app');

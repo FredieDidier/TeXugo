@@ -78,6 +78,28 @@ export function openSettings(app, S) {
     body: h(
       'div',
       {},
+      h(
+        'div',
+        { style: { display: 'flex', gap: '14px' } },
+        h(
+          'div',
+          { class: 'field' },
+          h('label', {}, 'Idioma'),
+          h(
+            'select',
+            {
+              onchange: (e) => {
+                st.lang = e.target.value;
+                app.saveSettingsSoon();
+                if (window.texugo && window.texugo.setLang) window.texugo.setLang(st.lang);
+                // Re-render everything in the new language.
+                setTimeout(() => location.reload(), 700);
+              },
+            },
+            [['pt', 'Português'], ['en', 'English']].map(([v, l]) => h('option', { value: v, selected: (st.lang || 'pt') === v }, l)),
+          ),
+        ),
+      ),
       h('div', { class: 'field' }, h('label', {}, 'Tema'), select('theme', [['system', 'Seguir o macOS'], ['light', 'Toca clara'], ['dark', 'Toca escura']])),
       h('h4', { class: 'set-h' }, 'Editor de código'),
       row(field('Fonte', fontSel), field('Tamanho', num('editorSize', { min: 9, max: 28, step: 0.5, def: 13.5 })), field('Espaçamento entre linhas', num('editorLineHeight', { min: 1, max: 2.5, step: 0.05, def: 1.6 }))),

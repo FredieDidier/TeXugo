@@ -1,4 +1,6 @@
 // Tiny DOM helpers: h() builds elements, icon() returns inline SVG icons.
+// Every string h() renders goes through tr(), the UI translation.
+import { tr } from './i18n.js';
 
 export function h(tag, attrs = {}, ...children) {
   const el = document.createElement(tag);
@@ -8,6 +10,7 @@ export function h(tag, attrs = {}, ...children) {
     else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
     else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
     else if (k === 'html') el.innerHTML = v;
+    else if (k === 'title' || k === 'placeholder' || k === 'aria-label') el.setAttribute(k, tr(String(v)));
     else if (k in el && typeof v !== 'string') el[k] = v;
     else el.setAttribute(k, v === true ? '' : v);
   }
@@ -18,7 +21,7 @@ export function h(tag, attrs = {}, ...children) {
 function append(el, children) {
   for (const c of children.flat(Infinity)) {
     if (c == null || c === false) continue;
-    el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+    el.append(c instanceof Node ? c : document.createTextNode(tr(String(c))));
   }
 }
 

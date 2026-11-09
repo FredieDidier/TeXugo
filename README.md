@@ -24,6 +24,7 @@ TeXugo é um editor LaTeX local para Mac. Os arquivos ficam no seu disco, a comp
 - **PDF numa janela separada**, para outro monitor, com SyncTeX entre as janelas.
 - **Clonar do GitHub** direto como projeto novo.
 - **Modelos:** artigo, artigo + apêndice online, slides Beamer (tema "Toca"), ementa de disciplina, parecer, carta e documento em branco.
+- **Português ou inglês:** a interface inteira, inclusive menus, dicas e mensagens de erro, troca de idioma em Preferências → Idioma.
 - Busca no projeto, estrutura do documento (seções, slides, rótulos), paleta de comandos (⌘K), abertura rápida (⌘P), contagem de palavras, temas claro e escuro.
 
 ## Rodar

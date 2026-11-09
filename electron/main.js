@@ -2,6 +2,7 @@
 // folder pickers and "move to Trash".
 import { app, BrowserWindow, Menu, dialog, ipcMain, shell, nativeTheme } from 'electron';
 import path from 'node:path';
+import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -70,16 +71,30 @@ function send(action) {
   if (win) win.webContents.send('menu', action);
 }
 
+// Native menu labels in English; the page translates itself (web/src/i18n.js).
+const MENU_EN = {
+  'Sobre o TeXugo': 'About TeXugo', 'Preferências…': 'Settings…', 'Ocultar TeXugo': 'Hide TeXugo', 'Encerrar TeXugo': 'Quit TeXugo', 'Arquivo': 'File',
+  'Novo projeto…': 'New project…', 'Abrir pasta…': 'Open folder…', 'Nova janela': 'New window', 'Tela inicial': 'Start screen', 'Abrir arquivo rápido': 'Quick open',
+  'Salvar': 'Save', 'Salvar todos': 'Save all', 'Fechar aba': 'Close tab', 'Fechar janela': 'Close window', 'Editar': 'Edit', 'Compilar': 'Build',
+  'Compilar documento da aba': 'Compile the tab’s document', 'Compilar tudo que está aberto': 'Compile everything open', 'Mostrar no PDF': 'Show in PDF',
+  'Visualizar': 'View', 'Paleta de comandos': 'Command palette', 'Painel inferior': 'Bottom panel', 'Ferramentas de desenvolvedor': 'Developer tools', 'Janela': 'Window',
+};
+let menuLang = 'pt';
+try {
+  menuLang = JSON.parse(fs.readFileSync(path.join(app.getPath('userData'), 'state.json'), 'utf8')).settings.lang === 'en' ? 'en' : 'pt';
+} catch {}
+const L = (label) => (menuLang === 'en' && MENU_EN[label]) || label;
+
 function buildMenu() {
-  const item = (label, accelerator, action) => ({ label, accelerator, click: () => send(action) });
+  const item = (label, accelerator, action) => ({ label: L(label), accelerator, click: () => send(action) });
   const template = [
-    { role: 'appMenu', submenu: [{ role: 'about', label: 'Sobre o TeXugo' }, { type: 'separator' }, item('Preferências…', 'Cmd+,', 'settings'), { type: 'separator' }, { role: 'hide', label: 'Ocultar TeXugo' }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { role: 'quit', label: 'Encerrar TeXugo' }] },
+    { role: 'appMenu', submenu: [{ role: 'about', label: L('Sobre o TeXugo') }, { type: 'separator' }, item('Preferências…', 'Cmd+,', 'settings'), { type: 'separator' }, { role: 'hide', label: L('Ocultar TeXugo') }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { role: 'quit', label: L('Encerrar TeXugo') }] },
     {
-      label: 'Arquivo',
+      label: L('Arquivo'),
       submenu: [
         item('Novo projeto…', 'Cmd+Shift+N', 'newProject'),
         item('Abrir pasta…', 'Cmd+O', 'open'),
-        { label: 'Nova janela', accelerator: 'Cmd+Alt+N', click: () => createWindow() },
+        { label: L('Nova janela'), accelerator: 'Cmd+Alt+N', click: () => createWindow() },
         item('Tela inicial', null, 'welcome'),
         { type: 'separator' },
         item('Abrir arquivo rápido', 'Cmd+P', 'quickOpen'),
@@ -87,19 +102,19 @@ function buildMenu() {
         item('Salvar todos', 'Cmd+Alt+S', 'saveAll'),
         item('Fechar aba', 'Cmd+W', 'closeTab'),
         { type: 'separator' },
-        { role: 'close', label: 'Fechar janela', accelerator: 'Cmd+Shift+W' },
+        { role: 'close', label: L('Fechar janela'), accelerator: 'Cmd+Shift+W' },
       ],
     },
-    { role: 'editMenu', label: 'Editar' },
+    { role: 'editMenu', label: L('Editar') },
     {
-      label: 'Compilar',
+      label: L('Compilar'),
       submenu: [item('Compilar documento da aba', 'Cmd+Enter', 'compile'), item('Compilar tudo que está aberto', 'Cmd+Shift+Enter', 'compileAll'), { type: 'separator' }, item('Mostrar no PDF', 'Cmd+J', 'syncForward')],
     },
     {
-      label: 'Visualizar',
-      submenu: [item('Paleta de comandos', 'Cmd+K', 'palette'), item('Painel inferior', 'Cmd+Shift+Y', 'toggleBottom'), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools', label: 'Ferramentas de desenvolvedor' }],
+      label: L('Visualizar'),
+      submenu: [item('Paleta de comandos', 'Cmd+K', 'palette'), item('Painel inferior', 'Cmd+Shift+Y', 'toggleBottom'), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools', label: L('Ferramentas de desenvolvedor') }],
     },
-    { role: 'windowMenu', label: 'Janela' },
+    { role: 'windowMenu', label: L('Janela') },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
@@ -115,6 +130,11 @@ ipcMain.handle('focus-self', (e) => {
     if (win.isMinimized()) win.restore();
     win.focus();
   }
+  return true;
+});
+ipcMain.handle('set-lang', (_e, l) => {
+  menuLang = l === 'en' ? 'en' : 'pt';
+  buildMenu();
   return true;
 });
 ipcMain.handle('new-window', () => {

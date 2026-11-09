@@ -1,5 +1,6 @@
 // Command palette (⌘K) and quick open (⌘P).
 import { call } from './api.js';
+import { tr } from './i18n.js';
 import { h, clear, icon, fileIcon, relPath } from './dom.js';
 import { openSettings } from './settings.js';
 import { newProjectDialog, showWelcome, cloneDialog } from './welcome.js';
@@ -81,7 +82,7 @@ export async function openPalette(app, S, mode = 'commands') {
     const q = (isCmd ? v.slice(1) : v).trim().toLowerCase();
     if (isCmd) {
       items = commands(app, S)
-        .map((c) => ({ ...c, s: q ? score(c.t + ' ' + (c.d || ''), q) : 0 }))
+        .map((c) => ({ ...c, s: q ? Math.max(score(c.t + ' ' + (c.d || ''), q), score(tr(c.t) + ' ' + (c.d || ''), q)) : 0 }))
         .filter((c) => c.s >= 0)
         .sort((a, b) => b.s - a.s);
     } else {
