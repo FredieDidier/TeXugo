@@ -97,39 +97,66 @@ async function sourceReader(doc, source, tmp) {
   return { read, label: path.basename(p), mainRel: '.main' };
 }
 
+// The other version rebuilt in tmp with the document's layout; files it
+// does not bring are copied from the current version (they count as
+// unchanged). Shared by the PDF with changes and the response to referees.
+export async function buildMirror(doc, source, tmp) {
+  const docDir = path.dirname(doc);
+  const src = await sourceReader(doc, source, tmp);
+  const oldDir = path.join(tmp, 'old', ...Array.from({ length: DEPTH }, (_, i) => 'd' + i));
+  fs.mkdirSync(oldDir, { recursive: true });
+  const oldDoc = path.join(oldDir, path.basename(doc));
+  const mainText = await src.read(src.mainRel);
+  if (mainText == null) throw new Error('Não deu para ler o documento da outra versão.');
+  fs.writeFileSync(oldDoc, mainText);
+  const changedFiles = [];
+  const fromCurrent = [];
+  for (const f of includeClosure(doc)) {
+    if (f === doc) continue;
+    const rel = path.relative(docDir, f);
+    const target = path.resolve(oldDir, rel);
+    if (!target.startsWith(path.join(tmp, 'old'))) continue;
+    const text = await src.read(rel);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    if (text == null) {
+      fs.copyFileSync(f, target);
+      fromCurrent.push(rel);
+    } else {
+      fs.writeFileSync(target, text);
+      if (text !== readText(f)) changedFiles.push(rel);
+    }
+  }
+  if (mainText !== readText(doc)) changedFiles.unshift(path.basename(doc));
+  return { src, oldDir, oldDoc, changedFiles, fromCurrent };
+}
+
+// A word diff of every changed file, with current line numbers, for Claude.
+export async function wordDiff(doc, source, { max = 200000 } = {}) {
+  const docDir = path.dirname(doc);
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-wdiff-'));
+  try {
+    const m = await buildMirror(doc, source, tmp);
+    const parts = [];
+    for (const rel of m.changedFiles) {
+      const r = await run('git', ['diff', '--no-index', '--no-color', '--word-diff=plain', '-U1', path.resolve(m.oldDir, rel), path.join(docDir, rel)], { timeout: 60000 });
+      // Hunk headers carry the new line numbers: @@ -a,b +c,d @@.
+      const body = r.stdout.split('\n').filter((l) => !/^(diff --git|index |--- |\+\+\+ )/.test(l)).join('\n');
+      parts.push(`<diff file="${rel}">\n${body}\n</diff>`);
+    }
+    let text = parts.join('\n\n');
+    if (text.length > max) text = text.slice(0, max) + '\n(diff cut: too long)';
+    return { label: m.src.label, changedFiles: m.changedFiles, text };
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+}
+
 export async function compareBuild(doc, source) {
   const docDir = path.dirname(doc);
   const stem = path.basename(doc, '.tex');
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-diff-'));
   try {
-    const src = await sourceReader(doc, source, tmp);
-    // Mirror: the old document sits DEPTH folders deep so ../ inputs land
-    // inside tmp too.
-    const oldDir = path.join(tmp, 'old', ...Array.from({ length: DEPTH }, (_, i) => 'd' + i));
-    fs.mkdirSync(oldDir, { recursive: true });
-    const oldDoc = path.join(oldDir, path.basename(doc));
-    const mainText = await src.read(src.mainRel);
-    if (mainText == null) throw new Error('Não deu para ler o documento da outra versão.');
-    fs.writeFileSync(oldDoc, mainText);
-    const changedFiles = [];
-    const fromCurrent = [];
-    for (const f of includeClosure(doc)) {
-      if (f === doc) continue;
-      const rel = path.relative(docDir, f);
-      const target = path.resolve(oldDir, rel);
-      if (!target.startsWith(path.join(tmp, 'old'))) continue;
-      const text = await src.read(rel);
-      fs.mkdirSync(path.dirname(target), { recursive: true });
-      if (text == null) {
-        fs.copyFileSync(f, target);
-        fromCurrent.push(rel);
-      } else {
-        fs.writeFileSync(target, text);
-        if (text !== readText(f)) changedFiles.push(rel);
-      }
-    }
-    if (mainText !== readText(doc)) changedFiles.unshift(path.basename(doc));
-
+    const { src, oldDoc, changedFiles, fromCurrent } = await buildMirror(doc, source, tmp);
     const outDir = path.join(docDir, '.texugo', 'diff');
     fs.mkdirSync(outDir, { recursive: true });
     const job = `${stem}-mudancas`;

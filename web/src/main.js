@@ -26,6 +26,7 @@ import { shortcutsDialog } from './shortcuts.js';
 import { zoteroDialog } from './zotero.js';
 import { mathPreview } from './mathpreview.js';
 import { reviewDialog, loadLastReview } from './review.js';
+import { responseDialog } from './rr.js';
 import { insertGrid } from './table.js';
 
 export const S = {
@@ -227,6 +228,7 @@ app.compare = () => compareDialog(app, S);
 app.shortcuts = shortcutsDialog;
 app.zotero = () => zoteroDialog(app, S);
 app.review = () => reviewDialog(app, S);
+app.respond = () => responseDialog(app, S);
 app.loadLastReview = () => loadLastReview(app, S);
 
 function tablePasted(r) {
@@ -572,6 +574,7 @@ function renderDocBar() {
                 { label: 'Limpar arquivos auxiliares', icon: 'trash', action: () => call('cleanAux', { doc: t.root }).then(() => toast('Auxiliares removidos.', 'ok')) },
                 'sep',
                 { label: 'Revisar como parecerista…', title: 'O seu Claude Code lê o paper inteiro e escreve um parecer, cada ponto ligado à linha', icon: 'review', action: () => reviewDialog(app, S) },
+                { label: 'Resposta aos pareceristas…', title: 'Cole os pareceres: o Claude escreve o response.tex com cada comentário, a resposta e onde o paper mudou', icon: 'letter', action: () => responseDialog(app, S) },
                 { label: 'Comparar com outra versão…', title: 'PDF com as mudanças marcadas (latexdiff): versão do coautor, do Overleaf ou de um commit', icon: 'columns', action: () => compareDialog(app, S) },
                 { label: 'Adicionar referência…', title: 'Por DOI, arXiv ou título, direto no .bib', icon: 'plus', kb: '⌥⌘R', action: () => addReference(app, S) },
                 { label: 'Formatar documento', title: 'Arruma a indentação com o latexindent do TeX Live', icon: 'wrap', kb: '⌥⇧F', action: () => tools.formatDoc(app, S) },

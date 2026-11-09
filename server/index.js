@@ -26,6 +26,7 @@ import * as compare from './compare.js';
 import * as refcheck from './refcheck.js';
 import * as zotero from './zotero.js';
 import * as reviewer from './review.js';
+import * as rr from './rr.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -497,6 +498,12 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async reviewRun({ root, doc, journal, focus, lang, model, effort }) {
       mustAllow(root);
       return reviewer.review({ root, doc: path.resolve(mustAllow(doc)), journal, focus, lang, model, effort });
+    },
+    async respondReferees({ root, doc, reports, source, lang, model, effort }) {
+      mustAllow(root);
+      if (!reports || reports.length < 40) throw httpError(400, 'Cole os pareceres.');
+      if (source && !['git', 'path'].includes(source.kind)) throw httpError(400, 'Versão inválida.');
+      return rr.respond({ root, doc: path.resolve(mustAllow(doc)), reports: String(reports).slice(0, 200000), source, lang, model, effort });
     },
     async reviewLast({ doc }) {
       return reviewer.lastReview(path.resolve(mustAllow(doc)));

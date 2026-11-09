@@ -312,6 +312,31 @@ export function createState(doc, path, hooks, settings = {}) {
       autoEnd,
       viciosExtension(path),
       mathPreviewExtension(path),
+      // ⌘-click on "file.tex:123" (in a comment, a log, a response letter)
+      // opens that line.
+      EditorView.domEventHandlers({
+        mousedown(e, view) {
+          if (!(e.metaKey || e.ctrlKey) || !hooks.openAt) return false;
+          const pos = view.posAtCoords({ x: e.clientX, y: e.clientY });
+          if (pos == null) return false;
+          const line = view.state.doc.lineAt(pos);
+          const re = /([\w./-]+\.(?:tex|bib|sty|cls|md|R|py|do)):(\d+)/g;
+          let m;
+          while ((m = re.exec(line.text))) {
+            const a = line.from + m.index;
+            if (pos >= a && pos <= a + m[0].length) {
+              e.preventDefault();
+              const dir = path.replace(/[^/]*$/, '');
+              const target = m[1].startsWith('/') ? m[1] : dir + m[1];
+              const parts = [];
+              for (const seg of target.split('/')) seg === '..' ? parts.pop() : seg !== '.' && parts.push(seg);
+              hooks.openAt(parts.join('/'), Number(m[2]));
+              return true;
+            }
+          }
+          return false;
+        },
+      }),
       /\.(tex|ltx)$/i.test(path) ? citeHover(hooks) : [],
       /\.(tex|ltx)$/i.test(path)
         ? EditorView.domEventHandlers({
