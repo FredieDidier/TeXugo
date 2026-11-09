@@ -23,11 +23,23 @@ const EXTRA_PATHS = [
   '/sbin',
 ];
 
+// Variables a parent Claude Code session (or the desktop app that launched
+// TeXugo from one) leaves in the environment. Passed on, they make the
+// user's own claude believe it is nested, point it at another login server
+// or proxy, and ask the user to sign in again.
+const INHERITED = /^(CLAUDECODE|CLAUDE_CODE_.*|CLAUDE_AGENT_SDK_.*|CLAUDE_PID|CLAUDE_EFFORT|CLAUDE_PREVIEW_.*|ANTHROPIC_BASE_URL|USE_STAGING_OAUTH|USE_LOCAL_OAUTH)$/;
+
+export function cleanEnv(env = process.env) {
+  const out = {};
+  for (const [k, v] of Object.entries(env)) if (!INHERITED.test(k)) out[k] = v;
+  return out;
+}
+
 export function toolEnv(extra = {}) {
   const parts = (process.env.PATH || '').split(':').filter(Boolean);
   for (const p of EXTRA_PATHS) if (!parts.includes(p)) parts.push(p);
   return {
-    ...process.env,
+    ...cleanEnv(),
     PATH: parts.join(':'),
     // Keep TeX from wrapping log lines at 79 characters; the log parser
     // relies on file paths and messages staying on one line.

@@ -54,5 +54,10 @@ export function connect(extra = '') {
   };
 }
 
+// Messages to the server over the same socket (terminal keystrokes).
+export function wsSend(msg) {
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify(msg));
+}
+
 // Electron bridge (preload). Absent when running in a plain browser.
 export const native = window.texugo || null;

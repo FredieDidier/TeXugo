@@ -16,6 +16,8 @@ import { isInside, dataDir, run, which, toolEnv } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
 import * as ai from './ai.js';
+import { Terminals } from './terminal.js';
+import { IdeBridge } from './ide.js';
 import * as doctor from './doctor.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -76,6 +78,33 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     return path.resolve(p);
   };
 
+  // Questions to the page (show a diff, open a file, save): the page answers
+  // with uiReply. timeout 0 waits for the user as long as it takes.
+  const asks = new Map();
+  let askSeq = 0;
+  const askUi = (type, payload, timeout = 30000) =>
+    new Promise((resolve) => {
+      if (![...clients].some((c) => c.readyState === 1)) return resolve({});
+      const askId = `a${++askSeq}`;
+      const timer = timeout ? setTimeout(() => (asks.delete(askId), resolve({})), timeout) : null;
+      asks.set(askId, (answer) => (timer && clearTimeout(timer), asks.delete(askId), resolve(answer || {})));
+      broadcast({ type, askId, ...payload });
+    });
+
+  const terminals = new Terminals(broadcast);
+  // Compile errors and ?? of the last builds, as diagnostics for Claude Code.
+  const diagnostics = () => {
+    const out = [];
+    for (const r of builds.lastResults.values()) {
+      for (const e of r.errors || []) out.push({ file: e.file || r.doc, line: e.line, severity: 'Error', message: e.message + (e.hint ? ` (${e.hint})` : '') });
+      for (const u of r.undefinedRefs || []) out.push({ file: u.file || r.doc, line: u.line, severity: 'Warning', message: `Undefined reference \\ref{${u.key}} (prints ?? in the PDF)` + (u.explain ? `. ${u.explain}` : '') });
+      for (const c of r.undefinedCites || []) out.push({ file: c.file || r.doc, line: c.line, severity: 'Warning', message: `Undefined citation \\cite{${c.key}}` + (c.explain ? `. ${c.explain}` : '') });
+      for (const w of (r.warnings || []).slice(0, 100)) out.push({ file: w.file || r.doc, line: w.line, severity: 'Warning', message: w.message });
+    }
+    return out;
+  };
+  const ide = new IdeBridge({ broadcast, askUi, diagnostics, allowed });
+
   function watch(root) {
     if (watchers.has(root)) return;
     const pending = new Map();
@@ -127,6 +156,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       root = path.resolve(root);
       if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) throw httpError(404, 'Pasta não encontrada.');
       openProjects.add(root);
+      ide.setFolders([...openProjects]);
       watch(root);
       rememberRecent(root);
       ensureGitignore(root);
@@ -370,6 +400,41 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async format({ path: p, text }) {
       return doctor.formatLatex(text, mustAllow(p));
     },
+    // Terminals and the Claude Code bridge.
+    async termCreate({ root, kind, cols, rows }) {
+      mustAllow(root);
+      let env = {};
+      if (kind === 'claude') {
+        await ide.start();
+        ide.setFolders([...openProjects]);
+        env = ide.env();
+      }
+      return terminals.create({ cwd: root, kind, cols, rows, env });
+    },
+    async termList() {
+      return terminals.list();
+    },
+    async termSnapshot({ id }) {
+      return terminals.snapshot(id);
+    },
+    async termKill({ id }) {
+      terminals.kill(id);
+      return true;
+    },
+    async ideState({ tabs, selection }) {
+      if (tabs) ide.setTabs(tabs.filter((t) => allowed(t.path)));
+      if (selection && allowed(selection.filePath)) ide.setSelection(selection);
+      return { clients: ide.connectedCount };
+    },
+    async ideMention({ path: p, lineStart, lineEnd }) {
+      ide.atMention(mustAllow(p), lineStart, lineEnd);
+      return { clients: ide.connectedCount };
+    },
+    async uiReply({ askId, answer }) {
+      const fn = asks.get(askId);
+      if (fn) fn(answer);
+      return true;
+    },
     async aiRewrite({ root, path: p, action, text, before, after, hints, lang }) {
       mustAllow(p);
       mustAllow(root);
@@ -468,6 +533,17 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       // (closed, crashed, reloaded) the main window takes the PDF back.
       const pdfwin = url.searchParams.get('pdfwin');
       const pdfroot = url.searchParams.get('root');
+      // Keystrokes and sizes of the terminals.
+      ws.on('message', (raw) => {
+        let m;
+        try {
+          m = JSON.parse(String(raw));
+        } catch {
+          return;
+        }
+        if (m.type === 'term:input' && typeof m.data === 'string') terminals.write(m.id, m.data);
+        else if (m.type === 'term:resize') terminals.resize(m.id, m.cols, m.rows);
+      });
       ws.on('close', () => {
         clients.delete(ws);
         if (pdfwin) broadcast({ type: 'pdfwin:close', pdf: pdfwin, root: pdfroot });
@@ -488,6 +564,8 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
           watch(path.resolve(root));
         },
         close: () => {
+          terminals.killAll();
+          ide.removeLock();
           for (const w of watchers.values()) w.close();
           builds.cancel();
           server.close();

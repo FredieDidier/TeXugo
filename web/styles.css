@@ -464,3 +464,22 @@ body > .cm-tooltip { z-index: 40; }
 /* The selection layer sits behind the text by default, where the active-line
    background hides it; draw it on top (the colour is translucent). */
 .cm-selectionLayer { z-index: 1 !important; pointer-events: none; }
+
+/* terminal panel */
+.term-panel { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.term-bar { display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-bottom: 1px solid var(--border); flex: none; overflow-x: auto; }
+.term-tab { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: 6px; font-size: 12px; cursor: pointer; color: var(--muted); white-space: nowrap; }
+.term-tab:hover { background: var(--sunken); }
+.term-tab.active { background: var(--sunken); color: var(--text); }
+.term-tab.exited { opacity: 0.6; }
+.term-tab .close { display: inline-grid; opacity: 0.5; }
+.term-tab .close svg { width: 12px; height: 12px; }
+.term-tab .close:hover { opacity: 1; }
+.term-kind { font-family: var(--mono); color: var(--muted); }
+.term-kind.claude { color: #d97757; }
+.term-stack { flex: 1; min-height: 0; position: relative; background: var(--sunken); }
+.term-view { position: absolute; inset: 4px 0 0 8px; }
+.term-view .xterm { height: 100%; }
+.term-view .xterm-viewport { background: transparent !important; }
+.statusbar .ide-on { color: #d97757; }
+.bottom-body:has(.term-panel) { padding: 0; overflow: hidden; }

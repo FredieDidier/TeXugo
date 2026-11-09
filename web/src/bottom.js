@@ -16,7 +16,11 @@ export class BottomPanel {
     this.render();
   }
 
-  show(view, { soft = false } = {}) {
+  // auto: the app opens the panel by itself (a build started or failed). It
+  // never takes the user out of a terminal, where Claude may be working; the
+  // Problems tab still shows the count.
+  show(view, { soft = false, auto = false } = {}) {
+    if (auto && this.view === 'terminal' && this.S.settings.bottomOpen) return this.render();
     if (!soft || !this.S.settings.bottomOpen) this.app.toggleBottom(true);
     if (!soft || this.view !== 'problems') this.view = view;
     this.render();
@@ -38,9 +42,20 @@ export class BottomPanel {
       tab('build', 'Compilação'),
       tab('problems', 'Problemas', errs + qq + warns, errs ? 'err' : qq ? 'warn' : ''),
       tab('log', 'Log'),
+      tab('terminal', 'Terminal', this.app.terminals ? this.app.terminals.count : 0),
       h('span', { style: { flex: 1 } }),
+      this.view === 'terminal'
+        ? h('button', { class: 'icon-btn', title: this.S.tallBottom ? 'Painel menor' : 'Painel maior (para o Claude Code)', onclick: () => this.app.toggleTallBottom() }, icon(this.S.tallBottom ? 'down' : 'up'))
+        : null,
       h('button', { class: 'icon-btn', title: 'Fechar painel', onclick: () => ((this.S.bottomDismissed = true), this.app.toggleBottom(false)) }, icon('x')),
     );
+    if (this.view === 'terminal') {
+      if (this.app.terminals && this.app.terminals.el.parentNode !== this.body) {
+        clear(this.body, this.app.terminals.el);
+        requestAnimationFrame(() => this.app.terminals.fitActive());
+      }
+      return;
+    }
     if (this.view === 'build') this.renderBuild(true);
     else if (this.view === 'problems') this.renderProblems(true);
     else this.renderLog();

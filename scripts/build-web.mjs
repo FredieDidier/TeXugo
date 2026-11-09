@@ -14,6 +14,7 @@ function copyStatic() {
   for (const f of fs.readdirSync(path.join(root, 'web', 'assets'))) fs.copyFileSync(path.join(root, 'web', 'assets', f), path.join(dist, f));
   fs.copyFileSync(path.join(pdfjs, 'build', 'pdf.worker.min.mjs'), path.join(dist, 'pdf.worker.min.mjs'));
   fs.copyFileSync(path.join(pdfjs, 'web', 'pdf_viewer.css'), path.join(dist, 'pdf_viewer.css'));
+  fs.copyFileSync(path.join(root, 'node_modules', '@xterm', 'xterm', 'css', 'xterm.css'), path.join(dist, 'xterm.css'));
   for (const d of ['cmaps', 'standard_fonts']) fs.cpSync(path.join(pdfjs, d), path.join(dist, d), { recursive: true });
   fs.cpSync(path.join(pdfjs, 'web', 'images'), path.join(dist, 'images'), { recursive: true });
 }

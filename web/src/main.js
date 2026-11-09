@@ -15,7 +15,9 @@ import { TOKEN } from './api.js';
 import { setLang, tr } from './i18n.js';
 import { SplitEditor } from './split.js';
 import { viciosConfig, viciosOf } from './vicios/cm.js';
-import { AI_ACTIONS, runAiAction } from './ai.js';
+import { AI_ACTIONS, runAiAction, focusedTarget } from './ai.js';
+import { TerminalPanel } from './terminal.js';
+import { setupIde, mentionInClaude } from './ide.js';
 
 export const S = {
   hello: null,
@@ -106,18 +108,21 @@ function buildLayout() {
     menu(e.clientX, e.clientY, [
       ...AI_ACTIONS.map((a) => ({ label: a.label, title: a.hint, icon: 'edit', action: () => runAiAction(app, S, a.id, { view, tab }) })),
       'sep',
+      { label: 'Mencionar no Claude Code', title: 'Põe o arquivo e as linhas selecionadas no prompt do Claude Code', icon: 'command', action: () => mentionInClaude(app, S, { view, tab }) },
       { label: 'Copiar', action: () => navigator.clipboard.writeText(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)) },
     ]);
   });
   app.sidebar = new Sidebar(app, S);
+  app.terminals = new TerminalPanel(app, S);
   app.bottom = new BottomPanel(app, S);
+  setupIde(app, S);
   applyLayoutSizes();
 }
 
 function applyLayoutSizes() {
   app.sidebarEl.style.width = S.settings.sidebarWidth + 'px';
   if (S.settings.pdfWidth) app.pdfGroup.style.width = S.settings.pdfWidth + 'px';
-  app.bottomEl.style.height = S.settings.bottomHeight + 'px';
+  app.bottomEl.style.height = (S.tallBottom ? Math.round(innerHeight * 0.62) : S.settings.bottomHeight) + 'px';
   app.bottomEl.classList.toggle('hidden', !S.settings.bottomOpen);
   app.bottomGutter.classList.toggle('hidden', !S.settings.bottomOpen);
   app.sidebarEl.classList.toggle('hidden', !!S.settings.sidebarHidden);
@@ -233,6 +238,7 @@ const editorHooks = (t) => ({
     S.cursor.line = line.number;
     S.cursor.col = pos - line.from + 1;
     renderStatusSoon();
+    app.idePush && app.idePush();
     app.sidebar.cursorMoved && app.sidebar.cursorMoved(line.number);
     if (S.settings.followCursor) followSoon();
   },
@@ -408,6 +414,7 @@ function renderTabs() {
     }),
   );
   app.split.render();
+  app.idePush && app.idePush();
   const act = app.tabsEl.querySelector('.tab.active');
   if (act) act.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
@@ -699,7 +706,7 @@ function wireBuildEvents() {
     else app.bottom.note(null);
     // The panel opens itself when a build starts, unless the user closed it
     // (errors and ?? still open it, in build:done).
-    if (!S.bottomDismissed) app.bottom.show('build', { soft: true });
+    if (!S.bottomDismissed) app.bottom.show('build', { soft: true, auto: true });
     refreshBuildUi();
   });
   on('build:doc', (e) => {
@@ -751,10 +758,10 @@ function wireBuildEvents() {
     const qq = (e.docs || []).reduce((n, d) => n + d.undefinedRefs.length + d.undefinedCites.length, 0);
     if (e.cancelled) toast('Compilação interrompida.', 'warn');
     else if (bad.length) {
-      app.bottom.show('problems');
+      app.bottom.show('problems', { auto: true });
       toast(`${bad.map((d) => d.name).join(', ')}: erro na compilação.`, 'error');
     } else if (qq) {
-      app.bottom.show('problems');
+      app.bottom.show('problems', { auto: true });
       toast(`Compilou, mas ainda há ${qq} ?? no PDF. Veja Problemas.`, 'warn', 6000);
     }
     refreshBuildUi();
@@ -1089,6 +1096,9 @@ function renderStatus() {
   const anyResult = [...S.docState.values()].some((s) => s.result);
   clear(
     app.statusEl,
+    S.ideClients
+      ? h('span', { class: 'item click ide-on', onclick: () => (app.bottom.show('terminal'), app.terminals.focus()), title: 'O Claude Code está ligado ao TeXugo: vê a seleção e os erros de compilação.' }, '✻ Claude ligado')
+      : null,
     S.project && S.git && S.git.repo
       ? h('span', { class: 'item click', onclick: () => app.sidebar.show('git'), title: 'Git' }, icon('git'), S.git.branch || '—', S.git.files.length ? ` · ${S.git.files.length} alterações` : '', S.git.ahead ? ` ↑${S.git.ahead}` : '', S.git.behind ? ` ↓${S.git.behind}` : '')
       : null,
@@ -1169,6 +1179,23 @@ function toggleBottom(force) {
   saveSettingsSoon();
 }
 app.toggleBottom = toggleBottom;
+
+// A taller bottom panel for Claude Code, without touching the saved height.
+app.toggleTallBottom = () => {
+  S.tallBottom = !S.tallBottom;
+  applyLayoutSizes();
+  app.bottom.render();
+  requestAnimationFrame(() => app.terminals.fitActive());
+};
+// ⌃` shows or hides the terminal, opening one when there is none.
+function toggleTerminal() {
+  if (S.settings.bottomOpen && app.bottom.view === 'terminal') return toggleBottom(false);
+  app.bottom.show('terminal');
+  if (!app.terminals.count) app.terminals.open('shell');
+  else app.terminals.focus();
+}
+app.toggleTerminal = toggleTerminal;
+app.mentionInClaude = () => mentionInClaude(app, S, focusedTarget(app));
 
 // ---------------------------------------------------------------- project
 async function openProject(root) {
@@ -1346,6 +1373,13 @@ function reloadPdfSoon(p) {
 // ---------------------------------------------------------------- keys
 function wireKeys() {
   document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && (e.key === '`' || e.code === 'Backquote')) {
+      e.preventDefault();
+      return toggleTerminal();
+    }
+    // Inside a terminal, keys belong to the program running there (⌃C, ⌃K,
+    // ⌃W in Claude Code or the shell); only ⌘K, ⌘P and ⌘, stay global.
+    if (e.target && e.target.closest && e.target.closest('.term-panel') && !(e.metaKey && ['k', 'p', ','].includes(e.key.toLowerCase()))) return;
     const mod = e.metaKey || e.ctrlKey;
     if (!mod) return;
     const k = e.key.toLowerCase();

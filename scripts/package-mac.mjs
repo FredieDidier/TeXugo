@@ -24,6 +24,20 @@ const copy = (rel) => fs.cpSync(path.join(root, rel), path.join(dest, rel), { re
 fs.rmSync(path.join(dest, 'dist', 'app.js.map'), { force: true });
 fs.mkdirSync(path.join(dest, 'node_modules'), { recursive: true });
 fs.cpSync(path.join(root, 'node_modules', 'ws'), path.join(dest, 'node_modules', 'ws'), { recursive: true });
+// node-pty (terminals): its JavaScript and the prebuilt N-API binary for
+// this Mac, which works in Electron as it does in Node. The helper it spawns
+// through must be executable.
+{
+  const src = path.join(root, 'node_modules', 'node-pty');
+  const dst = path.join(dest, 'node_modules', 'node-pty');
+  for (const rel of ['package.json', 'lib', 'LICENSE']) fs.cpSync(path.join(src, rel), path.join(dst, rel), { recursive: true });
+  for (const arch of ['arm64', 'x64']) {
+    const pre = path.join(src, 'prebuilds', `darwin-${arch}`);
+    if (!fs.existsSync(pre)) continue;
+    fs.cpSync(pre, path.join(dst, 'prebuilds', `darwin-${arch}`), { recursive: true });
+    fs.chmodSync(path.join(dst, 'prebuilds', `darwin-${arch}`, 'spawn-helper'), 0o755);
+  }
+}
 const slim = { name: pkg.name, productName: pkg.productName, version: pkg.version, main: pkg.main, type: pkg.type, dependencies: pkg.dependencies };
 fs.writeFileSync(path.join(dest, 'package.json'), JSON.stringify(slim, null, 2));
 
