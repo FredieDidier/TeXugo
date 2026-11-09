@@ -63,5 +63,11 @@ const installed = '/Applications/TeXugo.app';
 if (fs.existsSync(installed)) {
   fs.rmSync(installed, { recursive: true, force: true });
   execFileSync('ditto', [appDir, installed]);
+  // The copy picks up extended attributes again (Finder info, provenance),
+  // which break the signature and keep Finder from opening the app: clean
+  // and re-sign it in place, then make sure it verifies.
+  execFileSync('xattr', ['-cr', installed]);
+  execFileSync('codesign', ['--force', '--deep', '--sign', '-', installed], { stdio: 'inherit' });
+  execFileSync('codesign', ['--verify', '--deep', '--strict', installed], { stdio: 'inherit' });
   console.log('Atualizado:', installed);
 }
