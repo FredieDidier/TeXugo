@@ -348,3 +348,36 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border);
 .pdf-view.presenting { background: #000; overflow: hidden; cursor: pointer; }
 .pdf-view.presenting .pdfViewer { padding: 0; }
 .pdf-view.presenting .pdfViewer .page { box-shadow: none; margin: 0 auto; }
+
+/* Markdown preview, GitHub style */
+.md-view { position: absolute; inset: 0; overflow: auto; background: var(--bg); }
+.editor-host.md-split { display: flex; }
+.editor-host.md-split .cm-editor { width: 50%; flex: none; border-right: 1px solid var(--border); }
+.editor-host.md-split .md-view { position: relative; inset: auto; flex: 1; }
+.seg .btn { border-radius: 0; }
+.seg .btn:first-child { border-radius: 6px 0 0 6px; }
+.seg .btn:last-child { border-radius: 0 6px 6px 0; }
+.markdown-body { max-width: 860px; margin: 0 auto; padding: 32px 40px 80px; font: 15px/1.65 var(--ui); color: var(--text); word-wrap: break-word; }
+.markdown-body h1, .markdown-body h2 { padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
+.markdown-body h1 { font-size: 2em; margin: 0.2em 0 0.6em; }
+.markdown-body h2 { font-size: 1.5em; margin: 1.4em 0 0.6em; }
+.markdown-body h3 { font-size: 1.25em; margin: 1.2em 0 0.5em; }
+.markdown-body h1, .markdown-body h2, .markdown-body h3, .markdown-body h4 { font-weight: 650; line-height: 1.25; }
+.markdown-body p, .markdown-body ul, .markdown-body ol, .markdown-body blockquote, .markdown-body table, .markdown-body pre { margin: 0 0 1em; }
+.markdown-body a { color: var(--info); text-decoration: none; }
+.markdown-body a:hover { text-decoration: underline; }
+.markdown-body code { font: 0.86em var(--mono); background: var(--sunken); padding: 0.2em 0.4em; border-radius: 5px; }
+.markdown-body pre { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; overflow: auto; }
+.markdown-body pre code { background: none; padding: 0; font-size: 0.85em; line-height: 1.5; }
+.markdown-body blockquote { padding: 0 1em; color: var(--muted); border-left: 4px solid var(--accent); }
+.markdown-body table { border-collapse: collapse; display: block; overflow: auto; }
+.markdown-body th, .markdown-body td { border: 1px solid var(--border); padding: 6px 13px; }
+.markdown-body th { font-weight: 600; background: var(--panel); }
+.markdown-body tr:nth-child(2n) td { background: color-mix(in srgb, var(--panel) 50%, transparent); }
+.markdown-body img { max-width: 100%; border-radius: 4px; }
+.markdown-body hr { border: 0; height: 2px; background: var(--border); margin: 1.6em 0; }
+.markdown-body ul, .markdown-body ol { padding-left: 2em; }
+.markdown-body li + li { margin-top: 0.25em; }
+.markdown-body input[type=checkbox] { margin: 0 0.4em 0 -1.3em; accent-color: var(--accent); }
+.markdown-body li:has(> input[type=checkbox]) { list-style: none; }
+.markdown-body .front-matter { font-size: 12.5px; margin-bottom: 1.4em; }

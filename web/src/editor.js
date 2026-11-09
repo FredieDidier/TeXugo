@@ -4,12 +4,14 @@ import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLi
 import { defaultKeymap, history, historyKeymap, indentWithTab, toggleComment } from '@codemirror/commands';
 import { StreamLanguage, syntaxHighlighting, HighlightStyle, bracketMatching, indentOnInput, foldGutter, foldKeymap } from '@codemirror/language';
 import { stex } from '@codemirror/legacy-modes/mode/stex';
+import { markdown } from '@codemirror/lang-markdown';
 import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/search';
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap, snippetCompletion } from '@codemirror/autocomplete';
 import { linter, lintGutter, setDiagnostics } from '@codemirror/lint';
 import { tags as t } from '@lezer/highlight';
 
 const latex = StreamLanguage.define(stex);
+
 
 const style = HighlightStyle.define([
   { tag: t.keyword, color: 'var(--hl-cmd)' },
@@ -154,6 +156,7 @@ export const sizeCompartment = new Compartment();
 
 export function languageFor(path) {
   if (/\.(tex|sty|cls|ltx|bib|dtx|ins)$/i.test(path)) return [latex];
+  if (/\.(md|markdown|qmd|rmd)$/i.test(path)) return [markdown()];
   return [];
 }
 

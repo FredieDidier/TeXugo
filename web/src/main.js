@@ -9,6 +9,7 @@ import { showWelcome, newProjectDialog } from './welcome.js';
 import { openPalette } from './palette.js';
 import { openSettings, applyTheme } from './settings.js';
 import * as tools from './tools.js';
+import { renderMarkdown } from './markdown.js';
 
 export const S = {
   hello: null,
@@ -82,7 +83,8 @@ function buildLayout() {
   app.view = createView(app.editorHost);
   app.emptyEditor = h('div', { class: 'empty-editor' });
   app.binaryView = h('div', { class: 'binary-view hidden' });
-  app.editorHost.append(app.emptyEditor, app.binaryView);
+  app.mdView = h('div', { class: 'md-view hidden' }, (app.mdBody = h('article', { class: 'markdown-body' })));
+  app.editorHost.append(app.emptyEditor, app.binaryView, app.mdView);
   app.sidebar = new Sidebar(app, S);
   app.bottom = new BottomPanel(app, S);
   applyLayoutSizes();
@@ -171,6 +173,7 @@ const editorHooks = (t) => ({
     }
     t.version = (t.version || 0) + 1;
     countWordsSoon();
+    if (isMd(t) && t.mdMode === 'split') mdRenderSoon();
   },
   onCursor: (state) => {
     const pos = state.selection.main.head;
@@ -250,6 +253,7 @@ function activate(path) {
     if (app.view.state !== t.state) app.view.setState(t.state);
     applyDiagnostics();
   }
+  applyMdMode();
   renderTabs();
   renderDocBar();
   app.sidebar.onActiveChanged();
@@ -365,6 +369,30 @@ function docStatus(doc) {
   return st.status;
 }
 
+// ---------------------------------------------------------------- markdown
+const isMd = (t) => !!t && /\.(md|markdown)$/i.test(t.path);
+
+// Markdown tabs show one of: rendered preview (default, like GitHub), the
+// source, or both side by side with the preview updating as you type.
+function applyMdMode() {
+  const t = activeTab();
+  const md = isMd(t) && !t.binary;
+  const mode = md ? t.mdMode || 'preview' : 'edit';
+  app.editorHost.classList.toggle('md-split', md && mode === 'split');
+  app.mdView.classList.toggle('hidden', !md || mode === 'edit');
+  if (md) app.view.dom.classList.toggle('hidden', mode === 'preview');
+  if (md && mode !== 'edit') mdRender();
+}
+function mdRender() {
+  const t = activeTab();
+  if (!isMd(t)) return;
+  const text = app.view.state.doc.toString();
+  const top = app.mdView.scrollTop;
+  renderMarkdown(app.mdBody, text, t.path, app);
+  app.mdView.scrollTop = top;
+}
+const mdRenderSoon = debounce(mdRender, 200);
+
 function renderDocBar() {
   const t = activeTab();
   if (!t) {
@@ -452,6 +480,11 @@ function renderDocBar() {
         ),
       ),
     );
+  } else if (isMd(t)) {
+    const mode = t.mdMode || 'preview';
+    const seg = (id, label, ic) =>
+      h('button', { class: 'btn sm' + (mode === id ? ' primary' : ''), onclick: () => ((t.mdMode = id), applyMdMode(), renderDocBar(), id !== 'preview' && app.view.focus()) }, icon(ic), label);
+    items.push(h('div', { class: 'split-btn seg' }, seg('preview', 'Visualizar', 'eye'), seg('split', 'Lado a lado', 'columns'), seg('edit', 'Código', 'edit')));
   } else if (/\.tex$/.test(t.path)) {
     items.push(h('span', { class: 'chip', title: 'Nenhum documento do projeto faz \\input deste arquivo. Adicione "% !TEX root = ../paper.tex" no topo para dizer qual é.' }, icon('info'), 'fora de qualquer documento'));
   }
@@ -916,7 +949,7 @@ function renderStatus() {
     h('span', { class: 'grow' }),
     t && !t.binary ? h('span', { class: 'item' }, `${S.cursor.words.toLocaleString('pt-BR')} palavras`) : null,
     t && !t.binary ? h('span', { class: 'item' }, `Ln ${S.cursor.line}, Col ${S.cursor.col}`) : null,
-    t ? h('span', { class: 'item' }, t.path.endsWith('.bib') ? 'BibTeX' : t.path.endsWith('.tex') ? 'LaTeX' : 'Texto') : null,
+    t ? h('span', { class: 'item' }, t.path.endsWith('.bib') ? 'BibTeX' : t.path.endsWith('.tex') ? 'LaTeX' : /\.md$/.test(t.path) ? 'Markdown' : 'Texto') : null,
     h('span', { class: 'item click', onclick: () => toggleBottom(), title: 'Painel inferior' }, icon('panel')),
   );
 }
