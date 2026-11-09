@@ -20,6 +20,7 @@ import { Terminals } from './terminal.js';
 import { IdeBridge } from './ide.js';
 import { Agents } from './agent.js';
 import * as doctor from './doctor.js';
+import * as refs from './refs.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -463,6 +464,17 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     },
     async exportZip({ doc }) {
       return exportZip(mustAllow(doc));
+    },
+    // References: look up a DOI / arXiv id / title and append it to a .bib.
+    async refLookup({ q }) {
+      return refs.lookup(q);
+    },
+    async refBibs({ doc }) {
+      return refs.bibsOf(mustAllow(doc)).filter(allowed);
+    },
+    async refAdd({ bib, ref }) {
+      if (!/\.bib$/.test(bib || '')) throw httpError(400, 'Escolha um arquivo .bib.');
+      return refs.addToBib(mustAllow(bib), ref);
     },
     async blindCheck({ doc, names }) {
       return blindCheck(mustAllow(doc), { names });

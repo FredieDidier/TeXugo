@@ -248,6 +248,7 @@ export function createState(doc, path, hooks, settings = {}) {
         { key: 'Mod-Enter', preventDefault: true, run: () => (hooks.compile(), true) },
         { key: 'Mod-Shift-Enter', preventDefault: true, run: () => (hooks.compileAll(), true) },
         { key: 'Mod-j', preventDefault: true, run: (v) => (hooks.syncForward(v), true) },
+        { key: 'Mod-Alt-r', preventDefault: true, run: () => (hooks.addRef && hooks.addRef(), true) },
         { key: 'Shift-Alt-f', preventDefault: true, run: () => (hooks.format && hooks.format(), true) },
         { key: 'Mod-b', run: wrapSelection('\\textbf{', '}') },
         { key: 'Mod-i', run: wrapSelection('\\emph{', '}') },

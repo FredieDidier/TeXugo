@@ -20,6 +20,7 @@ import { TerminalPanel } from './terminal.js';
 import { setupIde, mentionInClaude } from './ide.js';
 import { AgentPanel } from './agent.js';
 import { setBaseline } from './changes.js';
+import { addReference } from './refs.js';
 
 export const S = {
   hello: null,
@@ -215,6 +216,7 @@ function activeTab() {
   return tabByPath(S.active);
 }
 app.activeTab = activeTab;
+app.addReference = () => addReference(app, S);
 
 // Hooks hold the tab object, not its path, so they keep working after the
 // file is renamed.
@@ -224,6 +226,7 @@ const editorHooks = (t) => ({
   compileAll: () => compileAll(),
   syncForward: () => syncForward(),
   format: () => tools.formatDoc(app, S),
+  addRef: () => addReference(app, S),
   ask: (view) => mentionInClaude(app, S, { view, tab: t }),
   ai: (view, x, y) => menu(x, y, [{ label: 'Perguntar sobre o trecho…', title: 'Anexa o trecho à mensagem no painel Claude', icon: 'claude', action: () => mentionInClaude(app, S, { view, tab: t }) }, 'sep', ...AI_ACTIONS.map((a) => ({ label: a.label, title: a.hint, icon: 'edit', action: () => runAiAction(app, S, a.id, { view, tab: t }) }))]),
   onChange: (u) => {
@@ -536,6 +539,7 @@ function renderDocBar() {
                 { label: 'Abrir PDF fora do app', icon: 'external', action: () => call('openExternal', { path: t.root.replace(/\.tex$/, '.pdf') }).catch((e) => toast(e.message, 'error')) },
                 { label: 'Limpar arquivos auxiliares', icon: 'trash', action: () => call('cleanAux', { doc: t.root }).then(() => toast('Auxiliares removidos.', 'ok')) },
                 'sep',
+                { label: 'Adicionar referência…', title: 'Por DOI, arXiv ou título, direto no .bib', icon: 'plus', kb: '⌥⌘R', action: () => addReference(app, S) },
                 { label: 'Formatar documento', title: 'Arruma a indentação com o latexindent do TeX Live', icon: 'wrap', kb: '⌥⇧F', action: () => tools.formatDoc(app, S) },
                 { label: 'Médico do TeX', icon: 'info', action: () => tools.texDoctor(app, S) },
                 { label: 'Exportar ZIP para submissão', icon: 'down', action: () => tools.exportZip(app, S) },

@@ -539,3 +539,10 @@ body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-d
 .selbar-btn:hover { background: var(--sunken); }
 .selbar-btn.b { font-weight: 700; } .selbar-btn.i { font-style: italic; font-family: Georgia, serif; }
 .selbar-btn.claude { color: #d97757; }
+
+/* Adicionar referência */
+.ref-results { margin-top: 12px; max-height: 50vh; overflow: auto; display: flex; flex-direction: column; gap: 6px; }
+.ref-item { display: flex; gap: 12px; align-items: center; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; }
+.ref-meta { flex: 1; min-width: 0; }
+.ref-title { font-weight: 600; margin-bottom: 2px; }
+.ref-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
