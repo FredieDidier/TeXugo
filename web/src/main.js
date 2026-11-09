@@ -21,6 +21,7 @@ import { setupIde, mentionInClaude } from './ide.js';
 import { AgentPanel } from './agent.js';
 import { setBaseline } from './changes.js';
 import { addReference } from './refs.js';
+import { insertGrid } from './table.js';
 
 export const S = {
   hello: null,
@@ -218,6 +219,25 @@ function activeTab() {
 app.activeTab = activeTab;
 app.addReference = () => addReference(app, S);
 
+function tablePasted(r) {
+  const what = r.rowsOnly ? `${r.rows} linhas coladas na tabela` : `Tabela ${r.rows}×${r.cols} colada em LaTeX`;
+  toast(`${what}. ⌘Z desfaz.${r.needsBooktabs ? ' Falta \\usepackage{booktabs} no preâmbulo.' : ''}`, r.needsBooktabs ? 'warn' : 'ok', 6000);
+}
+// For CSV text in the clipboard (a pasted grid is converted on paste).
+app.pasteTable = async () => {
+  const { view, tab } = focusedTarget(app);
+  if (!view || !tab || !/\.(tex|ltx)$/i.test(tab.path)) return toast('Abra um arquivo .tex.', 'warn');
+  let text = '';
+  try {
+    text = await navigator.clipboard.readText();
+  } catch {
+    return toast('Não deu para ler a área de transferência.', 'error');
+  }
+  const r = insertGrid(view, text, text.includes('\t') ? '\t' : text.includes(';') && !text.includes(',') ? ';' : ',');
+  if (!r) return toast('A área de transferência não tem uma tabela (células separadas por tab, vírgula ou ponto e vírgula).', 'warn', 6000);
+  tablePasted(r);
+};
+
 // Hooks hold the tab object, not its path, so they keep working after the
 // file is renamed.
 const editorHooks = (t) => ({
@@ -228,6 +248,7 @@ const editorHooks = (t) => ({
   format: () => tools.formatDoc(app, S),
   addRef: () => addReference(app, S),
   openAt: (file, line) => openFile(file, { line }),
+  tablePasted: (r) => tablePasted(r),
   ask: (view) => mentionInClaude(app, S, { view, tab: t }),
   ai: (view, x, y) => menu(x, y, [{ label: 'Perguntar sobre o trecho…', title: 'Anexa o trecho à mensagem no painel Claude', icon: 'claude', action: () => mentionInClaude(app, S, { view, tab: t }) }, 'sep', ...AI_ACTIONS.map((a) => ({ label: a.label, title: a.hint, icon: 'edit', action: () => runAiAction(app, S, a.id, { view, tab: t }) }))]),
   onChange: (u) => {

@@ -12,6 +12,7 @@ import { linter, lintGutter, setDiagnostics } from '@codemirror/lint';
 import { tags as t } from '@lezer/highlight';
 import { viciosExtension } from './vicios/cm.js';
 import { changesField } from './changes.js';
+import { insertGrid } from './table.js';
 
 const latex = StreamLanguage.define(stex);
 
@@ -310,6 +311,20 @@ export function createState(doc, path, hooks, settings = {}) {
       autoEnd,
       viciosExtension(path),
       /\.(tex|ltx)$/i.test(path) ? citeHover(hooks) : [],
+      /\.(tex|ltx)$/i.test(path)
+        ? EditorView.domEventHandlers({
+            // Cells copied from a spreadsheet become a booktabs table.
+            paste(e, view) {
+              const text = e.clipboardData && e.clipboardData.getData('text/plain');
+              if (!text || !text.includes('\t')) return false;
+              const r = insertGrid(view, text);
+              if (!r) return false;
+              e.preventDefault();
+              hooks.tablePasted && hooks.tablePasted(r);
+              return true;
+            },
+          })
+        : [],
       changesField,
       selectionBar(path, hooks),
       keymap.of([
