@@ -546,3 +546,12 @@ body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-d
 .ref-meta { flex: 1; min-width: 0; }
 .ref-title { font-weight: 600; margin-bottom: 2px; }
 .ref-actions { display: flex; flex-direction: column; gap: 4px; flex-shrink: 0; }
+
+/* Cartão da citação */
+.cite-tip { max-width: 420px; padding: 8px 10px; font: 12.5px/1.45 var(--ui); color: var(--text); }
+.cite-tip-title { font-weight: 600; margin-bottom: 2px; }
+.cite-tip-meta { color: var(--muted); }
+.cite-tip-missing { color: var(--err); margin-bottom: 4px; }
+.cite-tip-links { display: flex; gap: 12px; margin-top: 6px; }
+.cite-tip-link { color: var(--accent, var(--info)); text-decoration: none; font-weight: 500; }
+.cite-tip-link:hover { text-decoration: underline; }

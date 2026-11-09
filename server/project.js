@@ -249,7 +249,12 @@ export function projectSymbols(projectRoot) {
       const title = (after.match(/title\s*=\s*[{"](.+?)[}"]\s*,?\s*\n/i) || [])[1];
       const author = (after.match(/author\s*=\s*[{"](.+?)[}"]\s*,?\s*\n/i) || [])[1];
       const year = (after.match(/year\s*=\s*[{"]?(\d{4})/i) || [])[1];
-      bibKeys.push({ key: m[2], type: m[1].toLowerCase(), title, author, year, file: b });
+      const venue = (after.match(/(?:journal|booktitle|institution|school)\s*=\s*[{"](.+?)[}"]\s*,?\s*\n/i) || [])[1];
+      const doi = (after.match(/\bdoi\s*=\s*[{"]\s*(?:https?:\/\/(?:dx\.)?doi\.org\/)?([^}"\s]+)/i) || [])[1];
+      const url = (after.match(/\burl\s*=\s*[{"]\s*([^}"\s]+)/i) || [])[1];
+      const eprint = (after.match(/\beprint\s*=\s*[{"]\s*([^}"\s]+)/i) || [])[1];
+      const line = text.slice(0, m.index).split('\n').length;
+      bibKeys.push({ key: m[2], type: m[1].toLowerCase(), title, author, year, venue, doi, url, eprint, file: b, line });
     }
   }
   return { labels, bibKeys };

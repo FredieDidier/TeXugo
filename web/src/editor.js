@@ -1,6 +1,6 @@
 // CodeMirror 6 setup for LaTeX (and plain text, BibTeX, Markdown files).
 import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/state';
-import { showTooltip } from '@codemirror/view';
+import { showTooltip, hoverTooltip } from '@codemirror/view';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, dropCursor, rectangularSelection, crosshairCursor, highlightSpecialChars, Decoration } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, toggleComment } from '@codemirror/commands';
 import { StreamLanguage, syntaxHighlighting, HighlightStyle, bracketMatching, indentOnInput, foldGutter, foldKeymap } from '@codemirror/language';
@@ -14,6 +14,74 @@ import { viciosExtension } from './vicios/cm.js';
 import { changesField } from './changes.js';
 
 const latex = StreamLanguage.define(stex);
+
+// Hovering a key inside \cite{...} shows the reference from the .bib.
+const stripBraces = (s) => String(s || '').replace(/[{}]/g, '').replace(/\\&/g, '&').replace(/--/g, '–');
+function citeHover(hooks) {
+  return hoverTooltip((view, pos) => {
+    const line = view.state.doc.lineAt(pos);
+    const re = /\\[a-zA-Z]*cite[a-zA-Z]*\*?(?:\[[^\]]*\])*\{([^}]*)\}/g;
+    let m;
+    while ((m = re.exec(line.text))) {
+      const open = line.from + m.index + m[0].length - m[1].length - 1;
+      if (pos <= open || pos > open + 1 + m[1].length) continue;
+      let at = open + 1;
+      for (const raw of m[1].split(',')) {
+        const end = at + raw.length;
+        if (pos >= at && pos <= end && raw.trim()) {
+          const key = raw.trim();
+          const lead = raw.length - raw.trimStart().length;
+          return { pos: at + lead, end: at + lead + key.length, above: true, create: () => ({ dom: citeCard(key, hooks) }) };
+        }
+        at = end + 1;
+      }
+    }
+    return null;
+  });
+}
+function citeCard(key, hooks) {
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  };
+  const dom = el('div', 'cite-tip');
+  const b = symbols.bibKeys.find((x) => x.key === key);
+  if (!b) {
+    dom.append(el('div', 'cite-tip-missing', `“${key}” não está em nenhum .bib do projeto.`));
+    if (hooks.addRef) {
+      const a = el('a', 'cite-tip-link', 'Adicionar referência…');
+      a.href = '#';
+      a.onmousedown = (e) => (e.preventDefault(), hooks.addRef());
+      dom.append(a);
+    }
+    return dom;
+  }
+  const authors = stripBraces(b.author).split(/\s+and\s+/).filter(Boolean).map((a) => (a.includes(',') ? a.split(',')[0] : a.split(' ').pop()).trim());
+  dom.append(el('div', 'cite-tip-title', stripBraces(b.title) || key));
+  dom.append(el('div', 'cite-tip-meta', [authors.length > 3 ? authors[0] + ' et al.' : authors.join(', '), b.year, stripBraces(b.venue)].filter(Boolean).join(' · ')));
+  const links = el('div', 'cite-tip-links');
+  const link = (text, href) => {
+    const a = el('a', 'cite-tip-link', text);
+    a.href = href;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    links.append(a);
+  };
+  if (b.doi) link('DOI', 'https://doi.org/' + b.doi);
+  if (b.eprint && /^\d{4}\.\d{4,5}/.test(b.eprint)) link('arXiv', 'https://arxiv.org/abs/' + b.eprint);
+  else if (b.url) link('Link', b.url);
+  link('Scholar', 'https://scholar.google.com/scholar?q=' + encodeURIComponent(stripBraces(b.title) || key));
+  if (hooks.openAt) {
+    const a = el('a', 'cite-tip-link', 'Ver no .bib');
+    a.href = '#';
+    a.onmousedown = (e) => (e.preventDefault(), hooks.openAt(b.file, b.line));
+    links.append(a);
+  }
+  dom.append(links);
+  return dom;
+}
 
 
 const style = HighlightStyle.define([
@@ -241,6 +309,7 @@ export function createState(doc, path, hooks, settings = {}) {
       languageFor(path),
       autoEnd,
       viciosExtension(path),
+      /\.(tex|ltx)$/i.test(path) ? citeHover(hooks) : [],
       changesField,
       selectionBar(path, hooks),
       keymap.of([
