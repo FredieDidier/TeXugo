@@ -20,7 +20,7 @@ export async function showWelcome(app, S) {
         'div',
         { class: 'hero' },
         h('img', { src: './logo.svg', alt: '' }),
-        h('div', {}, h('h1', {}, wordmark()), h('p', {}, 'O bicho que cava até achar a referência. Zero ?? no seu PDF.')),
+        h('div', {}, h('h1', {}, wordmark()), h('p', {}, 'Bravo com os erros, manso com você.')),
         S.project ? h('button', { class: 'btn', style: { marginLeft: 'auto' }, onclick: () => el.remove() }, icon('x'), 'Voltar ao projeto') : null,
       ),
       h(

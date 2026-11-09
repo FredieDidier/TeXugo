@@ -1,7 +1,7 @@
 <p align="center"><img src="web/assets/logo.svg" width="120" alt="TeXugo"></p>
 
 <h1 align="center">TeXugo</h1>
-<p align="center"><i>O bicho que cava até achar a referência. Zero <code>??</code> no seu PDF.</i></p>
+<p align="center"><i>Bravo com os erros, manso com você.</i></p>
 
 TeXugo é um editor LaTeX local para Mac. Os arquivos ficam no seu disco, a compilação usa o seu TeX Live e nada vai para a nuvem. Serve para papers, apêndices online, slides em Beamer, ementas, pareceres e cartas.
 

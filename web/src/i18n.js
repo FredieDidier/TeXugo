@@ -121,7 +121,7 @@ const EN = {
   'Saída do tlmgr': 'tlmgr output', 'Compilar tudo agora': 'Compile all now', 'Instalação': 'Installation', 'TeX Live não encontrado': 'TeX Live not found', 'Pacotes que faltam': 'Missing packages',
   'Nenhuma compilação desta sessão reclamou de pacote faltando.': 'No build in this session complained about a missing package.', 'Ou procure pelo nome do arquivo': 'Or search by file name',
   // welcome and new project
-  'O bicho que cava até achar a referência. Zero ?? no seu PDF.': 'The critter that digs until it finds the reference. Zero ?? in your PDF.', 'Voltar ao projeto': 'Back to the project',
+  'Bravo com os erros, manso com você.': 'Fierce with errors, gentle with you.', 'Voltar ao projeto': 'Back to the project',
   'Começar algo novo': 'Start something new', 'Clonar do GitHub…': 'Clone from GitHub…', 'Recentes': 'Recent', 'Tirar da lista': 'Remove from list',
   'TeX Live não encontrado: instale o MacTeX.': 'TeX Live not found: install MacTeX.', 'Seu nome': 'Your name', 'Instituição': 'Institution', 'nome-da-pasta': 'folder-name',
   'Dê um nome à pasta.': 'Give the folder a name.', 'Título': 'Title', 'Novo projeto': 'New project', 'Autor': 'Author', 'Onde criar': 'Where to create', 'Nome da pasta': 'Folder name',
