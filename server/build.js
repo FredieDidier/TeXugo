@@ -271,12 +271,32 @@ export class BuildManager extends EventEmitter {
   }
 
   _spawn(id, doc, cmd, args, cwd) {
+    const STALL_MS = Number(process.env.TEXUGO_STALL_MS) || 180000;
+    const MAX_LOG = 50 * 1024 * 1024;
+    const STALL_MSG = `compilação parada: ${Math.round(STALL_MS / 1000)} s sem nenhum progresso (laço infinito ou comando esperando resposta?)`;
+    const FLOOD_MSG = 'compilação parada: o log passou de 50 MB, sinal de laço infinito';
     return new Promise((resolve) => {
       const child = spawn(cmd, args, { cwd, env: toolEnv(), detached: true });
       this.running.child = child;
       this.emit('event', { type: 'build:log', id, doc, text: `$ ${cmd} ${args.join(' ')}\n` });
       let buf = '';
+      // A TeX run that prints nothing for STALL_MS, or floods the log, is stuck
+      // (an endless loop, a macro waiting on input that never comes). Kill it
+      // instead of leaving the build spinning forever.
+      let total = 0;
+      let stalled = null;
+      const stop = (why) => {
+        if (stalled) return;
+        stalled = why;
+        this.emit('event', { type: 'build:log', id, doc, text: `\n! TeXugo: ${why}\n` });
+        try { process.kill(-child.pid, 'SIGKILL'); } catch { child.kill('SIGKILL'); }
+      };
+      let timer = setTimeout(() => stop(STALL_MSG), STALL_MS);
       const onData = (d) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => stop(STALL_MSG), STALL_MS);
+        total += d.length;
+        if (total > MAX_LOG) return stop(FLOOD_MSG);
         const text = d.toString();
         this.emit('event', { type: 'build:log', id, doc, text });
         buf += text;
@@ -292,11 +312,14 @@ export class BuildManager extends EventEmitter {
       child.stdout.on('data', onData);
       child.stderr.on('data', onData);
       child.on('error', (err) => {
+        clearTimeout(timer);
         this.emit('event', { type: 'build:log', id, doc, text: String(err) + '\n' });
         resolve(-1);
       });
       child.on('close', (code) => {
+        clearTimeout(timer);
         this.running.child = null;
+        if (stalled) return resolve(-1);
         resolve(code == null ? -1 : code);
       });
     });
