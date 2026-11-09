@@ -17,6 +17,7 @@
     "package": "npm run build:web && node scripts/package-mac.mjs"
   },
   "dependencies": {
+    "katex": "0.16.11",
     "node-pty": "^1.1.0",
     "ws": "^8.18.0"
   },

@@ -24,6 +24,7 @@ import { addReference } from './refs.js';
 import { compareDialog } from './compare.js';
 import { shortcutsDialog } from './shortcuts.js';
 import { zoteroDialog } from './zotero.js';
+import { mathPreview } from './mathpreview.js';
 import { insertGrid } from './table.js';
 
 export const S = {
@@ -39,7 +40,7 @@ export const S = {
   building: null, // { id, order, requested }
   queued: false,
   lastSummary: null,
-  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true, vicios: true, changeMarks: true },
+  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true, vicios: true, changeMarks: true, mathPreview: true },
   cursor: { line: 1, col: 1, words: 0 },
   detached: new Set(), // PDFs shown in their own window
 };
@@ -1359,6 +1360,7 @@ const refreshSymbolsSoon = debounce(async () => {
     const s = await call('symbols', { root: S.project.root });
     symbols.labels = s.labels;
     symbols.bibKeys = s.bibKeys;
+    mathPreview.macros = s.macros || {};
     if (S.sidebarView === 'refs') app.sidebar.render();
   } catch {}
 }, 700);
@@ -1559,6 +1561,7 @@ async function boot() {
   Object.assign(S.settings, S.hello.settings || {});
   viciosConfig.enabled = S.settings.vicios !== false;
   document.body.classList.toggle('no-change-marks', S.settings.changeMarks === false);
+  mathPreview.on = S.settings.mathPreview !== false;
   viciosConfig.onResult = (view) => view === app.view && renderStatusSoon();
   // Nothing to show before the first build: start with the bottom panel
   // closed; it opens when a build starts.

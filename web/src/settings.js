@@ -2,6 +2,7 @@
 import { h, icon, modal } from './dom.js';
 import { EditorView } from './editor.js';
 import { viciosConfig, refreshVicios } from './vicios/cm.js';
+import { mathPreview } from './mathpreview.js';
 
 export function applyTheme(theme) {
   const root = document.documentElement;
@@ -117,6 +118,7 @@ export function openSettings(app, S) {
         [app.view, app.split.view].forEach(refreshVicios);
         app.renderStatus();
       }),
+      check('mathPreview', 'Mostrar a equação desenhada acima da fórmula enquanto você edita', () => (mathPreview.on = st.mathPreview !== false)),
       check('changeMarks', 'Marcar na margem as linhas alteradas desde a última compilação', () => document.body.classList.toggle('no-change-marks', !st.changeMarks)),
       check('wrap', 'Quebrar linhas longas no editor', () => [app.view, app.split.view].forEach((v) => v.dispatch({ effects: app.wrapCompartment.reconfigure(st.wrap ? EditorView.lineWrapping : []) }))),
       check('autoCompile', 'Abas novas já vêm com "compilar ao salvar" ligado'),

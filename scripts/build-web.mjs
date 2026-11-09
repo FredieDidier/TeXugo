@@ -17,6 +17,10 @@ function copyStatic() {
   fs.copyFileSync(path.join(root, 'node_modules', '@xterm', 'xterm', 'css', 'xterm.css'), path.join(dist, 'xterm.css'));
   for (const d of ['cmaps', 'standard_fonts']) fs.cpSync(path.join(pdfjs, d), path.join(dist, d), { recursive: true });
   fs.cpSync(path.join(pdfjs, 'web', 'images'), path.join(dist, 'images'), { recursive: true });
+  // KaTeX for the equation preview: its CSS and fonts (the CSS loads fonts/).
+  const katex = path.join(root, 'node_modules', 'katex', 'dist');
+  fs.copyFileSync(path.join(katex, 'katex.min.css'), path.join(dist, 'katex.min.css'));
+  fs.cpSync(path.join(katex, 'fonts'), path.join(dist, 'fonts'), { recursive: true });
 }
 
 const opts = {

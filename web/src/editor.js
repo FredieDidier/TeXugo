@@ -13,6 +13,7 @@ import { tags as t } from '@lezer/highlight';
 import { viciosExtension } from './vicios/cm.js';
 import { changesField } from './changes.js';
 import { insertGrid } from './table.js';
+import { mathPreviewExtension } from './mathpreview.js';
 
 const latex = StreamLanguage.define(stex);
 
@@ -310,6 +311,7 @@ export function createState(doc, path, hooks, settings = {}) {
       languageFor(path),
       autoEnd,
       viciosExtension(path),
+      mathPreviewExtension(path),
       /\.(tex|ltx)$/i.test(path) ? citeHover(hooks) : [],
       /\.(tex|ltx)$/i.test(path)
         ? EditorView.domEventHandlers({

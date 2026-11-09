@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { readText, stripComments } from './util.js';
 import { parseBib, bibSummary } from './bibparse.js';
+import { macrosFrom } from './texmacros.js';
 
 export const ARTIFACT_EXT = new Set([
   '.aux', '.log', '.fls', '.fdb_latexmk', '.bbl', '.blg', '.out', '.toc', '.lof', '.lot',
@@ -217,8 +218,11 @@ export function projectSymbols(projectRoot) {
   const labels = [];
   const bibKeys = [];
   const cites = {}; // key -> number of \cite uses in the project
+  const macros = {}; // \newcommand & co., for the equation preview
   for (const f of listTexFiles(projectRoot)) {
-    const lines = (readText(f) || '').split('\n');
+    const src = readText(f) || '';
+    if (/\\(?:newcommand|renewcommand|providecommand|DeclareMathOperator|def)\b/.test(src)) Object.assign(macros, macrosFrom(src));
+    const lines = src.split('\n');
     lines.forEach((line, i) => {
       const clean = line.replace(/(^|[^\\])%.*$/, '$1');
       const re = /\\label\s*\{([^}]+)\}/g;
@@ -242,13 +246,14 @@ export function projectSymbols(projectRoot) {
       if (e.isDirectory()) {
         if (!IGNORED_DIRS.has(e.name) && !e.name.startsWith('.')) walk(full, depth + 1);
       } else if (e.name.endsWith('.bib')) bibs.push(full);
+      else if (e.name.endsWith('.sty')) Object.assign(macros, macrosFrom(readText(full) || ''));
     }
   })(projectRoot, 0);
   for (const b of bibs) {
     for (const e of parseBib(readText(b) || '')) bibKeys.push(bibSummary(e, b));
   }
   for (const b of bibKeys) b.uses = cites[b.key] || 0;
-  return { labels, bibKeys };
+  return { labels, bibKeys, macros };
 }
 
 // Document outline: sectioning commands and Beamer frames of a file.

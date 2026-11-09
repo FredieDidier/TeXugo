@@ -38,6 +38,7 @@ export const SECTIONS = [
       ['Desfazer / refazer', '⌘Z / ⇧⌘Z', 'Menu Editar'],
       ['Completar \\cite, \\ref, \\label e comandos', 'digite', 'Escreva \\cite{ ou \\ref{ e escolha na lista; ↵ aceita'],
       ['Ver a referência de uma citação', 'passar o mouse', 'Sobre a chave dentro de \\cite{…}'],
+      ['Ver a equação desenhada', 'cursor na fórmula', 'Aparece acima de $…$, \\[…\\], equation, align…; desliga em Preferências'],
       ['Adicionar referência (DOI, link, título)', '⌥⌘R', 'Seta ao lado de Compilar; + na aba Referências'],
       ['Colar tabela do Excel como LaTeX', '⌘V', 'Cole células num .tex; para CSV, paleta: “Colar tabela”'],
       ['Formatar documento (indentação)', '⌥⇧F', 'Seta ao lado de Compilar'],

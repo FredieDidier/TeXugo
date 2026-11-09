@@ -602,3 +602,8 @@ body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-d
 .zot-item { cursor: pointer; }
 .zot-item input { margin-top: 2px; }
 .zot-item.muted { opacity: 0.55; cursor: default; }
+
+/* Prévia de equações */
+.math-tip { padding: 8px 14px; background: var(--raised); border: 1px solid var(--border-strong); border-radius: 8px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12); color: var(--text); max-width: min(720px, 70vw); overflow-x: auto; font-size: 15px; }
+.math-tip .katex-display { margin: 0; }
+.math-tip.error { font: 12px var(--mono); color: var(--err); }
