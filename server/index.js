@@ -128,6 +128,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       openProjects.add(root);
       watch(root);
       rememberRecent(root);
+      ensureGitignore(root);
       const docs = project.listDocuments(root).map((d) => project.docInfo(d));
       return { root, name: path.basename(root), docs, ui: (state.projects || {})[root] || null };
     },
@@ -480,6 +481,25 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       });
     });
   });
+}
+
+// Like Lattice: in a Git repository, keep LaTeX build files out of commits
+// by adding the missing patterns to .gitignore, once, in a marked block.
+// .bbl is left out on purpose: arXiv submissions often keep it.
+const GENERATED = ['*.aux', '*.log', '*.fls', '*.fdb_latexmk', '*.out', '*.toc', '*.lof', '*.lot', '*.blg', '*.bcf', '*.run.xml', '*.synctex.gz', '*.synctex(busy)', '*.nav', '*.snm', '*.vrb', '*.xdv', '*.texugo-tmp'];
+function ensureGitignore(root) {
+  try {
+    if (!fs.existsSync(path.join(root, '.git'))) return;
+    const file = path.join(root, '.gitignore');
+    const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+    const have = new Set(text.split('\n').map((l) => l.trim()));
+    const missing = GENERATED.filter((g) => !have.has(g));
+    if (!missing.length) return;
+    const block = (text && !text.endsWith('\n') ? '\n' : '') + (text ? '\n' : '') + '# TeXugo: arquivos gerados pelo LaTeX\n' + missing.join('\n') + '\n';
+    fs.appendFileSync(file, block);
+  } catch {
+    // A read-only or odd repository is not worth failing the open for.
+  }
 }
 
 function listByExt(root, exts) {
