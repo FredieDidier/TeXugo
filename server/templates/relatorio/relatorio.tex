@@ -1,0 +1,132 @@
+% !TEX program = pdflatex
+\documentclass[11pt,a4paper]{report}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[brazil]{babel}
+\usepackage{lmodern}
+\usepackage[scaled]{helvet}
+\renewcommand{\familydefault}{\sfdefault}
+\usepackage{microtype}
+\usepackage[margin=2.5cm,headheight=14pt]{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{booktabs,tabularx}
+\usepackage{titlesec}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage[most]{tcolorbox}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage[hidelinks]{hyperref}
+
+\definecolor{tocaInk}{HTML}{1E2127}
+\definecolor{tocaHoney}{HTML}{D98E1F}
+\definecolor{tocaGrey}{HTML}{6B7280}
+\definecolor{tocaCream}{HTML}{FAF5EA}
+
+% Chapters as numbered sections with a honey rule, no "Capítulo N" page.
+\titleformat{\chapter}[hang]{\Huge\bfseries\color{tocaInk}}{\color{tocaHoney}\thechapter}{0.6em}{}[\vspace{2pt}{\color{tocaHoney}\titlerule[1.5pt]}]
+\titlespacing*{\chapter}{0pt}{0pt}{1.4em}
+\titleformat{\section}{\Large\bfseries\color{tocaInk}}{\thesection}{0.6em}{}
+\setlist{itemsep=3pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.6em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{tocaGrey}{{TITLE}}}
+\fancyhead[R]{\small\color{tocaGrey}{{INSTITUTION}}}
+\fancyfoot[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancypagestyle{plain}{\fancyhf{}\fancyfoot[R]{\small\thepage}\renewcommand{\headrulewidth}{0pt}}
+
+\newtcolorbox{destaque}[1][]{colback=tocaCream,colframe=tocaHoney,boxrule=0pt,leftrule=3pt,arc=2pt,left=10pt,right=10pt,top=8pt,bottom=8pt,#1}
+
+\begin{document}
+
+% ---------------------------------------------------------------- capa
+\begin{titlepage}
+  \newgeometry{margin=0pt}
+  \pagecolor{tocaInk}\color{white}
+  \vspace*{6cm}
+  \hspace*{2.5cm}\begin{minipage}{0.75\paperwidth}
+    {\color{tocaHoney}\rule{3cm}{5pt}}\par\vspace{1cm}
+    {\fontsize{34}{40}\selectfont\bfseries {{TITLE}}\par}\vspace{0.6cm}
+    {\Large Subtítulo do relatório\par}\vspace{3cm}
+    {\large {{AUTHOR}}\par}\vspace{0.2cm}
+    {\color{tocaHoney}{{INSTITUTION}}\par}\vspace{0.2cm}
+    {{DATE}}
+  \end{minipage}
+  \vfill
+  \hspace*{2.5cm}{\small\color{tocaGrey}Documento confidencial. Versão 1.0}\par\vspace{2cm}
+  \restoregeometry
+\end{titlepage}
+\nopagecolor\color{black}
+
+% ---------------------------------------------------------------- sumário executivo
+\chapter*{Sumário executivo}
+\addcontentsline{toc}{chapter}{Sumário executivo}
+
+\begin{destaque}
+  \textbf{Em uma frase:} o que o relatório conclui e o que se recomenda fazer.
+\end{destaque}
+
+\begin{itemize}
+  \item \textbf{Achado 1.} A receita cresceu 18\% no ano, puxada pelo Nordeste.
+  \item \textbf{Achado 2.} O custo de aquisição de clientes caiu pela metade.
+  \item \textbf{Recomendação.} Ampliar a operação no Nordeste antes do segundo semestre.
+\end{itemize}
+
+\tableofcontents
+
+% ---------------------------------------------------------------- corpo
+\chapter{Contexto}
+Por que o relatório foi pedido, qual pergunta ele responde e quais dados usa.
+
+\chapter{Resultados}
+\section{Receita por região}
+A Figura~\ref{fig:receita} compara as regiões e a Tabela~\ref{tab:indicadores} resume os indicadores.
+
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[
+      ybar, bar width=18pt, width=0.85\linewidth, height=6cm,
+      symbolic x coords={Norte,Nordeste,Centro-Oeste,Sudeste,Sul}, xtick=data,
+      ylabel={Receita (R\$ milhões)}, ymin=0, nodes near coords,
+      axis lines*=left, ymajorgrids, grid style={tocaGrey!25},
+      every axis plot/.append style={fill=tocaHoney, draw=none},
+    ]
+      \addplot coordinates {(Norte,12) (Nordeste,31) (Centro-Oeste,15) (Sudeste,44) (Sul,22)};
+    \end{axis}
+  \end{tikzpicture}
+  \caption{Receita por região em 2026.}\label{fig:receita}
+\end{figure}
+
+\section{Indicadores}
+\begin{table}[h]
+  \centering
+  \caption{Indicadores principais}\label{tab:indicadores}
+  \begin{tabularx}{0.8\linewidth}{Xrrr}
+    \toprule
+    Indicador & 2025 & 2026 & Variação \\
+    \midrule
+    Receita (R\$ mi) & 105 & 124 & +18\% \\
+    Clientes ativos (mil) & 48 & 61 & +27\% \\
+    Custo de aquisição (R\$) & 210 & 104 & $-$50\% \\
+    \bottomrule
+  \end{tabularx}
+\end{table}
+
+\chapter{Recomendações}
+\begin{enumerate}
+  \item \textbf{Curto prazo.} O que fazer nos próximos três meses.
+  \item \textbf{Médio prazo.} O que planejar para o ano.
+  \item \textbf{Riscos.} O que pode dar errado e como acompanhar.
+\end{enumerate}
+
+\appendix
+\chapter{Metodologia}
+Fontes dos dados, definições e limitações.
+
+\end{document}
