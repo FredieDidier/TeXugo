@@ -39,7 +39,7 @@ export class BottomPanel {
       tab('problems', 'Problemas', errs + qq + warns, errs ? 'err' : qq ? 'warn' : ''),
       tab('log', 'Log'),
       h('span', { style: { flex: 1 } }),
-      h('button', { class: 'icon-btn', title: 'Fechar painel', onclick: () => this.app.toggleBottom(false) }, icon('x')),
+      h('button', { class: 'icon-btn', title: 'Fechar painel', onclick: () => ((this.S.bottomDismissed = true), this.app.toggleBottom(false)) }, icon('x')),
     );
     if (this.view === 'build') this.renderBuild(true);
     else if (this.view === 'problems') this.renderProblems(true);

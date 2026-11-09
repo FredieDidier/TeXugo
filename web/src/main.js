@@ -665,7 +665,9 @@ function wireBuildEvents() {
     }
     if (e.expanded.length) app.bottom.note(`Também vou compilar ${e.expanded.map(basename).join(', ')}: ${e.requested.map(basename).join(', ')} importa os rótulos dele${e.expanded.length > 1 ? 's' : ''} (\\externaldocument).`);
     else app.bottom.note(null);
-    if (S.settings.bottomOpen) app.bottom.show('build', { soft: true });
+    // The panel opens itself when a build starts, unless the user closed it
+    // (errors and ?? still open it, in build:done).
+    if (!S.bottomDismissed) app.bottom.show('build', { soft: true });
     refreshBuildUi();
   });
   on('build:doc', (e) => {
@@ -1391,6 +1393,9 @@ async function boot() {
     return;
   }
   Object.assign(S.settings, S.hello.settings || {});
+  // Nothing to show before the first build: start with the bottom panel
+  // closed; it opens when a build starts.
+  S.settings.bottomOpen = false;
   setLang(S.settings.lang);
   applyTheme(S.settings.theme);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
