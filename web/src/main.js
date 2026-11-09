@@ -133,10 +133,28 @@ function renderTopbar() {
       ? anyBuilding
         ? h('button', { class: 'btn', onclick: () => call('cancelBuild'), title: 'Parar a compilação' }, icon('stop'), 'Parar')
         : h(
-            'button',
-            { class: 'btn', onclick: () => compileAll(), disabled: !openRoots.length, title: openRoots.length ? `Compila os documentos das abas abertas (⌘⇧↵):\n${openRoots.map((d) => relPath(S.project.root, d)).join('\n')}` : 'Compila os documentos das abas abertas (⌘⇧↵)' },
-            icon('playAll'),
-            openRoots.length > 1 ? `Compilar os ${openRoots.length} documentos` : 'Compilar tudo',
+            'div',
+            { class: 'tip-wrap' },
+            h(
+              'button',
+              { class: 'btn', onclick: () => compileAll(), disabled: !openRoots.length },
+              icon('playAll'),
+              openRoots.length > 1 ? `Compilar os ${openRoots.length} documentos` : 'Compilar tudo',
+            ),
+            // In-app hover card: what this button will compile, and why
+            // a tab may not count as a document of its own.
+            h(
+              'div',
+              { class: 'tip-card' },
+              h('div', { class: 'tip-title' }, 'Vai compilar ', h('kbd', {}, '⌘⇧↵')),
+              openRoots.length
+                ? openRoots.map((d) => {
+                    const tabs = S.tabs.filter((t) => t.root === d && t.path !== d).map((t) => t.name);
+                    return h('div', { class: 'tip-row' }, icon('tex'), h('b', {}, relPath(S.project.root, d)), tabs.length ? h('span', { class: 'faint' }, ` inclui ${tabs.join(', ')}`) : null);
+                  })
+                : h('div', { class: 'faint' }, 'Nenhuma aba aberta pertence a um documento.'),
+              h('div', { class: 'tip-foot' }, 'Um documento é o .tex que vira PDF. Abas que entram nele (como sections/body.tex) não contam de novo.'),
+            ),
           )
       : null,
     h('button', { class: 'icon-btn', title: 'Tema claro/escuro', onclick: cycleTheme }, icon(isDark() ? 'sun' : 'moon')),

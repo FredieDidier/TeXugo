@@ -413,3 +413,13 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border);
 @container (max-width: 520px) { .doc-bar > .toggle { display: none; } }
 @container (max-width: 430px) { .doc-bar > .chip { display: none; } .doc-bar .crumbs { display: none; } }
 @container (max-width: 330px) { .doc-bar .root-pick { display: none; } }
+
+.tip-wrap { position: relative; }
+.tip-card { display: none; position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; width: 340px; padding: 10px 12px; background: var(--raised); border: 1px solid var(--border); border-radius: 10px; box-shadow: var(--shadow); font-size: 12.5px; }
+.tip-wrap:hover .tip-card, .tip-wrap.show .tip-card { display: block; }
+.tip-title { font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+.tip-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; flex-wrap: wrap; }
+.tip-row svg.i { color: var(--accent); }
+.tip-foot { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); color: var(--muted); font-size: 11.5px; }
+.topbar .tip-wrap { -webkit-app-region: no-drag; }
+.topbar { overflow: visible; }
