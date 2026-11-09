@@ -83,6 +83,7 @@ const EN = {
   'PDF escuro no tema escuro (só na tela; o arquivo não muda)': 'Dark PDF in the dark theme (screen only; the file does not change)',
   'Mostrar caixas "underfull" em Problemas': 'Show "underfull" boxes in Problems', 'Reabrir o último projeto ao iniciar': 'Reopen the last project at startup',
   'Idioma': 'Language',
+  'Falta instalar: ': 'Missing: ', 'O TeX Live não foi encontrado. ': 'TeX Live was not found. ', 'Instale o MacTeX: ': 'Install MacTeX: ', '. O Médico do TeX mostra os detalhes.': '. The TeX doctor shows the details.',
   'Tela inicial: modelos, abrir pasta e recentes': 'Start screen: templates, open folder and recent projects',
   // sidebar: files
   'Documento compilável (\\documentclass)': 'Compilable document (\\documentclass)', 'Novo arquivo': 'New file', 'Nova pasta': 'New folder',
@@ -163,6 +164,8 @@ const EN = {
 const PATTERNS = [
   [/^(Erros|Avisos|Caixas|Estilo|\?\?) (\d+)$/, (m, k, n) => `${{ Erros: 'Errors', Avisos: 'Warnings', Caixas: 'Boxes', Estilo: 'Style', '??': '??' }[k]} ${n}`],
   [/^Erro (\d+) em (.+)$/, 'Error $1 in $2'],
+  [/^ TeX Live (\d*) · tudo pronto$/, ' TeX Live $1 · all set'],
+  [/^((?:[a-z]+ \([^)]+\)(?:, )?)+)\. $/, (m, list) => list.replace(/compilar com pdfLaTeX/g, 'compiling with pdfLaTeX').replace(/compilar/g, 'compiling').replace(/documentos com fontspec/g, 'fontspec documents').replace(/documentos LuaLaTeX/g, 'LuaLaTeX documents').replace(/bibliografia/g, 'bibliography').replace(/clique duplo no PDF/g, 'PDF double-click').replace(/painel Git/g, 'Git panel') + '. '],
   [/^Erro em (.+)$/, 'Error in $1'],
   [/^Compilar os (\d+) documentos$/, 'Compile the $1 documents'],
   [/^Compilar (.+?)( \(⌘↵\))?$/, 'Compile $1$2'],

@@ -72,12 +72,7 @@ export async function showWelcome(app, S) {
           ),
         ),
       ),
-      h(
-        'div',
-        { class: 'tools-check' },
-        ['latexmk', 'pdflatex', 'xelatex', 'lualatex', 'bibtex', 'biber', 'synctex', 'git'].map((k) => h('span', { class: 'chip ' + (t[k] ? 'ok' : 'error'), title: t[k] || 'não encontrado' }, t[k] ? icon('check') : icon('x'), k)),
-        S.hello.tex ? h('span', { class: 'faint', style: { alignSelf: 'center', marginLeft: '6px' } }, S.hello.tex) : h('span', { style: { color: 'var(--err)' } }, 'TeX Live não encontrado: instale o MacTeX.'),
-      ),
+      toolsLine(S),
     ),
   );
   document.body.append(el);
@@ -226,4 +221,39 @@ export function cloneDialog(app, S) {
     footer: [h('button', { class: 'btn', onclick: () => m.close() }, 'Cancelar'), btn],
   });
   setTimeout(() => url.focus(), 0);
+}
+
+// One quiet line when everything TeXugo needs is installed; otherwise a
+// warning naming what is missing and what stops working without it.
+const TOOL_ROLE = {
+  latexmk: 'compilar',
+  pdflatex: 'compilar com pdfLaTeX',
+  xelatex: 'documentos com fontspec',
+  lualatex: 'documentos LuaLaTeX',
+  bibtex: 'bibliografia (natbib)',
+  biber: 'bibliografia (biblatex)',
+  synctex: 'clique duplo no PDF',
+  git: 'painel Git',
+};
+function toolsLine(S) {
+  const t = S.hello.tools || {};
+  const missing = Object.keys(TOOL_ROLE).filter((k) => !t[k]);
+  const year = ((S.hello.tex || '').match(/TeX Live (\d{4})/) || [])[1];
+  if (!missing.length) {
+    return h('div', { class: 'tools-check' }, h('span', { class: 'faint' }, icon('checkCircle'), ` TeX Live ${year || ''} · tudo pronto`));
+  }
+  return h(
+    'div',
+    { class: 'tools-check tools-missing' },
+    icon('warn'),
+    h(
+      'div',
+      {},
+      h('b', {}, S.hello.tex ? 'Falta instalar: ' : 'O TeX Live não foi encontrado. '),
+      S.hello.tex ? missing.map((k) => `${k} (${TOOL_ROLE[k]})`).join(', ') + '. ' : '',
+      'Instale o MacTeX: ',
+      h('a', { href: '#', onclick: (e) => (e.preventDefault(), call('openUrl', { url: 'https://tug.org/mactex/' })) }, 'tug.org/mactex'),
+      '. O Médico do TeX mostra os detalhes.',
+    ),
+  );
 }

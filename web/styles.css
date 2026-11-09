@@ -426,3 +426,6 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border);
 
 .topbar .brand { cursor: pointer; border-radius: 6px; padding: 2px 6px; margin-left: -6px; -webkit-app-region: no-drag; }
 .topbar .brand:hover { background: var(--sunken); }
+.tools-missing { align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 8px; background: var(--err-soft); color: var(--text); }
+.tools-missing svg.i { color: var(--err); margin-top: 2px; }
+.tools-check .faint svg.i { color: var(--ok); vertical-align: -3px; }
