@@ -83,14 +83,14 @@ export async function blindCheck(app, S) {
   try {
     const list = await call('blindCheck', { doc, names: names.split(',') });
     modal({
-      title: [icon('eye'), ` Anonimato de ${basename(doc)}`],
+      title: [icon('eye'), ` Antes de submeter: ${basename(doc)}`],
       wide: true,
       body: h(
         'div',
         {},
         list.length
           ? h('div', { class: 'qq-banner' }, icon('warn'), h('div', {}, h('b', {}, `${list.length} possível${list.length > 1 ? 'is' : ''} pista${list.length > 1 ? 's' : ''} de autoria.`), ' Clique para ir à linha.'))
-          : h('p', { style: { color: 'var(--ok)', fontWeight: 600 } }, icon('checkCircle'), ' Nada encontrado: sem nomes, e-mails, \\thanks, agradecimentos ou metadados de autor.'),
+          : h('p', { style: { color: 'var(--ok)', fontWeight: 600 } }, icon('checkCircle'), ' Nada encontrado: sem nomes, e-mails, \\thanks, agradecimentos, caminhos com seu usuário ou metadados de autor, e as fontes do PDF estão todas embutidas e sem Type 3.'),
         list.map((f) =>
           h(
             'div',

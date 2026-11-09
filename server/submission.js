@@ -204,6 +204,8 @@ export async function blindCheck(doc, { names = [] } = {}) {
       if (/acknowledg|agradec/i.test(line)) add('ack', 'Agradecimentos no texto.', f, ln);
       const email = line.match(/[\w.+-]+@[\w-]+\.[\w.]+/);
       if (email) add('email', `E-mail no texto: ${email[0]}`, f, ln);
+      const home = line.match(/\/(?:Users|home)\/([\w.-]+)\//);
+      if (home) add('path', `Caminho absoluto com o nome de usuário "${home[1]}" (aparece nos .tex e às vezes no PDF).`, f, ln);
       if (/github\.com\/[\w-]+|osf\.io\/\w+|dropbox\.com/i.test(line)) add('link', 'Link que pode identificar os autores (GitHub, OSF, Dropbox).', f, ln);
       for (const { n, re } of nameRes) if (re.test(line)) add('name', `Aparece "${n}".`, f, ln);
       if (/\b(our|my) (previous|earlier|companion) (paper|work)\b|\bin our (paper|work)\b|\bnosso (trabalho|artigo) anterior\b/i.test(line)) add('self', 'Autocitação na primeira pessoa ("our previous paper").', f, ln);
@@ -224,6 +226,29 @@ export async function blindCheck(doc, { names = [] } = {}) {
       if (author) add('meta', `O PDF tem metadado Author: "${author}". Use \\hypersetup{pdfauthor={}}.`, doc, null);
       for (const { n, re } of nameRes) if (creator && re.test(creator)) add('meta', `Metadado Creator do PDF cita "${n}".`, doc, null);
     }
+    // Journal systems and arXiv reject Type 3 (bitmap) and non-embedded
+    // fonts; they usually come from old figures or a missing cm-super.
+    const pf = await run('pdffonts', [pdf], { timeout: 15000 });
+    if (pf.code === 0) {
+      const { type3, unembedded } = parsePdffonts(pf.stdout);
+      if (type3.length) add('font', `Fontes Type 3 (bitmap) no PDF: ${type3.slice(0, 6).join(', ')}. Muitas revistas recusam; costuma vir de figuras antigas ou de faltar o pacote cm-super (\\usepackage[T1]{fontenc} com lmodern resolve no texto).`, doc, null);
+      if (unembedded.length) add('font', `Fontes não embutidas no PDF: ${unembedded.slice(0, 6).join(', ')}. Geralmente vêm de figuras; exporte-as de novo com as fontes embutidas.`, doc, null);
+    }
   }
   return findings;
+}
+
+// Type 3 and non-embedded font names from pdffonts output.
+export function parsePdffonts(out) {
+  const rows = out.split('\n').slice(2).filter((l) => l.trim());
+  const type3 = new Set();
+  const unembedded = new Set();
+  for (const l of rows) {
+    const m = l.match(/^(.*?)\s+(Type 3|Type 1C?|TrueType(?: \(CID\))?|CID Type 0C?|CID TrueType|Type 1C)\s+(\S+)\s+(yes|no)\s+(yes|no)\s+(yes|no)/);
+    if (!m) continue;
+    const name = m[1].trim().replace(/^[A-Z]{6}\+/, '') || '[sem nome]';
+    if (m[2] === 'Type 3') type3.add(name);
+    if (m[4] === 'no') unembedded.add(name);
+  }
+  return { type3: [...type3], unembedded: [...unembedded] };
 }

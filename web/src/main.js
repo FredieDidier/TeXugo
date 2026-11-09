@@ -566,7 +566,7 @@ function renderDocBar() {
                 { label: 'Médico do TeX', icon: 'info', action: () => tools.texDoctor(app, S) },
                 { label: 'Exportar ZIP para submissão', icon: 'down', action: () => tools.exportZip(app, S) },
                 { label: 'Vícios de escrita', title: 'Tiques de IA e outros vícios, em português e inglês', icon: 'edit', action: () => tools.viciosReport(app, S) },
-                { label: 'Checar anonimato (double-blind)', icon: 'eye', action: () => tools.blindCheck(app, S) },
+                { label: 'Checar antes de submeter', title: 'Anonimato (double-blind) e fontes do PDF (Type 3, não embutidas)', icon: 'eye', action: () => tools.blindCheck(app, S) },
                 { label: 'Revisar estilo', title: 'Sugestões de estilo do ChkTeX', icon: 'check', action: () => tools.chktex(app, S) },
                 { label: 'Contar palavras', title: 'Conta com o texcount, seguindo \\input e \\include', icon: 'outline', action: () => tools.wordCount(app, S) },
               ]);

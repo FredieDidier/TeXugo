@@ -42,7 +42,7 @@ function commands(app, S) {
     { t: 'Claude Code (ligado ao TeXugo)', kw: 'claude agente ia ai terminal', i: 'command', run: () => app.terminals.open('claude') },
     { t: 'Perguntar ao Claude sobre a seleção', kw: 'claude at mention arroba', i: 'command', run: () => app.mentionInClaude() },
     { t: 'Vícios de escrita (tiques de IA)', kw: 'ia ai detector humanizar estilo travessão', i: 'edit', run: () => app.tools.viciosReport(app, S) },
-    { t: 'Checar anonimato (double-blind)', i: 'eye', run: () => app.tools.blindCheck(app, S) },
+    { t: 'Checar antes de submeter (anonimato, fontes Type 3)', kw: 'double-blind blind pdffonts', i: 'eye', run: () => app.tools.blindCheck(app, S) },
     { t: 'Revisar estilo', kw: 'chktex lint', i: 'check', run: () => app.tools.chktex(app, S) },
     { t: 'Contar palavras', kw: 'texcount', i: 'outline', run: () => app.tools.wordCount(app, S) },
     { t: 'Abrir Terminal na pasta do projeto', i: 'command', run: () => call('openTerminal', { path: S.project.root }) },
