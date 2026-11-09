@@ -124,7 +124,7 @@ function renderTopbar() {
   const openRoots = allOpenRoots();
   clear(
     app.topbar,
-    h('div', { class: 'brand' }, h('img', { src: './logo.svg', alt: '' }), wordmark()),
+    h('div', { class: 'brand', title: 'Tela inicial: modelos, abrir pasta e recentes', onclick: () => showWelcome(app, S) }, h('img', { src: './logo.svg', alt: '' }), wordmark()),
     p ? h('span', { class: 'project-name' }, '·  ' + p.name) : null,
     h('div', { class: 'spacer' }),
     p ? h('div', { class: 'quick', onclick: () => openPalette(app, S, 'files') }, icon('search'), h('span', {}, 'Buscar arquivo ou comando'), h('kbd', {}, '⌘K')) : null,
@@ -1110,6 +1110,7 @@ function renderActivity() {
     ),
     h('div', { class: 'grow' }),
     h('button', { class: 'icon-btn', title: 'Problemas', onclick: () => app.bottom.show('problems') }, icon('alert'), errs ? h('span', { class: 'badge' }, String(errs)) : null),
+    h('button', { class: 'icon-btn', title: 'Tela inicial: modelos, abrir pasta e recentes', onclick: () => showWelcome(app, S) }, icon('home')),
     h('button', { class: 'icon-btn', title: 'Novo projeto a partir de modelo', onclick: () => newProjectDialog(app, S) }, icon('plus')),
   );
 }

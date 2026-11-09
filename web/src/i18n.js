@@ -83,6 +83,7 @@ const EN = {
   'PDF escuro no tema escuro (só na tela; o arquivo não muda)': 'Dark PDF in the dark theme (screen only; the file does not change)',
   'Mostrar caixas "underfull" em Problemas': 'Show "underfull" boxes in Problems', 'Reabrir o último projeto ao iniciar': 'Reopen the last project at startup',
   'Idioma': 'Language',
+  'Tela inicial: modelos, abrir pasta e recentes': 'Start screen: templates, open folder and recent projects',
   // sidebar: files
   'Documento compilável (\\documentclass)': 'Compilable document (\\documentclass)', 'Novo arquivo': 'New file', 'Nova pasta': 'New folder',
   'Esconder auxiliares (.aux, .log…)': 'Hide auxiliary files (.aux, .log…)', 'Mostrar auxiliares (.aux, .log…)': 'Show auxiliary files (.aux, .log…)',
