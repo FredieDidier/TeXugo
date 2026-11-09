@@ -1,6 +1,9 @@
 // Document tools: submission ZIP, double-blind check, ChkTeX, word count.
 import { call } from './api.js';
 import { h, clear, icon, basename, relPath, toast, modal, prompt } from './dom.js';
+import { detect, kindOf, CATEGORIES, SOURCES, VERSION } from './vicios/core.js';
+import { hitInfo } from './vicios/cm.js';
+import { getLang } from './i18n.js';
 
 function docOf(app) {
   const t = app.activeTab();
@@ -248,4 +251,121 @@ export async function texDoctor(app, S, { files = [] } = {}) {
   );
   manual.addEventListener('keydown', (e) => e.key === 'Enter' && manual.value.trim() && lookup([manual.value.trim()]));
   if (missing.size) lookup([...missing]);
+}
+
+// Writing tics ("vícios") across the whole document: the file of the active
+// tab, or every .tex its document reads through \input.
+export async function viciosReport(app, S) {
+  const t = app.activeTab();
+  if (!t || t.binary || !kindOf(t.path)) {
+    toast('O detector de vícios lê arquivos .tex, .md e .txt.', 'warn');
+    return;
+  }
+  let files = [t.path];
+  if (t.root) {
+    try {
+      files = await call('docFiles', { doc: t.root });
+    } catch {}
+    if (!files.includes(t.path)) files.unshift(t.path);
+  }
+  const textOf = async (f) => {
+    const tab = S.tabs.find((x) => x.path === f);
+    if (tab && !tab.binary) return (tab.path === S.active ? app.view.state : tab.state).doc.toString();
+    try {
+      return (await call('read', { path: f })).text;
+    } catch {
+      return null;
+    }
+  };
+  const results = [];
+  for (const f of files) {
+    const text = await textOf(f);
+    if (text == null || !kindOf(f)) continue;
+    results.push({ f, text, ...detect(text, { kind: kindOf(f) }) });
+  }
+  const all = results.flatMap((r) => r.hits.map((x) => ({ ...x, f: r.f, text: r.text })));
+  const words = results.reduce((a, r) => a + r.stats.words, 0);
+  const lengths = results.flatMap((r) => r.stats.lengths).sort((a, b) => a - b);
+  const q = (p) => (lengths.length ? lengths[Math.min(lengths.length - 1, Math.floor(p * lengths.length))] : 0);
+  const triads = results.reduce((a, r) => a + r.stats.triads, 0);
+  const en = getLang() === 'en';
+  const lineOf = (text, pos) => {
+    let n = 1;
+    for (let i = 0; i < pos; i++) if (text.charCodeAt(i) === 10) n++;
+    return n;
+  };
+  const byCat = new Map();
+  for (const x of all) byCat.set(x.cat, [...(byCat.get(x.cat) || []), x]);
+  const cats = [...byCat.entries()].sort((a, b) => b[1].length - a[1].length);
+  const per1000 = words ? (all.length * 1000) / words : 0;
+  let m;
+  const go = (x) => {
+    const line = lineOf(x.text, x.from);
+    const col = x.from - x.text.lastIndexOf('\n', x.from - 1) - 1;
+    m.close();
+    app.openFile(x.f, { line, col });
+  };
+  const snippet = (x) => {
+    const a = Math.max(0, x.from - 30);
+    const b = Math.min(x.text.length, x.to + 30);
+    const clip = (s) => s.replace(/\s+/g, ' ');
+    return [a > 0 ? '…' : '', clip(x.text.slice(a, x.from)), h('mark', {}, clip(x.text.slice(x.from, Math.min(x.to, x.from + 90))) + (x.to - x.from > 90 ? '…' : '')), clip(x.text.slice(x.to, b)), b < x.text.length ? '…' : ''];
+  };
+  m = modal({
+    wide: true,
+    title: [icon('edit'), ' Vícios de escrita'],
+    body: h(
+      'div',
+      { class: 'vicios-report' },
+      h(
+        'p',
+        {},
+        h('b', {}, `${all.length} trecho${all.length === 1 ? '' : 's'} para revisar`),
+        ` em ${words.toLocaleString('pt-BR')} palavras (${per1000.toFixed(1).replace('.', ',')} por mil palavras)`,
+        results.length > 1 ? `, ${results.length} arquivos do documento.` : '.',
+      ),
+      h('p', { class: 'muted' }, 'São candidatos a uma segunda leitura, não prova de que o texto foi escrito por IA: cada padrão também aparece em texto humano, e o que pesa é o acúmulo. Passe o mouse sobre um trecho sublinhado no editor para ver o motivo.'),
+      h(
+        'div',
+        { class: 'vicios-stats' },
+        h('span', {}, `Frases: mediana de ${q(0.5)} palavras, 90% até ${q(0.9)}, ${lengths.filter((n) => n > 55).length} acima de 55`),
+        h('span', {}, `Tríades (listas de três): ${triads} (${(words ? (triads * 1000) / words : 0).toFixed(1).replace('.', ',')} por mil palavras)`),
+      ),
+      cats.length
+        ? cats.map(([cat, xs]) =>
+            h(
+              'details',
+              { class: 'vicios-cat', open: cats.length <= 3 },
+              h('summary', {}, h('b', {}, (CATEGORIES[cat] || {})[en ? 'en' : 'pt'] || cat), ` ${xs.length}`),
+              h('p', { class: 'muted' }, hitInfo(xs[0]).text, hitInfo(xs[0]).fix ? ' ' + hitInfo(xs[0]).fix : ''),
+              h(
+                'ul',
+                {},
+                xs.slice(0, 150).map((x) =>
+                  h(
+                    'li',
+                    { class: 'vicio-row', onclick: () => go(x), title: 'Ir para o trecho' },
+                    h('span', { class: 'faint' }, `${results.length > 1 ? basename(x.f) + ':' : 'linha '}${lineOf(x.text, x.from)}`),
+                    ' ',
+                    h('span', {}, snippet(x)),
+                  ),
+                ),
+              ),
+            ),
+          )
+        : h('p', { style: { color: 'var(--ok)' } }, icon('checkCircle'), ' Nenhum vício encontrado.'),
+      h(
+        'details',
+        { class: 'vicios-cat' },
+        h('summary', { class: 'muted' }, `Fontes da lista (versão ${VERSION})`),
+        h(
+          'ul',
+          {},
+          Object.values(SOURCES).map((s) =>
+            h('li', {}, s.url ? h('a', { href: '#', onclick: (e) => (e.preventDefault(), call('openUrl', { url: s.url })) }, s.t) : s.t),
+          ),
+        ),
+      ),
+    ),
+  });
 }

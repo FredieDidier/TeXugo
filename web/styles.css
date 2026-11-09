@@ -10,6 +10,7 @@
   --muted: #6b6f76;
   --faint: #9a9ca1;
   --accent: #b9741a;
+  --vicio: #8a5cc7;
   --accent-strong: #9a5f10;
   --accent-soft: #f6e3c4;
   --on-accent: #ffffff;
@@ -32,7 +33,7 @@
   :root:not([data-theme='light']) {
     --bg: #15171c; --panel: #1b1e24; --raised: #232731; --sunken: #121418;
     --border: #2c313c; --border-strong: #3b4150; --text: #e6e3dc; --muted: #9ba0a8; --faint: #6c717b;
-    --accent: #e9a23b; --accent-strong: #f4b957; --accent-soft: rgba(233, 162, 59, 0.16); --on-accent: #1e2127;
+    --vicio: #b48ff0; --accent: #e9a23b; --accent-strong: #f4b957; --accent-soft: rgba(233, 162, 59, 0.16); --on-accent: #1e2127;
     --ok: #4cb782; --ok-soft: rgba(76, 183, 130, 0.15); --warn: #f0883e; --warn-soft: rgba(240, 136, 62, 0.15);
     --err: #ef6b62; --err-soft: rgba(239, 107, 98, 0.15); --info: #6aa9f0; --sel: rgba(233, 162, 59, 0.25);
     --shadow: 0 10px 34px rgba(0, 0, 0, 0.5); --pdf-bg: #101216; color-scheme: dark;
@@ -41,7 +42,7 @@
 :root[data-theme='dark'] {
   --bg: #15171c; --panel: #1b1e24; --raised: #232731; --sunken: #121418;
   --border: #2c313c; --border-strong: #3b4150; --text: #e6e3dc; --muted: #9ba0a8; --faint: #6c717b;
-  --accent: #e9a23b; --accent-strong: #f4b957; --accent-soft: rgba(233, 162, 59, 0.16); --on-accent: #1e2127;
+  --vicio: #b48ff0; --accent: #e9a23b; --accent-strong: #f4b957; --accent-soft: rgba(233, 162, 59, 0.16); --on-accent: #1e2127;
   --ok: #4cb782; --ok-soft: rgba(76, 183, 130, 0.15); --warn: #f0883e; --warn-soft: rgba(240, 136, 62, 0.15);
   --err: #ef6b62; --err-soft: rgba(239, 107, 98, 0.15); --info: #6aa9f0; --sel: rgba(233, 162, 59, 0.25);
   --shadow: 0 10px 34px rgba(0, 0, 0, 0.5); --pdf-bg: #101216; color-scheme: dark;
@@ -435,3 +436,22 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border);
 .tools-missing { align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 8px; background: var(--err-soft); color: var(--text); }
 .tools-missing svg.i { color: var(--err); margin-top: 2px; }
 .tools-check .faint svg.i { color: var(--ok); vertical-align: -3px; }
+
+/* writing-tic detector */
+.cm-vicio { text-decoration: underline dotted var(--vicio); text-decoration-thickness: 1.5px; text-underline-offset: 3px; text-decoration-skip-ink: none; }
+.cm-vicio-ritmo { text-decoration-style: dashed; text-decoration-color: color-mix(in srgb, var(--vicio) 55%, transparent); }
+.vicio-tip { max-width: 380px; padding: 8px 10px; font: 12.5px/1.45 var(--ui); color: var(--text); }
+.vicio-tip-item + .vicio-tip-item { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 6px; }
+.vicio-tip-title { font-weight: 600; color: var(--vicio); margin-bottom: 2px; }
+.vicio-tip-fix { margin-top: 4px; color: var(--muted); }
+.vicio-tip-src { margin-top: 4px; font-size: 11px; color: var(--faint, var(--muted)); }
+.statusbar .vicio-count { color: var(--vicio); }
+.vicios-report .vicios-stats { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12px; color: var(--muted); margin: 6px 0 10px; }
+.vicios-report details.vicios-cat { border-top: 1px solid var(--border); padding: 6px 0; }
+.vicios-report details.vicios-cat summary { cursor: pointer; }
+.vicios-report ul { list-style: none; margin: 4px 0 0; padding: 0; max-height: 260px; overflow: auto; }
+.vicios-report .vicio-row { font-size: 12px; padding: 3px 4px; border-radius: 4px; cursor: pointer; }
+.vicios-report .vicio-row:hover { background: var(--sunken); }
+.vicios-report mark { background: color-mix(in srgb, var(--vicio) 22%, transparent); color: inherit; border-radius: 2px; }
+/* Hover tooltips live in <body>: keep them under dialogs. */
+body > .cm-tooltip { z-index: 40; }

@@ -14,6 +14,7 @@ import { bootPdfWindow } from './pdfwin.js';
 import { TOKEN } from './api.js';
 import { setLang, tr } from './i18n.js';
 import { SplitEditor } from './split.js';
+import { viciosConfig, viciosOf } from './vicios/cm.js';
 
 export const S = {
   hello: null,
@@ -28,7 +29,7 @@ export const S = {
   building: null, // { id, order, requested }
   queued: false,
   lastSummary: null,
-  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true },
+  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true, vicios: true },
   cursor: { line: 1, col: 1, words: 0 },
   detached: new Set(), // PDFs shown in their own window
 };
@@ -512,6 +513,7 @@ function renderDocBar() {
                 { label: 'Formatar documento', title: 'Arruma a indentação com o latexindent do TeX Live', icon: 'wrap', kb: '⌥⇧F', action: () => tools.formatDoc(app, S) },
                 { label: 'Médico do TeX', icon: 'info', action: () => tools.texDoctor(app, S) },
                 { label: 'Exportar ZIP para submissão', icon: 'down', action: () => tools.exportZip(app, S) },
+                { label: 'Vícios de escrita', title: 'Tiques de IA e outros vícios, em português e inglês', icon: 'edit', action: () => tools.viciosReport(app, S) },
                 { label: 'Checar anonimato (double-blind)', icon: 'eye', action: () => tools.blindCheck(app, S) },
                 { label: 'Revisar estilo', title: 'Sugestões de estilo do ChkTeX', icon: 'check', action: () => tools.chktex(app, S) },
                 { label: 'Contar palavras', title: 'Conta com o texcount, seguindo \\input e \\include', icon: 'outline', action: () => tools.wordCount(app, S) },
@@ -1086,6 +1088,7 @@ function renderStatus() {
       : null,
     S.building ? h('span', { class: 'item' }, h('span', { class: 'status-dot building' }), 'compilando') : null,
     h('span', { class: 'grow' }),
+    t && !t.binary && viciosConfig.enabled && /\.(tex|ltx|md|markdown|qmd|rmd|txt)$/i.test(t.path) ? viciosItem() : null,
     t && !t.binary ? h('span', { class: 'item' }, `${S.cursor.words.toLocaleString('pt-BR')} palavras`) : null,
     t && !t.binary ? h('span', { class: 'item' }, `Ln ${S.cursor.line}, Col ${S.cursor.col}`) : null,
     t ? h('span', { class: 'item' }, t.path.endsWith('.bib') ? 'BibTeX' : t.path.endsWith('.tex') ? 'LaTeX' : /\.md$/.test(t.path) ? 'Markdown' : 'Texto') : null,
@@ -1093,6 +1096,15 @@ function renderStatus() {
   );
 }
 app.renderStatus = renderStatus;
+
+function viciosItem() {
+  const n = viciosOf(app.view.state).length;
+  return h(
+    'span',
+    { class: 'item click' + (n ? ' vicio-count' : ''), onclick: () => tools.viciosReport(app, S), title: 'Vícios de escrita: trechos a revisar (tiques de IA). Clique para ver a lista.' },
+    n ? `${n} vício${n > 1 ? 's' : ''}` : 'sem vícios',
+  );
+}
 const renderStatusSoon = debounce(renderStatus, 80);
 
 const countWordsSoon = debounce(() => {
@@ -1419,6 +1431,8 @@ async function boot() {
     return;
   }
   Object.assign(S.settings, S.hello.settings || {});
+  viciosConfig.enabled = S.settings.vicios !== false;
+  viciosConfig.onResult = (view) => view === app.view && renderStatusSoon();
   // Nothing to show before the first build: start with the bottom panel
   // closed; it opens when a build starts.
   S.settings.bottomOpen = false;

@@ -1,6 +1,7 @@
 // Preferences dialog and theme handling.
 import { h, icon, modal } from './dom.js';
 import { EditorView } from './editor.js';
+import { viciosConfig, refreshVicios } from './vicios/cm.js';
 
 export function applyTheme(theme) {
   const root = document.documentElement;
@@ -111,6 +112,11 @@ export function openSettings(app, S) {
         field('Espaçamento entre linhas', num('mdLineHeight', { min: 1.1, max: 2.4, step: 0.05, def: 1.65 })),
       ),
       h('h4', { class: 'set-h' }, 'Geral'),
+      check('vicios', 'Sublinhar vícios de escrita (tiques de IA), em português e inglês', () => {
+        viciosConfig.enabled = st.vicios !== false;
+        [app.view, app.split.view].forEach(refreshVicios);
+        app.renderStatus();
+      }),
       check('wrap', 'Quebrar linhas longas no editor', () => [app.view, app.split.view].forEach((v) => v.dispatch({ effects: app.wrapCompartment.reconfigure(st.wrap ? EditorView.lineWrapping : []) }))),
       check('autoCompile', 'Abas novas já vêm com "compilar ao salvar" ligado'),
       check('invertPdf', 'PDF escuro no tema escuro (só na tela; o arquivo não muda)'),

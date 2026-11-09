@@ -9,6 +9,7 @@ import { searchKeymap, highlightSelectionMatches, search } from '@codemirror/sea
 import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap, snippetCompletion } from '@codemirror/autocomplete';
 import { linter, lintGutter, setDiagnostics } from '@codemirror/lint';
 import { tags as t } from '@lezer/highlight';
+import { viciosExtension } from './vicios/cm.js';
 
 const latex = StreamLanguage.define(stex);
 
@@ -190,6 +191,7 @@ export function createState(doc, path, hooks, settings = {}) {
       wrapCompartment.of(settings.wrap === false ? [] : EditorView.lineWrapping),
       languageFor(path),
       autoEnd,
+      viciosExtension(path),
       keymap.of([
         { key: 'Mod-s', preventDefault: true, run: () => (hooks.save(), true) },
         { key: 'Mod-Enter', preventDefault: true, run: () => (hooks.compile(), true) },

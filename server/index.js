@@ -233,6 +233,10 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       mustAllow(p);
       return project.rootsFor(root, p).map((d) => project.docInfo(d));
     },
+    // The .tex files of a document (itself plus everything it \input s).
+    async docFiles({ doc }) {
+      return [...project.includeClosure(mustAllow(doc))].filter((f) => /\.tex$/.test(f));
+    },
     async outline({ path: p, text }) {
       return project.outline(mustAllow(p), text);
     },
