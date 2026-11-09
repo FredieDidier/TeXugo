@@ -31,9 +31,9 @@ const EN = {
   'Compilar este documento sempre que salvar': 'Compile this document every time you save', 'ao salvar': 'on save', 'Recompilar': 'Recompile', 'Compilar': 'Compile',
   'Compilando…': 'Compiling…', 'Mais opções': 'More options', 'Compilar este documento': 'Compile this document', 'Compilar tudo que está aberto': 'Compile everything open',
   'Compilar do zero (limpa auxiliares)': 'Compile from scratch (clears auxiliary files)', 'Mostrar no PDF': 'Show in PDF', 'Abrir PDF fora do app': 'Open PDF outside the app',
-  'Limpar arquivos auxiliares': 'Clean auxiliary files', 'Auxiliares removidos.': 'Auxiliary files removed.', 'Formatar documento (latexindent)': 'Format document (latexindent)',
+  'Limpar arquivos auxiliares': 'Clean auxiliary files', 'Auxiliares removidos.': 'Auxiliary files removed.', 'Formatar documento': 'Format document',
   'Médico do TeX': 'TeX doctor', 'Exportar ZIP para submissão': 'Export submission ZIP', 'Checar anonimato (double-blind)': 'Check anonymity (double-blind)',
-  'Revisar estilo (ChkTeX)': 'Check style (ChkTeX)', 'Contar palavras': 'Count words', 'Visualizar': 'Preview', 'Lado a lado': 'Side by side', 'Código': 'Code',
+  'Revisar estilo': 'Check style', 'Contar palavras': 'Count words', 'Visualizar': 'Preview', 'Lado a lado': 'Side by side', 'Código': 'Code',
   'fora de qualquer documento': 'outside any document', 'erro': 'error', 'erros': 'errors', 'zero ??': 'zero ??',
   'Nenhuma referência ou citação indefinida': 'No undefined reference or citation',
   'Nenhum documento do projeto faz \\input deste arquivo. Adicione "% !TEX root = ../paper.tex" no topo para dizer qual é.': 'No document of the project \\inputs this file. Add "% !TEX root = ../paper.tex" at the top to say which one.',
@@ -67,12 +67,13 @@ const EN = {
   // open folder
   'Abrir pasta': 'Open folder', 'Caminho completo da pasta do projeto': 'Full path of the project folder',
   // palette
-  'Compilar documento da aba': 'Compile the tab’s document', 'Mostrar no PDF (SyncTeX)': 'Show in PDF (SyncTeX)', 'Salvar todos': 'Save all', 'Fechar aba': 'Close tab',
+  'Compilar documento da aba': 'Compile the tab’s document', 'Salvar todos': 'Save all', 'Fechar aba': 'Close tab',
   'Abrir pasta…': 'Open folder…', 'Novo projeto a partir de modelo…': 'New project from a template…', 'Tela inicial': 'Start screen', 'Clonar repositório do GitHub…': 'Clone a GitHub repository…',
   'Mostrar arquivos': 'Show files', 'Buscar no projeto': 'Search the project', 'Git: commit, pull, push': 'Git: commit, pull, push', 'Problemas da compilação': 'Build problems',
   'Log da compilação': 'Build log', 'Mostrar/esconder painel inferior': 'Show/hide bottom panel', 'Preferências': 'Settings', 'Parar compilação': 'Stop build',
-  'Médico do TeX (pacotes, instalação)': 'TeX doctor (packages, installation)', 'Exportar ZIP para submissão (arXiv)': 'Export submission ZIP (arXiv)',
-  'Contar palavras (texcount)': 'Count words (texcount)',
+  'Médico do TeX (pacotes, instalação)': 'TeX doctor (packages, installation)',
+  'Arruma a indentação com o latexindent do TeX Live': 'Fixes indentation with TeX Live’s latexindent', 'Sugestões de estilo do ChkTeX': 'Style suggestions from ChkTeX',
+  'Conta com o texcount, seguindo \\input e \\include': 'Counts with texcount, following \\input and \\include',
   'Abrir Terminal na pasta do projeto': 'Open Terminal in the project folder', 'Mostrar projeto no Finder': 'Show project in Finder',
   'Nome do arquivo… (digite > para comandos)': 'File name… (type > for commands)', '> Comando…': '> Command…',
   // settings

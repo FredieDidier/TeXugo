@@ -1,0 +1,34 @@
+#!/bin/sh
+# After every commit, rebuild TeXugo and replace /Applications/TeXugo.app, so
+# the app in the Dock is always the latest commit. Runs in the background:
+# the commit (here or in GitHub Desktop) returns at once. Builds from the
+# working tree, which right after a commit is that commit plus any edits
+# left out of it. Log: out/auto-install.log. Turn on with
+#   git config core.hooksPath .githooks
+# and off with
+#   git config --unset core.hooksPath
+
+root=$(git rev-parse --show-toplevel) || exit 0
+gitdir=$(git rev-parse --git-dir)
+# Rebases and cherry-picks commit many times in a row; skip until they end.
+[ -d "$gitdir/rebase-merge" ] || [ -d "$gitdir/rebase-apply" ] && exit 0
+[ -f "$gitdir/CHERRY_PICK_HEAD" ] && exit 0
+
+# GitHub Desktop and apps opened from Finder do not get the shell PATH.
+export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:$PATH"
+command -v npm >/dev/null 2>&1 || exit 0
+
+cd "$root" || exit 0
+mkdir -p out
+commit=$(git rev-parse --short HEAD)
+nohup /usr/bin/lockf -k out/.auto-install.lock /bin/sh -c '
+  notify() { osascript -e "display notification \"$1\" with title \"TeXugo\"" >/dev/null 2>&1; }
+  echo "== $(date "+%Y-%m-%d %H:%M:%S") commit '"$commit"'"
+  if npm run package; then
+    if pgrep -xq TeXugo; then notify "Versão '"$commit"' instalada. Feche e abra o TeXugo para usar."
+    else notify "Versão '"$commit"' instalada em Aplicativos."; fi
+  else
+    notify "Falhou ao instalar a versão '"$commit"'. Veja out/auto-install.log."
+  fi
+' >>out/auto-install.log 2>&1 </dev/null &
+exit 0

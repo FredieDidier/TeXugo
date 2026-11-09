@@ -51,6 +51,12 @@ Para gerar o `out/TeXugo.app` (arraste para Aplicativos; se já houver um TeXugo
 npm run package
 ```
 
+Para que cada commit reinstale o app sozinho (em segundo plano; o macOS avisa quando terminar, e o log fica em `out/auto-install.log`):
+
+```bash
+git config core.hooksPath .githooks
+```
+
 Testes do motor de compilação e dos modelos:
 
 ```bash

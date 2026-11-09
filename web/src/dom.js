@@ -160,7 +160,7 @@ export function menu(x, y, items) {
     items.filter(Boolean).map((it) =>
       it === 'sep'
         ? h('div', { class: 'sep' })
-        : h('div', { class: 'mi' + (it.danger ? ' danger' : ''), onclick: () => (closeMenus(), it.action()) }, it.icon ? icon(it.icon) : h('span', { style: { width: '16px' } }), it.label, it.kb ? h('span', { class: 'kb' }, it.kb) : null),
+        : h('div', { class: 'mi' + (it.danger ? ' danger' : ''), title: it.title, onclick: () => (closeMenus(), it.action()) }, it.icon ? icon(it.icon) : h('span', { style: { width: '16px' } }), it.label, it.kb ? h('span', { class: 'kb' }, it.kb) : null),
     ),
   );
   document.body.append(m);

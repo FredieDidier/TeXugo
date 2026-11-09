@@ -12,7 +12,7 @@ function commands(app, S) {
     { t: 'Compilar tudo que está aberto', k: '⌘⇧↵', i: 'playAll', run: () => app.compileAll() },
     { t: 'Compilar do zero (limpa auxiliares)', i: 'broom', run: () => app.compileTab(null, { clean: true }) },
     ...(S.project.docs || []).map((d) => ({ t: `Compilar ${relPath(S.project.root, d.path)}`, d: d.kind === 'slides' ? 'slides' : d.engine, i: 'play', run: () => app.compileDocs([d.path]) })),
-    { t: 'Mostrar no PDF (SyncTeX)', k: '⌘J', i: 'target', run: () => app.syncForward() },
+    { t: 'Mostrar no PDF', kw: 'synctex', k: '⌘J', i: 'target', run: () => app.syncForward() },
     { t: 'Salvar', k: '⌘S', i: 'check', run: () => app.saveTab(app.activeTab()) },
     { t: 'Salvar todos', k: '⌥⌘S', i: 'check', run: () => app.saveAll() },
     { t: 'Fechar aba', k: '⌘W', i: 'x', run: () => S.active && app.closeTab(S.active) },
@@ -30,12 +30,12 @@ function commands(app, S) {
     { t: 'Mostrar/esconder painel inferior', i: 'panel', run: () => app.toggleBottom() },
     { t: 'Preferências', k: '⌘,', i: 'gear', run: () => openSettings(app, S) },
     { t: 'Parar compilação', i: 'stop', run: () => call('cancelBuild') },
-    { t: 'Formatar documento (latexindent)', k: '⌥⇧F', i: 'wrap', run: () => app.tools.formatDoc(app, S) },
+    { t: 'Formatar documento', kw: 'latexindent indentar', k: '⌥⇧F', i: 'wrap', run: () => app.tools.formatDoc(app, S) },
     { t: 'Médico do TeX (pacotes, instalação)', i: 'info', run: () => app.tools.texDoctor(app, S) },
-    { t: 'Exportar ZIP para submissão (arXiv)', i: 'down', run: () => app.tools.exportZip(app, S) },
+    { t: 'Exportar ZIP para submissão', kw: 'arxiv', i: 'down', run: () => app.tools.exportZip(app, S) },
     { t: 'Checar anonimato (double-blind)', i: 'eye', run: () => app.tools.blindCheck(app, S) },
-    { t: 'Revisar estilo (ChkTeX)', i: 'check', run: () => app.tools.chktex(app, S) },
-    { t: 'Contar palavras (texcount)', i: 'outline', run: () => app.tools.wordCount(app, S) },
+    { t: 'Revisar estilo', kw: 'chktex lint', i: 'check', run: () => app.tools.chktex(app, S) },
+    { t: 'Contar palavras', kw: 'texcount', i: 'outline', run: () => app.tools.wordCount(app, S) },
     { t: 'Abrir Terminal na pasta do projeto', i: 'command', run: () => call('openTerminal', { path: S.project.root }) },
     { t: 'Mostrar projeto no Finder', i: 'folder', run: () => call('reveal', { path: S.project.root }) },
   ];
@@ -83,7 +83,7 @@ export async function openPalette(app, S, mode = 'commands') {
     const q = (isCmd ? v.slice(1) : v).trim().toLowerCase();
     if (isCmd) {
       items = commands(app, S)
-        .map((c) => ({ ...c, s: q ? Math.max(score(c.t + ' ' + (c.d || ''), q), score(tr(c.t) + ' ' + (c.d || ''), q)) : 0 }))
+        .map((c) => ({ ...c, s: q ? Math.max(score(c.t + ' ' + (c.d || '') + ' ' + (c.kw || ''), q), score(tr(c.t) + ' ' + (c.d || '') + ' ' + (c.kw || ''), q)) : 0 }))
         .filter((c) => c.s >= 0)
         .sort((a, b) => b.s - a.s);
     } else {
