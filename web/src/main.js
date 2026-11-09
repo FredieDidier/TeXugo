@@ -110,7 +110,7 @@ function buildLayout() {
     menu(e.clientX, e.clientY, [
       ...AI_ACTIONS.map((a) => ({ label: a.label, title: a.hint, icon: 'edit', action: () => runAiAction(app, S, a.id, { view, tab }) })),
       'sep',
-      { label: 'Mencionar no Claude Code', title: 'Põe o arquivo e as linhas selecionadas no prompt do Claude Code', icon: 'command', action: () => mentionInClaude(app, S, { view, tab }) },
+      { label: 'Perguntar ao Claude sobre o trecho', title: 'Anexa o trecho à mensagem no painel Claude', icon: 'claude', action: () => mentionInClaude(app, S, { view, tab }) },
       { label: 'Copiar', action: () => navigator.clipboard.writeText(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)) },
     ]);
   });
@@ -224,6 +224,8 @@ const editorHooks = (t) => ({
   compileAll: () => compileAll(),
   syncForward: () => syncForward(),
   format: () => tools.formatDoc(app, S),
+  ask: (view) => mentionInClaude(app, S, { view, tab: t }),
+  ai: (view, x, y) => menu(x, y, AI_ACTIONS.map((a) => ({ label: a.label, title: a.hint, icon: 'edit', action: () => runAiAction(app, S, a.id, { view, tab: t }) }))),
   onChange: (u) => {
     if (u && u.transactions) app.split.fromMain(t, u);
     if (!t.dirty) {

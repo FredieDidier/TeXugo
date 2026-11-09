@@ -39,6 +39,8 @@ export class AgentPanel {
         }
       },
     });
+    this.attachments = [];
+    this.attachEl = h('div', { class: 'agent-attachments' });
     this.withSel = h('input', { type: 'checkbox', checked: true });
     this.withErr = h('input', { type: 'checkbox', checked: true });
     this.sendBtn = h('button', { class: 'btn primary sm', onclick: () => (this.running ? this.stop() : this.send()) });
@@ -58,6 +60,7 @@ export class AgentPanel {
       h(
         'div',
         { class: 'agent-compose' },
+        this.attachEl,
         this.input,
         h(
           'div',
@@ -103,9 +106,32 @@ export class AgentPanel {
     return node;
   }
 
+  // A passage sent here with "Mencionar no Claude".
+  attach(x) {
+    if (this.attachments.some((y) => y.path === x.path && y.a === x.a && y.b === x.b)) return this.focus();
+    this.attachments.push(x);
+    this.renderAttachments();
+    this.focus();
+  }
+
+  renderAttachments() {
+    clear(
+      this.attachEl,
+      this.attachments.map((x, k) =>
+        h(
+          'span',
+          { class: 'agent-attach-chip', title: x.text.slice(0, 300) },
+          `${basename(x.path)} ${x.a === x.b ? 'linha ' + x.a : `linhas ${x.a}–${x.b}`}`,
+          h('span', { class: 'close', title: 'Tirar', onclick: () => (this.attachments.splice(k, 1), this.renderAttachments()) }, icon('x')),
+        ),
+      ),
+    );
+  }
+
   context() {
     const t = this.app.activeTab();
     const parts = [];
+    for (const x of this.attachments) parts.push(`Excerpt the user points to: ${x.path}, lines ${x.a}-${x.b}:\n"""\n${x.text.slice(0, 8000)}\n"""`);
     if (t && !t.binary) {
       parts.push(`Active file: ${t.path}`);
       const sel = this.app.view.state.selection.main;
@@ -129,11 +155,16 @@ export class AgentPanel {
     this.input.value = '';
     const t = this.app.activeTab();
     const sel = t && !t.binary && !this.app.view.state.selection.main.empty && this.withSel.checked;
-    this.add(h('div', { class: 'agent-msg user' }, document.createTextNode(text), sel ? h('div', { class: 'agent-attach' }, `+ seleção de ${basename(t.path)}`) : null));
+    const ctx = this.context();
+    const att = this.attachments.map((x) => `${basename(x.path)} ${x.a}–${x.b}`);
+    if (sel) att.push(`seleção de ${basename(t.path)}`);
+    this.attachments = [];
+    this.renderAttachments();
+    this.add(h('div', { class: 'agent-msg user' }, document.createTextNode(text), att.length ? h('div', { class: 'agent-attach' }, '+ ' + att.join(', ')) : null));
     this.setRunning(true);
     this.thinking = this.add(h('div', { class: 'agent-thinking muted' }, h('span', { class: 'status-dot building' }), ' Claude está trabalhando…'));
     try {
-      await call('agentSend', { root: this.S.project.root, text: this.context() + text });
+      await call('agentSend', { root: this.S.project.root, text: ctx + text });
     } catch (err) {
       this.setRunning(false);
       this.thinking?.remove();

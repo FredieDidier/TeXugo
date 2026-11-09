@@ -524,3 +524,18 @@ body > .cm-tooltip { z-index: 40; }
 .cm-line.cm-chg-del-top { border-top: 2px solid color-mix(in srgb, var(--err) 70%, transparent); }
 body.no-change-marks .cm-line.cm-chg-add, body.no-change-marks .cm-line.cm-chg-mod { box-shadow: none; }
 body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-del-top { border: 0; }
+.vicios-report .vicios-rule { margin: 6px 0 10px 10px; padding-left: 8px; border-left: 2px solid var(--border); }
+.vicios-report .vicios-rule p { margin: 2px 0 4px; font-size: 12px; }
+.agent-attachments { display: flex; flex-wrap: wrap; gap: 4px; }
+.agent-attachments:empty { display: none; }
+.agent-attach-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; background: var(--sunken); border: 1px solid var(--border); border-radius: 999px; padding: 1px 4px 1px 8px; }
+.agent-attach-chip .close { display: inline-grid; cursor: pointer; opacity: 0.6; }
+.agent-attach-chip .close svg { width: 11px; height: 11px; }
+
+/* floating bar over a selection */
+.cm-tooltip:has(> .cm-selbar) { border: 1px solid var(--border); border-radius: 8px; background: var(--raised, var(--bg)); box-shadow: 0 4px 14px rgba(0,0,0,0.12); }
+.cm-selbar { display: flex; gap: 2px; padding: 3px; }
+.selbar-btn { border: 0; background: transparent; color: var(--text); font: 12px var(--ui); padding: 3px 8px; border-radius: 5px; cursor: pointer; }
+.selbar-btn:hover { background: var(--sunken); }
+.selbar-btn.b { font-weight: 700; } .selbar-btn.i { font-style: italic; font-family: Georgia, serif; }
+.selbar-btn.claude { color: #d97757; }

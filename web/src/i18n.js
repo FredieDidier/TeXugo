@@ -141,6 +141,8 @@ const EN = {
   'Recusar': 'Reject',
   'Nova': 'New', 'Começa uma conversa nova': 'Starts a new conversation', 'Abrir o Claude Code completo no terminal': 'Open the full Claude Code in the terminal',
   'Marcar na margem as linhas alteradas desde a última compilação': 'Mark in the margin the lines changed since the last build',
+  'Perguntar ao Claude sobre o trecho': 'Ask Claude about the passage', 'Anexa o trecho à mensagem no painel Claude': 'Attaches the passage to the message in the Claude panel',
+  'Perguntar ao Claude sobre a seleção': 'Ask Claude about the selection', 'Tirar': 'Remove', 'Ir para o trecho': 'Go to the passage',
   // split editor
   'Arquivo mostrado no lado direito': 'File shown on the right', 'Fechar a divisão (⌘⌥\\)': 'Close the split (⌘⌥\\)',
   'Dividir o editor: outro arquivo ou outro trecho ao lado (⌘⌥\\)': 'Split the editor: another file or another part side by side (⌘⌥\\)', 'Dividir o editor / fechar a divisão': 'Split the editor / close the split',
@@ -243,6 +245,7 @@ const PATTERNS = [
   [/^Linhas (\d+)–(\d+) de (\d+)$/, 'Lines $1–$2 of $3'],
   [/^Arquivo novo, (\d+) linhas$/, 'New file, $1 lines'],
   [/^O Claude quer editar (.+), mas há alterações não salvas\. Salve \(⌘S\) e peça de novo\.$/, 'Claude wants to edit $1, but it has unsaved changes. Save (⌘S) and ask again.'],
+  [/^(\S+\.\w+) (linha|linhas) ([\d–]+)$/, (m, f, w, n) => `${f} ${w === 'linha' ? 'line' : 'lines'} ${n}`],
   [/^(\d+) vícios?$/, (m, n) => `${n} tic${n > 1 ? 's' : ''}`],
   [/^(\d+) trechos? para revisar$/, (m, n) => `${n} passage${n > 1 ? 's' : ''} to review`],
   [/^ em (.+) palavras \((.+) por mil palavras\)$/, (m, w, r) => ` in ${w.replace(/\./g, ',')} words (${r.replace(',', '.')} per thousand words)`],

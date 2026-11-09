@@ -111,21 +111,18 @@ export function setupIde(app, S) {
   });
 }
 
-// "Mencionar no Claude": puts the file and lines of the selection into the
-// Claude Code prompt (like @file#L10-20).
-export async function mentionInClaude(app, S, target) {
+// "Mencionar no Claude": the selected passage goes into the Claude panel's
+// message box as an attachment (file and lines), ready for a question.
+export function mentionInClaude(app, S, target) {
   const { view, tab } = target || { view: app.view, tab: app.activeTab() };
   if (!tab || tab.binary) return;
-  if (!S.ideClients) {
-    toast('Abra o Claude Code pelo TeXugo primeiro (painel inferior, aba Terminal).', 'warn', 6000);
-    return app.terminals.open('claude');
-  }
   const r = view.state.selection.main;
-  const a = view.state.doc.lineAt(r.from).number - 1;
-  const b = view.state.doc.lineAt(r.empty ? r.from : Math.max(r.from, r.to - 1)).number - 1;
-  await call('ideMention', { path: tab.path, lineStart: a, lineEnd: b });
-  app.bottom.show('terminal');
-  app.terminals.focus();
+  const doc = view.state.doc;
+  const a = doc.lineAt(r.from).number;
+  const b = doc.lineAt(r.empty ? r.from : Math.max(r.from, r.to - 1)).number;
+  const text = r.empty ? doc.line(a).text : view.state.sliceDoc(r.from, r.to);
+  app.agent.attach({ path: tab.path, a, b, text });
+  app.sidebar.show('claude');
 }
 
 // The changed region of a whole file, with two lines of context, as a word

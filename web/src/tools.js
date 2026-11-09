@@ -255,6 +255,16 @@ export async function texDoctor(app, S, { files = [] } = {}) {
 
 // Writing tics ("vícios") across the whole document: the file of the active
 // tab, or every .tex its document reads through \input.
+function byRule(xs) {
+  const m = new Map();
+  for (const x of xs) {
+    const k = x.id + '\u0000' + x.pt;
+    if (!m.has(k)) m.set(k, []);
+    m.get(k).push(x);
+  }
+  return [...m.values()].sort((a, b) => b.length - a.length);
+}
+
 export async function viciosReport(app, S) {
   const t = app.activeTab();
   if (!t || t.binary || !kindOf(t.path)) {
@@ -337,20 +347,31 @@ export async function viciosReport(app, S) {
               'details',
               { class: 'vicios-cat', open: cats.length <= 3 },
               h('summary', {}, h('b', {}, (CATEGORIES[cat] || {})[en ? 'en' : 'pt'] || cat), ` ${xs.length}`),
-              h('p', { class: 'muted' }, hitInfo(xs[0]).text, hitInfo(xs[0]).fix ? ' ' + hitInfo(xs[0]).fix : ''),
-              h(
-                'ul',
-                {},
-                xs.slice(0, 150).map((x) =>
+              // One block per rule: a category such as "Ritmo das frases" holds
+              // several different problems, each with its own explanation.
+              byRule(xs).map((group) => {
+                const info = hitInfo(group[0]);
+                const name = info.text.split(/:\s|\.\s/)[0];
+                return h(
+                  'div',
+                  { class: 'vicios-rule' },
+                  h('div', { class: 'vicios-rule-head' }, h('b', {}, name), ` · ${group.length}`),
+                  h('p', { class: 'muted' }, info.text, info.fix ? ' ' + info.fix : ''),
                   h(
-                    'li',
-                    { class: 'vicio-row', onclick: () => go(x), title: 'Ir para o trecho' },
-                    h('span', { class: 'faint' }, `${results.length > 1 ? basename(x.f) + ':' : 'linha '}${lineOf(x.text, x.from)}`),
-                    ' ',
-                    h('span', {}, snippet(x)),
+                    'ul',
+                    {},
+                    group.slice(0, 150).map((x) =>
+                      h(
+                        'li',
+                        { class: 'vicio-row', onclick: () => go(x), title: 'Ir para o trecho' },
+                        h('span', { class: 'faint' }, `${results.length > 1 ? basename(x.f) + ':' : 'linha '}${lineOf(x.text, x.from)}`),
+                        ' ',
+                        h('span', {}, snippet(x)),
+                      ),
+                    ),
                   ),
-                ),
-              ),
+                );
+              }),
             ),
           )
         : h('p', { style: { color: 'var(--ok)' } }, icon('checkCircle'), ' Nenhum vício encontrado.'),

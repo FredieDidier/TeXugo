@@ -1,5 +1,6 @@
 // CodeMirror 6 setup for LaTeX (and plain text, BibTeX, Markdown files).
 import { EditorState, Compartment, StateEffect, StateField } from '@codemirror/state';
+import { showTooltip } from '@codemirror/view';
 import { EditorView, keymap, lineNumbers, highlightActiveLine, highlightActiveLineGutter, drawSelection, dropCursor, rectangularSelection, crosshairCursor, highlightSpecialChars, Decoration } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, toggleComment } from '@codemirror/commands';
 import { StreamLanguage, syntaxHighlighting, HighlightStyle, bracketMatching, indentOnInput, foldGutter, foldKeymap } from '@codemirror/language';
@@ -153,6 +154,53 @@ function wrapSelection(before, after) {
   };
 }
 
+// Floating bar over a selection: bold, italic, comment, ask Claude, AI
+// actions. Buttons keep the selection (mousedown does not take focus).
+function selectionBar(path, hooks) {
+  const tex = /\.(tex|sty|cls|ltx)$/i.test(path);
+  const md = /\.(md|markdown)$/i.test(path);
+  if (!tex && !md) return [];
+  const bar = (state) => {
+    const r = state.selection.main;
+    if (r.empty || state.selection.ranges.length > 1 || r.to - r.from < 2) return [];
+    return [
+      {
+        pos: r.from,
+        above: true,
+        arrow: false,
+        create(view) {
+          const dom = document.createElement('div');
+          dom.className = 'cm-selbar';
+          const btn = (label, title, run, cls = '') => {
+            const b = document.createElement('button');
+            b.className = 'selbar-btn ' + cls;
+            b.textContent = label;
+            b.title = title;
+            b.addEventListener('mousedown', (e) => e.preventDefault());
+            b.addEventListener('click', (e) => run(view, e));
+            dom.append(b);
+          };
+          btn('B', tex ? 'Negrito: \\textbf{} (⌘B)' : 'Negrito (⌘B)', (v) => wrapSelection(tex ? '\\textbf{' : '**', tex ? '}' : '**')(v), 'b');
+          btn('I', tex ? 'Itálico: \\emph{} (⌘I)' : 'Itálico (⌘I)', (v) => wrapSelection(tex ? '\\emph{' : '*', tex ? '}' : '*')(v), 'i');
+          if (tex) btn('%', 'Comentar ou descomentar as linhas (⌘/)', (v) => toggleComment(v));
+          if (hooks.ask) btn('✻ Claude', 'Perguntar ao Claude sobre o trecho', (v) => hooks.ask(v), 'claude');
+          if (hooks.ai) btn('IA ▾', 'Revisar, polir, humanizar, encurtar, traduzir…', (v, e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            hooks.ai(v, r.left, r.bottom + 4);
+          });
+          return { dom };
+        },
+      },
+    ];
+  };
+  const field = StateField.define({
+    create: bar,
+    update: (v, tr) => (tr.docChanged || tr.selection ? bar(tr.state) : v),
+    provide: (f) => showTooltip.computeN([f], (s) => s.field(f)),
+  });
+  return field;
+}
+
 export const wrapCompartment = new Compartment();
 export const sizeCompartment = new Compartment();
 
@@ -194,6 +242,7 @@ export function createState(doc, path, hooks, settings = {}) {
       autoEnd,
       viciosExtension(path),
       changesField,
+      selectionBar(path, hooks),
       keymap.of([
         { key: 'Mod-s', preventDefault: true, run: () => (hooks.save(), true) },
         { key: 'Mod-Enter', preventDefault: true, run: () => (hooks.compile(), true) },
