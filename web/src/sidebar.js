@@ -80,8 +80,10 @@ export class Sidebar {
     if (!S.project) return clear(this.el);
     const docs = new Set((S.project.docs || []).map((d) => d.path));
     const activePath = S.active;
-    // Expand folders that lead to the active file.
-    if (activePath) {
+    // Expand the folders that lead to the active file once, when it becomes
+    // active; after that the user's own collapsing wins (Recolher pastas).
+    if (activePath && this.revealedFor !== activePath) {
+      this.revealedFor = activePath;
       let d = activePath.slice(0, activePath.lastIndexOf('/'));
       while (d.startsWith(S.project.root) && d.length >= S.project.root.length) {
         this.expanded.add(d);
