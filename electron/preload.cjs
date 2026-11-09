@@ -4,6 +4,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('texugo', {
   pickFolder: () => ipcRenderer.invoke('pick-folder'),
+  pickVersion: () => ipcRenderer.invoke('pick-version'),
   newWindow: () => ipcRenderer.invoke('new-window'),
   focus: () => ipcRenderer.invoke('focus-self'),
   setLang: (l) => ipcRenderer.invoke('set-lang', l),

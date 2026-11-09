@@ -124,6 +124,12 @@ ipcMain.handle('pick-folder', async (e) => {
   const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'], buttonLabel: 'Abrir' });
   return r.canceled ? null : r.filePaths[0];
 });
+// A received version: a .tex, a .zip or a folder.
+ipcMain.handle('pick-version', async (e) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'openDirectory'], filters: [{ name: 'LaTeX, ZIP ou pasta', extensions: ['tex', 'zip'] }], buttonLabel: 'Comparar' });
+  return r.canceled ? null : r.filePaths[0];
+});
 ipcMain.handle('focus-self', (e) => {
   const win = BrowserWindow.fromWebContents(e.sender);
   if (win) {

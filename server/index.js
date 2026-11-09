@@ -21,6 +21,7 @@ import { IdeBridge } from './ide.js';
 import { Agents, claudeFlags } from './agent.js';
 import * as doctor from './doctor.js';
 import * as refs from './refs.js';
+import * as compare from './compare.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -476,6 +477,15 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       if (!/\.bib$/.test(bib || '')) throw httpError(400, 'Escolha um arquivo .bib.');
       return refs.addToBib(mustAllow(bib), ref);
     },
+    // Compare with another version (received .tex/ZIP/folder or a Git commit).
+    async compareBuild({ doc, source }) {
+      mustAllow(doc);
+      if (!source || !['path', 'git'].includes(source.kind)) throw httpError(400, 'Escolha a outra versão.');
+      return compare.compareBuild(path.resolve(doc), source);
+    },
+    async compareSave({ doc, pdf }) {
+      return compare.saveCopy(mustAllow(pdf), mustAllow(doc));
+    },
     async blindCheck({ doc, names }) {
       return blindCheck(mustAllow(doc), { names });
     },
@@ -608,7 +618,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
 // Like Lattice: in a Git repository, keep LaTeX build files out of commits
 // by adding the missing patterns to .gitignore, once, in a marked block.
 // .bbl is left out on purpose: arXiv submissions often keep it.
-const GENERATED = ['*.aux', '*.log', '*.fls', '*.fdb_latexmk', '*.out', '*.toc', '*.lof', '*.lot', '*.blg', '*.bcf', '*.run.xml', '*.synctex.gz', '*.synctex(busy)', '*.nav', '*.snm', '*.vrb', '*.xdv', '*.texugo-tmp'];
+const GENERATED = ['*.aux', '*.log', '*.fls', '*.fdb_latexmk', '*.out', '*.toc', '*.lof', '*.lot', '*.blg', '*.bcf', '*.run.xml', '*.synctex.gz', '*.synctex(busy)', '*.nav', '*.snm', '*.vrb', '*.xdv', '*.texugo-tmp', '.texugo/'];
 function ensureGitignore(root) {
   try {
     if (!fs.existsSync(path.join(root, '.git'))) return;
