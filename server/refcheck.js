@@ -6,6 +6,7 @@
 // accepts a suggestion.
 import fs from 'node:fs';
 import { parseBib, texToText, setField } from './bibparse.js';
+import { openAlexDois } from './refs.js';
 
 const UA = 'TeXugo (LaTeX editor; https://github.com/FredieDidier/TeXugo)';
 
@@ -48,7 +49,7 @@ const norm = (s) =>
     .split(/\s+/)
     .filter((w) => w.length > 2);
 // Share of title words in common (Jaccard).
-export function titleSimilarity(a, b) {
+function jaccard(a, b) {
   const A = new Set(norm(a));
   const B = new Set(norm(b));
   if (!A.size || !B.size) return 0;
@@ -56,12 +57,32 @@ export function titleSimilarity(a, b) {
   for (const w of A) if (B.has(w)) n++;
   return n / (A.size + B.size - n);
 }
+// Some records keep only the main title ("The Dynamics of Criminal
+// Behavior" for "...: Evidence from Weather Shocks"): compare the parts
+// before the colon too, when they are long enough to be specific.
+export function titleSimilarity(a, b) {
+  const main = (s) => texToText(s).split(/:\s/)[0];
+  const full = jaccard(a, b);
+  const ma = main(a);
+  const mb = main(b);
+  const part = norm(ma).length >= 3 && norm(mb).length >= 3 ? jaccard(ma, mb) : 0;
+  return Math.max(full, part);
+}
 const firstFamily = (author) => norm((texToText(author).split(/\s+and\s+/)[0] || '').split(',')[0])[0] || '';
 const yearOf = (m) => {
   const d = (m['published-print'] || m['published-online'] || m.issued || {})['date-parts'];
   return d && d[0] && d[0][0] ? String(d[0][0]) : '';
 };
 const pagesNorm = (p) => String(p || '').replace(/[–—-]+/g, '--').replace(/\s/g, '');
+// XLII and 42 are the same volume.
+const roman = (v) => {
+  const s = String(v || '').toUpperCase();
+  if (!/^[IVXLCDM]+$/.test(s)) return v;
+  const val = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+  let n = 0;
+  for (let i = 0; i < s.length; i++) n += val[s[i]] < (val[s[i + 1]] || 0) ? -val[s[i]] : val[s[i]];
+  return String(n);
+};
 const dashNorm = (p) => String(p || '').replace(/[–—]|--/g, '-').replace(/\s/g, '');
 
 export function compareEntry(e, m) {
@@ -87,7 +108,7 @@ export function compareEntry(e, m) {
     // Only fill in what is missing or contradicts; an article number vs a
     // page range is not worth flagging.
     if (!have && e.type === 'article') out.push({ field: k, have: '', crossref: ref[k] });
-    else if (have && dashNorm(have) !== dashNorm(ref[k]) && !(k === 'pages' && !/--/.test(ref[k]))) out.push({ field: k, have, crossref: ref[k] });
+    else if (have && dashNorm(roman(have)) !== dashNorm(roman(ref[k])) && !(k === 'pages' && !/--/.test(ref[k]))) out.push({ field: k, have, crossref: ref[k] });
   }
   if (!f.doi && ref.doi) out.push({ field: 'doi', have: '', crossref: ref.doi });
   return out;
@@ -122,6 +143,26 @@ async function checkOne(e) {
     const y = Number((texToText(f.year || '').match(/\d{4}/) || [])[0]);
     const near = (it) => !y || !Number(yearOf(it)) || Math.abs(Number(yearOf(it)) - y) <= 2;
     m = pool.filter(near).sort((a, b) => score(b) - score(a))[0];
+    if (!m && venue) {
+      // Same search inside the journal the .bib names.
+      const r1 = await get(`https://api.crossref.org/works?rows=4&query.bibliographic=${encodeURIComponent(q)}&query.container-title=${encodeURIComponent(texToText(venue))}`);
+      const hits = ((r1 && r1.message.items) || []).filter((it) => titleSimilarity(title, (it.title || [])[0]) >= 0.8 && (!fam || (it.author || []).some((a) => norm(a.family || a.name || '')[0] === fam)) && near(it));
+      m = hits.find((it) => it.type === 'journal-article') || (e.type === 'article' ? null : hits[0]) || null;
+    }
+    if (!m) {
+      // Second source: OpenAlex by title, then Crossref by the DOI it gives.
+      for (const w of await openAlexDois(title, 3)) {
+        if (titleSimilarity(title, w.title) < 0.8) continue;
+        if (fam && !w.authors.some((a) => norm(a).includes(fam))) continue;
+        if (y && w.year && Math.abs(Number(w.year) - y) > 2) continue;
+        const r2 = await get(`https://api.crossref.org/works/${encodeURIComponent(w.doi)}`);
+        if (r2 && (e.type !== 'article' || r2.message.type === 'journal-article')) {
+          m = r2.message;
+          how = 'openalex';
+          break;
+        }
+      }
+    }
     if (!m) return { key: e.key, status: 'notfound', note: e.type === 'article' ? 'Não achei no Crossref com segurança.' : 'Não está no Crossref (comum para working papers, livros e relatórios).' };
   }
   if (e.type === 'article' && m.type && m.type !== 'journal-article') return { key: e.key, status: 'notfound', note: `O DOI é de ${m.type === 'report' ? 'um working paper' : 'outro tipo de registro'}, não do artigo publicado.` };

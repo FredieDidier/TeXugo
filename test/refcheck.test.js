@@ -33,3 +33,10 @@ test('compareEntry: ignores dash style, reports real differences and a missing D
   assert.deepEqual(d.map((x) => x.field), ['year', 'volume', 'pages', 'doi']);
   assert.ok(titleSimilarity('Family Violence and Football', 'Family violence and football: the effect') > 0.5);
 });
+
+test('roman volumes and main-title records match', () => {
+  const [e] = parseBib('@article{j, title={The Dynamics of Criminal Behavior: Evidence from Weather Shocks}, journal={Journal of Human Resources}, year={2007}, volume={42}}');
+  assert.deepEqual(compareEntry(e, { type: 'journal-article', volume: 'XLII', issued: { 'date-parts': [[2007]] }, 'container-title': ['Journal of Human Resources'] }), []);
+  assert.ok(titleSimilarity('The Dynamics of Criminal Behavior: Evidence from Weather Shocks', 'The Dynamics of Criminal Behavior') >= 0.8);
+  assert.ok(titleSimilarity('Crime: A Survey', 'Crime') < 0.8);
+});

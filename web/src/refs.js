@@ -30,7 +30,7 @@ export async function addReference(app, S) {
   let natbib = false;
   if (view) natbib = /\\usepackage(\[[^\]]*\])?\{[^}]*natbib/.test(view.state.doc.sliceString(0, 20000));
 
-  const input = h('input', { placeholder: 'DOI, link do arXiv, ID do arXiv ou título', style: { width: '100%' } });
+  const input = h('input', { placeholder: "DOI, link do artigo (ScienceDirect, arXiv) ou título", style: { width: '100%' } });
   const bibSel = h('select', {}, bibs.map((b) => h('option', { value: b }, S.project ? relPath(S.project.root, b) : basename(b))));
   const results = h('div', { class: 'ref-results' });
   const go = h('button', { class: 'btn primary' }, 'Buscar');
@@ -90,7 +90,7 @@ export async function addReference(app, S) {
       h('div', { style: { display: 'flex', gap: '8px' } }, input, go),
       h('div', { class: 'field', style: { marginTop: '10px' } }, h('label', {}, 'Arquivo .bib'), bibSel),
       results,
-      h('p', { class: 'faint', style: { fontSize: '12px', marginTop: '10px' } }, 'Busca no Crossref (DOI e título) e no arXiv. Se a referência já estiver no .bib, usa a chave que existe.'),
+      h('p', { class: 'faint', style: { fontSize: '12px', marginTop: '10px' } }, 'Busca no Crossref, no OpenAlex e no arXiv. Se a referência já estiver no .bib, usa a chave que existe.'),
     ),
   });
   setTimeout(() => input.focus(), 0);

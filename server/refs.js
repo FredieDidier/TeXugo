@@ -27,6 +27,9 @@ async function get(url, accept = 'application/json') {
 // What the user pasted: a DOI, an arXiv id, or free text (a title).
 export function classify(q) {
   const s = String(q || '').trim();
+  // ScienceDirect links carry the PII, not the DOI.
+  const pii = s.match(/sciencedirect\.com\/science\/article\/(?:abs\/)?pii\/([A-Z0-9]{16,17})/i);
+  if (pii) return { kind: 'pii', id: pii[1].toUpperCase() };
   const doi = s.match(/\b(10\.\d{4,9}\/[^\s"<>]+)/);
   if (doi) return { kind: 'doi', id: doi[1].replace(/[.,;)\]]+$/, '') };
   const ax = s.match(/(?:arxiv\.org\/(?:abs|pdf)\/|arxiv:\s*|^)(\d{4}\.\d{4,5}|[a-z-]+(?:\.[A-Z]{2})?\/\d{7})(v\d+)?(?:\.pdf)?\s*$/i);
@@ -123,13 +126,49 @@ async function byArxiv(id) {
 }
 
 // Returns candidates: one for a DOI or arXiv id, up to six for a title.
+// OpenAlex's title search finds works Crossref's ranking buries (Crossref
+// itself has them; it just lists other things first). Returns DOIs.
+export async function openAlexDois(title, max = 3) {
+  const r = await get(`https://api.openalex.org/works?search=${encodeURIComponent(title)}&per-page=${max}&select=doi,title,publication_year,authorships`).catch(() => null);
+  return ((r && r.results) || [])
+    .filter((w) => w.doi)
+    .map((w) => ({ doi: w.doi.replace(/^https?:\/\/doi\.org\//i, ''), title: w.title || '', year: String(w.publication_year || ''), authors: (w.authorships || []).map((a) => (a.author && a.author.display_name) || '') }));
+}
+
+const words = (s) => new Set(String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 2));
+const overlap = (a, b) => {
+  const A = words(a);
+  const B = words(b);
+  let n = 0;
+  for (const w of A) if (B.has(w)) n++;
+  return A.size ? n / A.size : 0;
+};
+
 export async function lookup(q) {
   const c = classify(q);
   if (c.kind === 'doi') return [await byDoi(c.id)];
   if (c.kind === 'arxiv') return [await byArxiv(c.id)];
+  if (c.kind === 'pii') {
+    const r = await get(`https://api.crossref.org/works?rows=1&filter=alternative-id:${c.id}`);
+    const m = r && r.message.items[0];
+    if (!m) throw new Error('Não achei esse artigo do ScienceDirect no Crossref. Cole o DOI (aparece na página do artigo).');
+    return [fromCrossref(m)];
+  }
   if (c.q.length < 4) throw new Error('Digite um DOI, um ID do arXiv ou parte do título.');
-  const r = await get(`https://api.crossref.org/works?rows=6&query.bibliographic=${encodeURIComponent(c.q)}`);
-  return ((r && r.message.items) || []).filter((m) => m.title && m.title[0]).map(fromCrossref);
+  const [r, oa] = await Promise.all([get(`https://api.crossref.org/works?rows=6&query.bibliographic=${encodeURIComponent(c.q)}`), openAlexDois(c.q, 3)]);
+  const list = ((r && r.message.items) || []).filter((m) => m.title && m.title[0]).map(fromCrossref);
+  // OpenAlex hits whose title matches what was typed go first.
+  const have = new Set(list.map((x) => (x.doi || '').toLowerCase()));
+  const extra = [];
+  for (const w of oa) {
+    if (have.has(w.doi.toLowerCase()) || overlap(w.title, c.q) < 0.6) continue;
+    try {
+      extra.push(await byDoi(w.doi));
+    } catch {}
+  }
+  const best = [...extra, ...list];
+  best.sort((a, b) => overlap(b.title, c.q) - overlap(a.title, c.q));
+  return best.slice(0, 6);
 }
 
 // Appends the entry unless the .bib already has this DOI or arXiv id;
