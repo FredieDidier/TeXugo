@@ -350,7 +350,10 @@ async function refreshRoots(t) {
 
 function activate(path) {
   const prev = activeTab();
-  if (prev && !prev.binary && prev.path !== path) prev.state = app.view.state;
+  // Always take the view's state back into its tab first: re-opening the
+  // active file (a click in the tree, a jump to a line) must not restore
+  // the state it had when it was activated, which drops unsaved edits.
+  if (prev && !prev.binary) prev.state = app.view.state;
   S.active = path;
   const t = activeTab();
   app.emptyEditor.classList.toggle('hidden', !!t);

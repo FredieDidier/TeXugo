@@ -8,7 +8,7 @@ export const SECTIONS = [
   {
     title: 'Achar qualquer coisa',
     rows: [
-      ['Paleta de comandos: busque qualquer comando pelo nome', '⌘K', 'Também ⇧⌘P; menu Visualizar → Paleta de comandos'],
+      ['Paleta de comandos: a caixa “Buscar arquivo ou comando” no topo. Digite o nome de qualquer comando e dê Enter', '⌘K', 'Também ⇧⌘P; menu Visualizar → Paleta de comandos'],
       ['Abrir um arquivo do projeto pelo nome', '⌘P', 'Menu Arquivo → Abrir arquivo rápido; barra de busca no topo'],
       ['Buscar texto em todo o projeto', '⇧⌘F', 'Ícone da lupa na barra da esquerda'],
       ['Buscar e substituir no arquivo', '⌘F', 'Dentro do editor; ⌘G vai para a próxima, ⇧⌘G para a anterior'],
@@ -85,6 +85,7 @@ export const SECTIONS = [
       ['Abrir a linha citada como arquivo.tex:123', '⌘-clique', 'Em comentários do response.tex, logs e notas'],
       ['Anotações do PDF (suas ou do coautor), ligadas ao .tex', '', 'Aba Revisão; lista na aba Anotações do painel inferior'],
       ['Comparar com outra versão (PDF com mudanças marcadas)', '', 'Aba Revisão'],
+      ['Marcar a versão enviada e ler o retorno contra ela (sugestões: aplica direto, já no texto, conflito, sumiu)', '', 'Aba Revisão → Versões enviadas; aba Sugestões no painel de baixo; paleta: “enviada”, “retorno”'],
       ['Comentar o trecho selecionado (vai para os coautores com o commit)', '⌥⌘M', 'Barra da seleção: 💬; botão direito; aba Comentários do painel inferior'],
       ['Comentários no texto: responder, resolver, ir ao trecho', '', 'Passe o mouse no trecho marcado; aba Comentários; aba Revisão'],
       ['Novidades dos coautores desde a sua última visita (por pessoa e por seção)', '', 'Aba Revisão; aba Novidades no painel de baixo; paleta: “novidades”'],
@@ -136,7 +137,8 @@ export function shortcutsDialog() {
   };
   q.addEventListener('input', render);
   render();
-  const m = modal({ title: [icon('command'), ' Atalhos e comandos'], wide: true, body: h('div', {}, q, list) });
+  const hint = h('p', { class: 'faint sc-hint' }, 'Onde está escrito “paleta: …”, aperte ⌘K (ou clique na caixa de busca no topo), digite a palavra entre aspas e dê Enter.');
+  const m = modal({ title: [icon('command'), ' Atalhos e comandos'], wide: true, body: h('div', {}, q, hint, list) });
   m.el.classList.add('shortcuts-modal');
   setTimeout(() => q.focus(), 0);
 }

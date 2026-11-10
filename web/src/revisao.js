@@ -14,6 +14,7 @@ import { compareDialog } from './compare.js';
 import { summary } from './news.js';
 import { authorColor } from './blame.js';
 import { replicationItems } from './replication.js';
+import { loadSent, sentCount, markDialog, feedbackDialog } from './sent.js';
 
 const REC = { reject: 'rejeitar', 'major revision': 'revisão maior', 'minor revision': 'revisão menor', accept: 'aceitar' };
 
@@ -81,6 +82,28 @@ export async function renderRevisao(app, S, el) {
       [btn('Comparar…', () => compareDialog(app, S), !diffPdf), diffPdf ? btn('Abrir o último', () => app.openPdf(`${docDir}.texugo/diff/${basename(stem)}-mudancas.pdf`, { activate: true })) : null].filter(Boolean),
     ),
   ];
+  {
+    if (!S.sent || S.sent.root !== S.project.root) await loadSent(app, S);
+    const open = sentCount(S);
+    const marks = (S.sent.marks || []).filter((x) => x.doc === relPath(S.project.root, doc));
+    const lastFb = (S.sent.feedback || []).find((f) => f.counts && f.counts.open);
+    const dm = (iso) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    coauthors.push(
+      row(
+        'papers',
+        'Versões enviadas',
+        open
+          ? `${open} sugest${open > 1 ? 'ões' : 'ão'} em aberto · de ${lastFb.from || lastFb.source}`
+          : marks.length
+            ? marks[0].to
+              ? `Última: enviada a ${marks[0].to} em ${dm(marks[0].date)}`
+              : `Última: enviada em ${dm(marks[0].date)}`
+            : 'Marque a versão quando mandar o paper: o retorno é lido contra ela, mesmo que o texto já tenha mudado.',
+        [open ? btn('Ver sugestões', () => app.bottom.show('sugestoes'), true) : null, btn('Marcar o envio…', () => markDialog(app, S), !open && !marks.length), btn('Recebi o retorno…', () => feedbackDialog(app, S, { markId: marks[0] && marks[0].id }), !open && !!marks.length)].filter(Boolean),
+        { cls: open ? 'open' : '' },
+      ),
+    );
+  }
   {
     const cm = app.comments;
     const open = cm.open();

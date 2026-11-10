@@ -5,6 +5,7 @@ import { tr } from './i18n.js';
 import { h, clear, icon, fileIcon, relPath } from './dom.js';
 import { openSettings } from './settings.js';
 import { newProjectDialog, showWelcome, cloneDialog } from './welcome.js';
+import { markDialog, feedbackDialog } from './sent.js';
 
 function commands(app, S) {
   const t = app.activeTab();
@@ -29,6 +30,8 @@ function commands(app, S) {
     { t: 'Referências do projeto (.bib, verificar no Crossref)', kw: 'bib bibtex citar crossref doi papers bibliografia verificar checar', i: 'book', run: () => app.sidebar.show('refs') },
     { t: 'Comentar o trecho selecionado', kw: 'comentário comentar nota coautor anotação discussão', i: 'comment', run: () => app.comments.add(app.view, app.activeTab()) },
     { t: 'Comentários no texto (seus e dos coautores)', kw: 'comentários comentário coautor discussão responder resolver', i: 'comment', run: () => app.bottom.show('comentarios') },
+    { t: 'Marcar a versão enviada (para ler o retorno contra ela)', kw: 'enviar enviada versão marcar coautor amigo leitor retorno sugestões', i: 'papers', run: () => markDialog(app, S) },
+    { t: 'Recebi um retorno: ler as sugestões contra a versão enviada', kw: 'retorno sugestões recebi versão enviada comparar coautor amigo leitor pdf anotado', i: 'down', run: () => feedbackDialog(app, S) },
     { t: 'Pacote de replicação: checklist da revista', kw: 'replicação replication pacote data editor dcas readme seed dados código aea econometrica zenodo dataverse', i: 'papers', run: () => app.bottom.show('replicacao') },
     { t: 'Novidades dos coautores desde a sua última visita', kw: 'git commits coautor novidades mudanças quem mudou pull remoto', i: 'users', run: () => app.bottom.show('novidades') },
     { t: 'Mostrar ou esconder quem escreveu cada trecho', kw: 'autoria blame git coautor quem escreveu linha', i: 'users', run: () => app.blame.toggle() },

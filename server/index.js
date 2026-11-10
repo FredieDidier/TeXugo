@@ -12,6 +12,7 @@ import * as project from './project.js';
 import * as gitOps from './git.js';
 import * as coauthors from './coauthors.js';
 import * as comments from './comments.js';
+import * as sent from './sent.js';
 import * as sync from './synctex.js';
 import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
@@ -696,6 +697,39 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       mustAllow(doc);
       if (!source || !['path', 'git'].includes(source.kind)) throw httpError(400, 'Escolha a outra versão.');
       return compare.compareBuild(path.resolve(doc), source);
+    },
+    // Versions sent to someone, and what came back read against them.
+    async sentList({ root }) {
+      return { marks: sent.list(mustAllow(root)), feedback: sent.feedbackList(mustAllow(root)).map(({ id, doc, from, source, date, base, counts }) => ({ id, doc, from, source, date, base, counts })) };
+    },
+    async sentMark({ root, doc, to, note }) {
+      return sent.mark(mustAllow(root), mustAllow(doc), { to, note });
+    },
+    async sentDelete({ root, id }) {
+      return sent.remove(mustAllow(root), id);
+    },
+    async sentFeedback({ root, doc, source, base, buffers, from }) {
+      root = mustAllow(root);
+      if (!source || source.kind !== 'path' || !source.path) throw httpError(400, 'Escolha o arquivo que voltou.');
+      if (base && !((base.kind === 'sent' && base.id) || (base.kind === 'git' && base.rev))) throw httpError(400, 'Versão de base inválida.');
+      const own = {};
+      for (const [p, text] of Object.entries(buffers || {})) if (allowed(p) && typeof text === 'string') own[path.resolve(p)] = text;
+      return sent.feedback(root, mustAllow(doc), { kind: 'path', path: String(source.path) }, { base: base || null, buffers: own, from });
+    },
+    async sentFeedbackGet({ root, id }) {
+      return sent.feedbackGet(mustAllow(root), id);
+    },
+    async sentDecide({ root, id, n, decision }) {
+      return sent.decide(mustAllow(root), id, Number(n), decision ?? null);
+    },
+    async sentFeedbackDelete({ root, id }) {
+      return sent.feedbackRemove(mustAllow(root), id);
+    },
+    async sentMapLine({ root, id, file, line, marked }) {
+      return sent.mapLine(mustAllow(root), id, mustAllow(file), Number(line) || 1, { marked: String(marked || '').slice(0, 400) });
+    },
+    async sentPdf({ root, id }) {
+      return sent.sentPdf(mustAllow(root), id);
     },
     async compareSave({ doc, pdf }) {
       return compare.saveCopy(mustAllow(pdf), mustAllow(doc));

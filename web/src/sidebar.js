@@ -372,6 +372,7 @@ export class Sidebar {
       );
     }
     const msg = h('textarea', { rows: 2, placeholder: 'Mensagem do commit (opcional: vazia, o TeXugo escreve uma a partir dos arquivos)', style: { width: '100%', resize: 'vertical' } });
+    if (S.commitDraft) (msg.value = S.commitDraft), (S.commitDraft = null);
     const staged = g.files.filter((f) => f.staged);
     const unstaged = g.files.filter((f) => !f.staged || f.work !== ' ');
     const doCommit = async () => {

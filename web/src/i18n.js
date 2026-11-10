@@ -13,6 +13,18 @@ export function getLang() {
 }
 
 const EN = {
+  // PDF annotation kinds
+  'Destaque': 'Highlight', 'Sublinhado': 'Underline', 'Tachado': 'Strike-out', 'Nota': 'Note', 'Ondulado': 'Squiggly', 'Caixa': 'Box', 'Desenho': 'Drawing', 'Ler outro PDF': 'Read another PDF',
+  // sent versions
+  'Versões enviadas': 'Sent versions', 'Sugestões': 'Suggestions', 'Ver sugestões': 'See suggestions', 'Marcar o envio…': 'Mark as sent…', 'Recebi o retorno…': 'Feedback came back…',
+  'Marque a versão quando mandar o paper: o retorno é lido contra ela, mesmo que o texto já tenha mudado.': 'Mark the version when you send the paper: the feedback is read against it, even if the text has changed since.',
+  'Marcar a versão enviada (para ler o retorno contra ela)': 'Mark the version sent (to read the feedback against it)', 'Recebi um retorno: ler as sugestões contra a versão enviada': 'Feedback came back: read the suggestions against the sent version',
+  'Marcar a versão enviada e ler o retorno contra ela (sugestões: aplica direto, já no texto, conflito, sumiu)': 'Mark the version sent and read the feedback against it (suggestions: applies, already in, conflict, gone)',
+  'Aba Revisão → Versões enviadas; aba Sugestões no painel de baixo; paleta: “enviada”, “retorno”': 'Review tab → Sent versions; Suggestions tab of the bottom panel; palette: “sent”, “feedback”',
+  'Paleta de comandos: a caixa “Buscar arquivo ou comando” no topo. Digite o nome de qualquer comando e dê Enter': 'Command palette: the “Search files or commands” box at the top. Type the name of any command and press Enter',
+  'Onde está escrito “paleta: …”, aperte ⌘K (ou clique na caixa de busca no topo), digite a palavra entre aspas e dê Enter.': 'Where it says “palette: …”, press ⌘K (or click the search box at the top), type the word in quotes and press Enter.',
+  'Lido contra a versão enviada: cada nota aponta para a linha de hoje do mesmo trecho.': 'Read against the sent version: each note points to today’s line for the same passage.',
+  'o trecho mudou desde o envio': 'the passage changed since sending', 'o trecho foi cortado desde o envio': 'the passage was cut since sending',
   // replication package
   'Replicação': 'Replication', 'Pacote de replicação': 'Replication package', 'Ver checklist': 'See checklist', 'Pacote de replicação: checklist da revista': 'Replication package: the journal’s checklist',
   'README, código, seeds, caminhos e dados conferidos contra o padrão das revistas (DCAS), com o que cada uma pede.': 'README, code, seeds, paths and data checked against the journals’ standard (DCAS), with what each journal asks.',
@@ -397,6 +409,10 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  [/^(\d+) sugest(?:ão|ões) em aberto · de (.+)$/, (m, n, w) => `${n} open suggestion${n === '1' ? '' : 's'} · from ${w}`],
+  [/^Última: enviada a (.+) em (\d\d\/\d\d)$/, 'Latest: sent to $1 on $2'],
+  [/^Última: enviada em (\d\d\/\d\d)$/, 'Latest: sent on $1'],
+  [/^Na versão enviada: “([\s\S]*)”$/, 'In the sent version: “$1”'],
   [/^(\d+) pendências? · (.+)$/, (m, n, j) => `${n} pending · ${EN[j] || j}`],
   [/^Tudo certo pelo que dá para conferir · (.+)$/, (m, j) => `All clear, as far as can be checked · ${EN[j] || j}`],
   [/^(\d+) em aberto · último: (.+?) (agora|há \d+ (?:min|h)|\d\d\/\d\d\/\d{4})$/, (m, n, w, t) => `${n} open · latest: ${w} ${t === 'agora' ? 'now' : t.replace(/^há (\d+) (min|h)$/, '$1 $2 ago')}`],

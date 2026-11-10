@@ -96,8 +96,21 @@ export function annotationsDialog(app, S) {
   });
 }
 
-async function load(app, S, doc, pdfPath, received, label) {
-  const own = doc.replace(/\.tex$/, '.pdf');
+// A PDF annotated on a version marked as sent (Versões enviadas): SyncTeX of
+// the PDF as it was sent gives the old line, and the old text finds it in
+// today's text.
+export async function fromSent(app, S, doc, file, sentId, who) {
+  try {
+    const copy = await call('annotImport', { doc, file });
+    await load(app, S, doc, copy, true, (who ? who + ' · ' : '') + basename(file), sentId);
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
+async function load(app, S, doc, pdfPath, received, label, sentId = null) {
+  const sentPdf = sentId ? await call('sentPdf', { root: S.project.root, id: sentId }).catch(() => null) : null;
+  const own = sentPdf || doc.replace(/\.tex$/, '.pdf');
   S.annots = { status: 'loading', doc, label: label || basename(pdfPath) };
   app.bottom.show('anotacoes');
   try {
@@ -120,13 +133,22 @@ async function load(app, S, doc, pdfPath, received, label) {
       // which gives the end of a paragraph to the file that closes it.
       const note = ['Text', 'FreeText', 'Caret'].includes(a.kind);
       if (note && a.context) r = await call('syncTextInverse', { doc, text: a.context }).catch(() => null);
+      if (r && r.ok) r.via = 'text';
       if ((!r || !r.ok) && hasSync) r = await call('syncInverse', { pdf: own, page: a.page, x: a.x, y: a.y }).catch(() => null);
-      if ((!r || !r.ok) && a.context) r = await call('syncTextInverse', { doc, text: a.context }).catch(() => null);
+      if ((!r || !r.ok) && a.context) {
+        r = await call('syncTextInverse', { doc, text: a.context }).catch(() => null);
+        if (r && r.ok) r.via = 'text';
+      }
+      if (r && r.ok && sentPdf && r.file && r.via !== 'text') {
+        // An old line of the sent version: find it in today's text.
+        const m = await call('sentMapLine', { root: S.project.root, id: sentId, file: r.file, line: r.line, marked: a.marked }).catch(() => null);
+        if (m && m.ok) Object.assign(r, { line: m.line }), Object.assign(a, { changed: !!m.changed, gone: !!m.gone, was: m.was || '' });
+      }
       if (r && r.ok) Object.assign(a, { file: r.file, line: r.line, approx: !hasSync || !!r.approx });
     }
     const done = await call('annotState', { doc, pdf: pdfPath }).catch(() => ({}));
     for (const a of items) a.done = !!(done && done[a.id]);
-    S.annots = { status: 'done', doc, pdf: pdfPath, label: label || basename(pdfPath), items, pagesDiffer: received && ownPages !== pages, hasSync };
+    S.annots = { status: 'done', doc, pdf: pdfPath, label: label || basename(pdfPath), items, pagesDiffer: received && ownPages !== pages, hasSync, sent: !!sentPdf };
     if (!items.length) toast('Nenhuma anotação neste PDF.', 'info');
   } catch (err) {
     S.annots = { status: 'error', doc, error: err.message };
@@ -160,6 +182,7 @@ export function renderAnnotationsPanel(app, S, body) {
         h('span', { style: { flex: 1 } }),
         h('button', { class: 'btn sm', onclick: () => annotationsDialog(app, S) }, 'Ler outro PDF'),
       ),
+      st.sent ? h('div', { class: 'faint', style: { fontSize: '12px', margin: '4px 0' } }, 'Lido contra a versão enviada: cada nota aponta para a linha de hoje do mesmo trecho.') : null,
       st.pagesDiffer ? h('div', { class: 'qq-banner' }, icon('warn'), h('div', {}, 'O PDF anotado tem outro número de páginas que o compilado aqui: as linhas podem não bater. Compile a versão que o coautor anotou.')) : null,
       st.items.map((a) =>
         h(
@@ -178,7 +201,7 @@ export function renderAnnotationsPanel(app, S, body) {
             },
           }),
           h('span', { class: 'kind ' + (a.kind === 'StrikeOut' ? 'err' : a.kind === 'Text' || a.kind === 'FreeText' ? 'muted' : 'warn') }, KINDS[a.kind]),
-          h('div', { class: 'txt' }, a.marked ? h('span', { class: 'ann-marked' + (a.kind === 'StrikeOut' ? ' strike' : '') }, `“${a.marked}”`) : null, a.comment ? h('span', {}, ' ', a.comment) : a.marked ? null : h('span', { class: 'faint' }, ' (sem texto)'), a.author ? h('div', { class: 'sug' }, a.author) : null),
+          h('div', { class: 'txt' }, a.marked ? h('span', { class: 'ann-marked' + (a.kind === 'StrikeOut' ? ' strike' : '') }, `“${a.marked}”`) : null, a.comment ? h('span', {}, ' ', a.comment) : a.marked ? null : h('span', { class: 'faint' }, ' (sem texto)'), a.author ? h('div', { class: 'sug' }, a.author) : null, a.changed ? h('div', { class: 'ann-changed', title: a.was ? `Na versão enviada: “${a.was.slice(0, 300)}”` : '' }, a.gone ? 'o trecho foi cortado desde o envio' : 'o trecho mudou desde o envio') : null),
           h('span', { class: 'where', title: a.approx ? 'Linha achada pelo texto (aproximada)' : 'Linha pelo SyncTeX' }, `p. ${a.page}${a.file ? ` · ${relPath(S.project.root, a.file)}:${a.line}${a.approx ? ' ~' : ''}` : ''}`),
           h('button', { class: 'btn sm ghost', title: 'Pedir ao Claude para fazer esta mudança', onclick: (e) => (e.stopPropagation(), ask(a)) }, icon('claude')),
         ),
