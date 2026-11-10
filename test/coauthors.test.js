@@ -130,3 +130,28 @@ test('sections carry their current line, and diffs take project paths', async ()
   assert.match(d, /\+b changed/);
   assert.match(await showCommit(root, { rev: n.head, file: f }), /Bruno Lima/);
 });
+
+test('the paper as a PDF with what is on the remote, before the pull', async () => {
+  const { compareBuild } = await import('../server/compare.js');
+  const { execFileSync } = await import('node:child_process');
+  const base = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-remote-'));
+  const g = (cwd, ...a) => execFileSync('git', ['-c', 'user.name=T', '-c', 'user.email=t@x.org', ...a], { cwd, stdio: 'pipe' });
+  g(base, 'init', '-q', '--bare', 'origin.git');
+  g(base, 'clone', '-q', 'origin.git', 'me');
+  const me = path.join(base, 'me');
+  fs.writeFileSync(path.join(me, 'paper.tex'), '\\documentclass{article}\n\\begin{document}\nCafes in most cities.\n\\end{document}\n');
+  g(me, 'add', '-A');
+  g(me, 'commit', '-qm', 'init');
+  g(me, 'push', '-q', '-u', 'origin', 'HEAD');
+  g(base, 'clone', '-q', 'origin.git', 'other');
+  const other = path.join(base, 'other');
+  fs.writeFileSync(path.join(other, 'paper.tex'), '\\documentclass{article}\n\\begin{document}\nCafes in large cities.\n\\end{document}\n');
+  g(other, 'commit', '-qam', 'edit');
+  g(other, 'push', '-q');
+  g(me, 'fetch', '-q');
+  const r = await compareBuild(path.join(me, 'paper.tex'), { kind: 'git', rev: 'HEAD' }, { kind: 'git', rev: '@{u}' });
+  assert.equal(r.same, false);
+  assert.deepEqual(r.changedFiles, ['paper.tex']);
+  assert.match(fs.readFileSync(r.tex, 'utf8'), /DIFdel\{most \}/);
+  assert.match(fs.readFileSync(path.join(me, 'paper.tex'), 'utf8'), /most cities/);
+});

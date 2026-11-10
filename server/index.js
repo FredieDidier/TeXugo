@@ -693,10 +693,11 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       return refs.addToBib(mustAllow(bib), ref);
     },
     // Compare with another version (received .tex/ZIP/folder or a Git commit).
-    async compareBuild({ doc, source }) {
+    async compareBuild({ doc, source, target }) {
       mustAllow(doc);
       if (!source || !['path', 'git'].includes(source.kind)) throw httpError(400, 'Escolha a outra versão.');
-      return compare.compareBuild(path.resolve(doc), source);
+      if (target && (target.kind !== 'git' || !/^([0-9a-f]{7,40}|HEAD|@\{u\})$/.test(target.rev || ''))) throw httpError(400, 'Versão inválida.');
+      return compare.compareBuild(path.resolve(doc), source, target || null);
     },
     // Versions sent to someone, and what came back read against them.
     async sentList({ root }) {

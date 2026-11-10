@@ -19,6 +19,28 @@ const dateBR = (iso, withTime) => {
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const sectionName = (s) => s || 'início do arquivo';
 
+// The paper as a PDF with the changes from `from` to `to` marked (latexdiff),
+// built from Git: works before the pull, with nothing changed here.
+async function pdfDiff(app, S, from, to, btn) {
+  const t = app.activeTab();
+  const doc = t && t.root;
+  if (!doc) return toast('Abra um arquivo do paper para ver as mudanças no PDF.', 'warn');
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Montando o PDF…';
+  try {
+    const r = await call('compareBuild', { doc, source: { kind: 'git', rev: from, label: from }, target: { kind: 'git', rev: to } });
+    if (r.same) toast('Nenhuma mudança no texto deste documento.', 'info');
+    else toast(`${r.added + r.deleted} trechos mudaram (${r.changedFiles.join(', ') || basename(doc)}): azul entrou, vermelho riscado saiu.`, 'ok', 8000);
+    app.openPdf(r.pdf, { activate: true });
+  } catch (err) {
+    toast(err.message, 'error', 10000);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+}
+
 // Fetches the news. since: 'visit' | 7 | 30. Keeps the pinned base.
 export async function loadNews(app, S, { since } = {}) {
   if (!S.project || !S.git || !S.git.repo) return (S.news = null);
@@ -141,7 +163,9 @@ export async function renderNewsPanel(app, S, el) {
             ? `Desde o commit de ${dateBR(b.date, true)}.`
             : ''
       : '';
-  const head = h('div', { class: 'news-head' }, period, fetchBtn, h('span', { class: 'faint news-since' }, sinceText));
+  const visitFrom = n.since === 'visit' && (n.shownBaseline || d.baseline) && (n.shownBaseline || d.baseline).hash;
+  const pdfBtn = d.count && visitFrom ? h('button', { class: 'btn sm', title: 'O paper com tudo o que mudou desde a sua visita marcado', onclick: (e) => pdfDiff(app, S, visitFrom, 'HEAD', e.currentTarget) }, icon('pdf'), 'Ver no PDF') : null;
+  const head = h('div', { class: 'news-head' }, period, fetchBtn, pdfBtn, h('span', { class: 'faint news-since' }, sinceText));
 
   const from = n.since === 'visit' && b && b.hash ? b.hash : null;
   const blocks = [];
@@ -168,6 +192,7 @@ export async function renderNewsPanel(app, S, el) {
           },
           'Baixar (pull)',
         ),
+        h('button', { class: 'btn sm', title: 'O paper com o que chegou no remoto marcado, antes de baixar', onclick: (e) => pdfDiff(app, S, 'HEAD', '@{u}', e.currentTarget) }, icon('pdf'), 'Ver no PDF'),
       ),
     );
     for (const a of d.remote) blocks.push(authorBlock(app, S, a, { remote: true }));
@@ -197,13 +222,15 @@ function authorBlock(app, S, a, { from, remote } = {}) {
             ),
           )
         : null,
-      !remote && from
-        ? h(
-            'button',
-            { class: 'btn sm ghost', title: 'Tudo o que mudou neste arquivo desde a sua visita (de todos, inclusive você)', onclick: async () => diffModal(`O que mudou em ${basename(f.path)}`, await call('gitNewsDiff', { root, from, path: f.path }), () => app.openFile(f.path)) },
-            'Ver mudanças',
-          )
-        : null,
+      remote
+        ? h('button', { class: 'btn sm ghost', title: 'O que chegou no remoto para este arquivo, antes de baixar', onclick: async () => diffModal(`O que chegou em ${basename(f.path)}`, await call('gitNewsDiff', { root, from: 'HEAD', to: '@{u}', path: f.path }), () => app.openFile(f.path)) }, 'Ver mudanças')
+        : from
+          ? h(
+              'button',
+              { class: 'btn sm ghost', title: 'Tudo o que mudou neste arquivo desde a sua visita (de todos, inclusive você)', onclick: async () => diffModal(`O que mudou em ${basename(f.path)}`, await call('gitNewsDiff', { root, from, path: f.path }), () => app.openFile(f.path)) },
+              'Ver mudanças',
+            )
+          : null,
     );
   const commitRow = (c) =>
     h(

@@ -15,6 +15,10 @@ export function getLang() {
 const EN = {
   // PDF annotation kinds
   'Destaque': 'Highlight', 'Sublinhado': 'Underline', 'Tachado': 'Strike-out', 'Nota': 'Note', 'Ondulado': 'Squiggly', 'Caixa': 'Box', 'Desenho': 'Drawing', 'Ler outro PDF': 'Read another PDF',
+  // news as a PDF
+  'Ver no PDF': 'See in the PDF', 'Montando o PDF…': 'Building the PDF…', 'O paper com o que chegou no remoto marcado, antes de baixar': 'The paper with what arrived on the remote marked, before pulling',
+  'O paper com tudo o que mudou desde a sua visita marcado': 'The paper with everything that changed since your visit marked', 'O que chegou no remoto para este arquivo, antes de baixar': 'What arrived on the remote for this file, before pulling',
+  'Abra um arquivo do paper para ver as mudanças no PDF.': 'Open a file of the paper to see the changes in the PDF.', 'Nenhuma mudança no texto deste documento.': 'No text changes in this document.',
   // sent versions
   'Versões enviadas': 'Sent versions', 'Sugestões': 'Suggestions', 'Ver sugestões': 'See suggestions', 'Marcar o envio…': 'Mark as sent…', 'Recebi o retorno…': 'Feedback came back…',
   'Marque a versão quando mandar o paper: o retorno é lido contra ela, mesmo que o texto já tenha mudado.': 'Mark the version when you send the paper: the feedback is read against it, even if the text has changed since.',
@@ -409,6 +413,8 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  [/^(\d+) trechos mudaram \((.*)\): azul entrou, vermelho riscado saiu\.$/, '$1 passages changed ($2): blue came in, red struck out went out.'],
+  [/^O que chegou em (.+)$/, 'What arrived in $1'],
   [/^(\d+) sugest(?:ão|ões) em aberto · de (.+)$/, (m, n, w) => `${n} open suggestion${n === '1' ? '' : 's'} · from ${w}`],
   [/^Última: enviada a (.+) em (\d\d\/\d\d)$/, 'Latest: sent to $1 on $2'],
   [/^Última: enviada em (\d\d\/\d\d)$/, 'Latest: sent on $1'],

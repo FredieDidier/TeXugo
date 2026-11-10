@@ -151,17 +151,28 @@ export async function wordDiff(doc, source, { max = 200000 } = {}) {
   }
 }
 
-export async function compareBuild(doc, source) {
+// target: the "new" side, when it is not the current text (another Git
+// revision, as for the commits on the remote not pulled yet).
+export async function compareBuild(doc, source, target = null) {
   const docDir = path.dirname(doc);
   const stem = path.basename(doc, '.tex');
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-diff-'));
   try {
-    const { src, oldDoc, changedFiles, fromCurrent } = await buildMirror(doc, source, tmp);
+    fs.mkdirSync(path.join(tmp, 'a'));
+    const { src, oldDoc, changedFiles: ch, fromCurrent } = await buildMirror(doc, source, path.join(tmp, 'a'));
+    let changedFiles = ch;
+    let newDoc = doc;
+    if (target) {
+      fs.mkdirSync(path.join(tmp, 'b'));
+      const b = await buildMirror(doc, target, path.join(tmp, 'b'));
+      newDoc = b.oldDoc;
+      changedFiles = [...new Set([...ch, ...b.changedFiles])];
+    }
     const outDir = path.join(docDir, '.texugo', 'diff');
     fs.mkdirSync(outDir, { recursive: true });
-    const job = `${stem}-mudancas`;
+    const job = target ? `${stem}-novidades` : `${stem}-mudancas`;
     const diffTex = path.join(outDir, job + '.tex');
-    const ld = await run('latexdiff', ['--flatten', '--encoding=utf8', oldDoc, doc], { cwd: docDir, timeout: 180000 });
+    const ld = await run('latexdiff', ['--flatten', '--encoding=utf8', oldDoc, newDoc], { cwd: docDir, timeout: 180000 });
     if (ld.code !== 0 || !ld.stdout.includes('\\begin{document}')) {
       throw new Error('O latexdiff falhou: ' + (ld.stderr || '').split('\n').filter((l) => /error|die|at .* line/i.test(l)).slice(0, 3).join(' ').slice(0, 400) || `código ${ld.code}`);
     }
