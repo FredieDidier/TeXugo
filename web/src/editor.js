@@ -11,6 +11,7 @@ import { autocompletion, completionKeymap, closeBrackets, closeBracketsKeymap, s
 import { linter, lintGutter, setDiagnostics } from '@codemirror/lint';
 import { tags as t } from '@lezer/highlight';
 import { viciosExtension } from './vicios/cm.js';
+import { grammarExtension } from './grammar/cm.js';
 import { changesField } from './changes.js';
 import { insertGrid } from './table.js';
 import { mathPreviewExtension } from './mathpreview.js';
@@ -311,6 +312,7 @@ export function createState(doc, path, hooks, settings = {}) {
       languageFor(path),
       autoEnd,
       viciosExtension(path),
+      grammarExtension(path),
       mathPreviewExtension(path),
       // ⌘-click on "file.tex:123" (in a comment, a log, a response letter)
       // opens that line.

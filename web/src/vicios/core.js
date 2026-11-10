@@ -33,7 +33,7 @@ function fallbackLang(s) {
 }
 
 // Paragraphs of the words layer: [{ from, to, lang }].
-function paragraphs(words, forced) {
+export function paragraphs(words, forced) {
   const out = [];
   const re = /\n[ \t]*\n/g;
   let last = 0;

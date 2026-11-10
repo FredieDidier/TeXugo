@@ -640,3 +640,26 @@ body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-d
 .rev-status { font-size: 11.5px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
 .rev-row.open .rev-status { color: var(--text); }
 .rev-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+
+/* Grammar checker (LanguageTool). */
+.cm-spell { text-decoration: underline wavy var(--err); text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-skip-ink: none; }
+.cm-grammar { text-decoration: underline wavy var(--info); text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-skip-ink: none; }
+.grammar-tip .vicio-tip-title.is-spell { color: var(--err); }
+.grammar-tip .vicio-tip-title.is-grammar { color: var(--info); }
+.grammar-fixes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.grammar-fixes .btn { font-weight: 600; }
+.grammar-more { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; margin-top: 8px; }
+.grammar-more .link, p .link { background: none; border: 0; padding: 0; color: var(--accent-strong); cursor: pointer; font: inherit; font-size: 12px; }
+.grammar-more .link:hover, p .link:hover { text-decoration: underline; }
+.grammar-more .vicio-tip-src { margin: 0 0 0 auto; }
+.grammar-item.has-hits { color: var(--info); }
+.grammar-item.is-err { color: var(--err); }
+.grammar-list { max-height: 60vh; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius); }
+.grammar-row { display: grid; grid-template-columns: 44px minmax(80px, 180px) 1fr; gap: 10px; padding: 7px 10px; cursor: pointer; font-size: 12.5px; border-bottom: 1px solid var(--border); }
+.grammar-row:last-child { border-bottom: 0; }
+.grammar-row:hover { background: var(--sunken); }
+.grammar-row-ln { color: var(--faint); font-family: var(--mono); text-align: right; }
+.grammar-row-word { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.grammar-row-word.is-spell { color: var(--err); }
+.grammar-row-word.is-grammar { color: var(--info); }
+.grammar-install-log { max-height: 220px; overflow: auto; font: 11px/1.4 var(--mono); background: var(--sunken); padding: 8px; border-radius: 6px; white-space: pre-wrap; }

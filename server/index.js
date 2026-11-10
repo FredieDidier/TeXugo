@@ -14,6 +14,7 @@ import * as sync from './synctex.js';
 import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
 import { LiveManager, overlayPath, realPath } from './live.js';
+import { Grammar } from './grammar.js';
 import { isInside, dataDir, run, which, toolEnv } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
@@ -82,6 +83,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
   builds.on('event', broadcast);
   const live = new LiveManager();
   live.on('event', broadcast);
+  const grammar = new Grammar(broadcast);
 
   const allowed = (p) => typeof p === 'string' && [...openProjects].some((r) => isInside(r, p));
   const mustAllow = (p) => {
@@ -354,6 +356,21 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       doc = mustAllow(doc);
       for (const b of buffers || []) mustAllow(b.path);
       return live.request(path.resolve(root), doc, buffers, { tolerate });
+    },
+    // Grammar and spelling (LanguageTool), on plain paragraphs.
+    async grammarStatus() {
+      return grammar.status();
+    },
+    async grammarCheck({ paras, server, disabledRules, level }) {
+      try {
+        return { results: await grammar.check(paras || [], { server, disabledRules, level }) };
+      } catch (err) {
+        return { error: err.message, code: err.code || null };
+      }
+    },
+    async grammarInstall() {
+      await grammar.install();
+      return grammar.status();
     },
     async liveStop({ doc }) {
       live.stop(mustAllow(doc));
@@ -735,6 +752,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
           for (const w of watchers.values()) w.close();
           builds.cancel();
           live.stopAll();
+          grammar.stop();
           server.close();
         },
       });

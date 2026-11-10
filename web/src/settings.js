@@ -112,6 +112,20 @@ export function openSettings(app, S) {
         field('Tamanho', num('mdSize', { min: 11, max: 24, step: 0.5, def: 15 })),
         field('Espaçamento entre linhas', num('mdLineHeight', { min: 1.1, max: 2.4, step: 0.05, def: 1.65 })),
       ),
+      h('h4', { class: 'set-h' }, 'Corretor gramatical'),
+      check('grammar', 'Sublinhar erros de ortografia (vermelho) e de gramática (azul) com o LanguageTool', () => app.grammarChanged()),
+      row(
+        field('Rigor', h('select', { onchange: (e) => ((st.grammarLevel = e.target.value), save(), app.grammarChanged()) }, [['picky', 'Rigoroso: aponta o máximo possível (padrão)'], ['default', 'Normal: só o que o LanguageTool tem certeza']].map(([v, l]) => h('option', { value: v, selected: (st.grammarLevel || 'picky') === v }, l)))),
+        field('Onde corrigir', h('select', { onchange: (e) => ((st.grammarServer = e.target.value), save(), app.grammarChanged()) }, [['local', 'No seu Mac (o texto não sai do computador)'], ['online', 'Servidor online do LanguageTool (envia o texto)']].map(([v, l]) => h('option', { value: v, selected: (st.grammarServer || 'local') === v }, l)))),
+      ),
+      h(
+        'p',
+        { class: 'faint', style: { fontSize: '12px', margin: '2px 0 0' } },
+        `Seu dicionário: ${(st.grammarWords || []).length} palavra(s). Regras que você mandou não apontar: ${(st.grammarRules || []).length}. `,
+        (st.grammarWords || []).length || (st.grammarRules || []).length
+          ? h('button', { class: 'link', onclick: (e) => ((st.grammarWords = []), (st.grammarRules = []), save(), app.grammarChanged(), (e.target.parentElement.textContent = 'Dicionário e regras zerados.')) }, 'Zerar')
+          : null,
+      ),
       h('h4', { class: 'set-h' }, 'Geral'),
       check('vicios', 'Sublinhar vícios de escrita (tiques de IA), em português e inglês', () => {
         viciosConfig.enabled = st.vicios !== false;
