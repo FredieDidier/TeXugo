@@ -706,3 +706,27 @@ body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-d
 .news-commit:hover .t { color: var(--accent); }
 .click { cursor: pointer; }
 .toast .toast-link { display: inline-block; margin-top: 4px; color: var(--accent); font-weight: 600; }
+
+/* Comments in the text. */
+.cm-comment { background: rgba(240, 190, 60, 0.22); border-bottom: 2px solid rgba(214, 156, 30, 0.75); }
+.cm-comment-tip { max-width: 360px; padding: 8px 10px; }
+.cm-comment-tip .cm-thread { border: 0; padding: 0; margin: 0; background: none; }
+.cm-thread { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; margin-bottom: 8px; background: var(--raised); }
+.cm-thread.focus { border-color: var(--accent); box-shadow: 0 0 0 2px var(--sel); }
+.cm-thread.resolved { opacity: 0.7; }
+.cm-where { display: flex; align-items: center; gap: 8px; font: 12px var(--mono); color: var(--muted); margin-bottom: 4px; }
+.cm-where .click { display: inline-flex; align-items: center; gap: 4px; }
+.cm-where .click:hover { color: var(--accent); }
+.cm-quote { margin: 0 0 8px; padding: 2px 8px; border-left: 3px solid rgba(214, 156, 30, 0.75); color: var(--muted); font: 12px/1.5 var(--mono); white-space: pre-wrap; max-height: 7.5em; overflow: hidden; }
+.cm-msg { display: flex; gap: 8px; padding: 4px 0; }
+.cm-msg:not(.first) { padding-left: 14px; }
+.cm-avatar { display: inline-block; width: 22px; height: 22px; border-radius: 50%; background: var(--c); color: #fff; font: 600 10px/22px var(--ui); text-align: center; flex: none; }
+.cm-body { min-width: 0; }
+.cm-who { font-size: 12px; }
+.cm-text { white-space: pre-wrap; word-wrap: break-word; }
+.cm-thread textarea { margin-top: 6px; }
+.cm-actions { display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.cm-actions .icon-btn { margin-left: auto; }
+.cm-panel .split-btn.seg .btn { border-radius: 0; }
+/* Editor tooltips (selection bar, hovers) never float over a dialog. */
+body:has(> .overlay) .cm-editor .cm-tooltip { visibility: hidden; }

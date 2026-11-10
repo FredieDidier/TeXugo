@@ -13,6 +13,21 @@ export function getLang() {
 }
 
 const EN = {
+  // comments in the text
+  'Comentários': 'Comments', 'Comentários no texto': 'Comments in the text', 'Comentar o trecho': 'Comment on the passage', 'Comentar o trecho…': 'Comment on the passage…', 'Comentar trecho': 'Comment on passage',
+  'Comentar o trecho selecionado': 'Comment on the selected passage', 'Comentar': 'Comment', 'Responder': 'Reply', 'Responder…': 'Reply…', 'Resolver': 'Resolve', 'Reabrir': 'Reopen', 'Em aberto': 'Open', 'Resolvidos': 'Resolved', 'Todos': 'All',
+  'Apagar o comentário': 'Delete the comment', 'Apagar o comentário?': 'Delete the comment?', 'Apagar': 'Delete', 'trecho mudou': 'passage changed', 'Todos resolvidos.': 'All resolved.', 'Nada aqui.': 'Nothing here.', 'Nenhum comentário em aberto.': 'No open comments.',
+  'Apaga o comentário e as respostas, para todos depois do próximo commit. Para encerrar a conversa sem apagar, use Resolver.': 'Deletes the comment and its replies, for everyone after the next commit. To close the conversation without deleting, use Resolve.',
+  'O texto comentado foi reescrito ou apagado; o comentário mostra como ele era.': 'The commented text was rewritten or deleted; the comment shows how it was.',
+  'O seu comentário (os coautores veem depois do commit e do pull)': 'Your comment (coauthors see it after the commit and their pull)', 'Selecione o trecho que quer comentar.': 'Select the passage you want to comment on.',
+  'Comentário salvo. Ele vai para os coautores no próximo commit.': 'Comment saved. It goes to your coauthors with the next commit.', 'Escreva o comentário.': 'Write the comment.', 'Escreva a resposta.': 'Write the reply.', 'Selecione o trecho a comentar.': 'Select the passage to comment on.',
+  'Selecione um trecho no editor e comente (⌥⌘M)': 'Select a passage in the editor and comment (⌥⌘M)', 'Ficam em .texugo-comments/ e vão para os coautores com o commit.': 'They live in .texugo-comments/ and go to your coauthors with the commit.',
+  'Nenhum comentário ainda. Selecione um trecho e clique em Comentar na barra que aparece, ou use ⌥⌘M.': 'No comments yet. Select a passage and click Comment in the bar that appears, or use ⌥⌘M.',
+  'Selecione um trecho e comente (⌥⌘M): os coautores respondem e resolvem, e tudo vai junto no commit.': 'Select a passage and comment (⌥⌘M): coauthors reply and resolve, and it all goes along with the commit.',
+  'Deixar um comentário neste trecho para os coautores (⌥⌘M)': 'Leave a comment on this passage for your coauthors (⌥⌘M)', 'Um comentário para os coautores, que vai junto no commit': 'A comment for your coauthors that goes along with the commit',
+  'Comentários no texto (seus e dos coautores)': 'Comments in the text (yours and your coauthors’)',
+  'Comentar o trecho selecionado (vai para os coautores com o commit)': 'Comment on the selected passage (goes to your coauthors with the commit)', 'Barra da seleção: 💬; botão direito; aba Comentários do painel inferior': 'Selection bar: 💬; right-click; Comments tab of the bottom panel',
+  'Comentários no texto: responder, resolver, ir ao trecho': 'Comments in the text: reply, resolve, go to the passage', 'Passe o mouse no trecho marcado; aba Comentários; aba Revisão': 'Hover the marked passage; Comments tab; Review tab',
   // second sweep
   'Converse com o seu Claude Code sobre este projeto. Ele lê e busca os arquivos sozinho; cada edição ou comando aparece aqui para você aceitar antes.': 'Talk to your Claude Code about this project. It reads and searches the files by itself; every edit or command shows up here for you to accept first.',
   'A mensagem leva o arquivo aberto, a seleção e os erros da última compilação.': 'The message carries the open file, the selection and the errors of the last build.',
@@ -352,6 +367,10 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  [/^(\d+) em aberto · último: (.+?) (agora|há \d+ (?:min|h)|\d\d\/\d\d\/\d{4})$/, (m, n, w, t) => `${n} open · latest: ${w} ${t === 'agora' ? 'now' : t.replace(/^há (\d+) (min|h)$/, '$1 $2 ago')}`],
+  [/^ · (agora|há \d+ (?:min|h)|\d\d\/\d\d\/\d{4})$/, (m, t) => ` · ${t === 'agora' ? 'now' : t.replace(/^há (\d+) (min|h)$/, '$1 $2 ago')}`],
+  [/^resolvido por (.+)$/, (m, w) => `resolved by ${w === 'você' ? 'you' : w}`],
+  [/^(.+), linha (\d+) · ⌘↵ salva$/, '$1, line $2 · ⌘↵ saves'],
   [/^(.+) · (\d\d\/\d\d\/\d{4})\n(.*)\nClique para ver o commit$/s, (m, w, d, sub) => `${w.replace(/^Você \((.+)\)$/, 'You ($1)')} · ${d}\n${sub}\nClick to see the commit`],
   [/^Modelo (.+), esforço (.+) \(troque no painel Claude\)\. Um paper longo leva alguns minutos; você pode continuar trabalhando\.$/, (m, mo, e) => `Model ${mo}, ${EN[e[0].toUpperCase() + e.slice(1)] ? EN[e[0].toUpperCase() + e.slice(1)].toLowerCase() : e} effort (change it in the Claude panel). A long paper takes a few minutes; you can keep working.`],
   [/^Sai um response\.tex: (?:.+)\. Modelo (.+), esforço (.+)\. O Claude só lê; o único arquivo escrito é o response\.tex\.$/, (m, mo, e) => `The result is a response.tex: each comment in a box, the reply, and “Change in the paper” with the section and page, or a red “To do” for what is missing. Model ${mo}, ${EN[e[0].toUpperCase() + e.slice(1)] ? EN[e[0].toUpperCase() + e.slice(1)].toLowerCase() : e} effort. Claude only reads; the only file written is response.tex.`],

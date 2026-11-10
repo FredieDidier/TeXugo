@@ -47,6 +47,7 @@ export class BottomPanel {
       tab('log', 'Log'),
       tab('terminal', 'Terminal', this.app.terminals ? this.app.terminals.count : 0),
       this.S.annots || this.view === 'anotacoes' ? tab('anotacoes', 'Anotações', this.S.annots && this.S.annots.items ? this.S.annots.items.filter((a) => !a.done).length : 0) : null,
+      this.app.comments && (this.app.comments.items.length || this.view === 'comentarios') ? tab('comentarios', 'Comentários', this.app.comments.count()) : null,
       newsCount(this.S) || this.view === 'novidades' ? tab('novidades', 'Novidades', newsCount(this.S)) : null,
       this.S.review || this.view === 'parecer' ? tab('parecer', 'Parecer', this.S.review && this.S.review.report ? this.S.review.report.points.filter((p) => !p.done).length : 0) : null,
       h('span', { style: { flex: 1 } }),
@@ -65,6 +66,7 @@ export class BottomPanel {
     if (this.view === 'parecer') return renderReviewPanel(this.app, this.S, this.body);
     if (this.view === 'anotacoes') return renderAnnotationsPanel(this.app, this.S, this.body);
     if (this.view === 'novidades') return renderNewsPanel(this.app, this.S, this.body);
+    if (this.view === 'comentarios') return this.app.comments.render(this.body);
     if (this.view === 'build') this.renderBuild(true);
     else if (this.view === 'problems') this.renderProblems(true);
     else this.renderLog();

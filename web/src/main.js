@@ -31,6 +31,7 @@ import { annotationsDialog } from './annotations.js';
 import { insertGrid } from './table.js';
 import { setupLive, shownPdf } from './live.js';
 import { setupBlame } from './blame.js';
+import { setupComments } from './comments.js';
 import { checkOnOpen } from './news.js';
 import { setupGrammar, grammarItem } from './grammar/ui.js';
 
@@ -124,6 +125,7 @@ function buildLayout() {
       ...AI_ACTIONS.map((a) => ({ label: a.label, title: a.hint, icon: 'edit', action: () => runAiAction(app, S, a.id, { view, tab }) })),
       'sep',
       { label: 'Perguntar ao Claude sobre o trecho', title: 'Anexa o trecho à mensagem no painel Claude', icon: 'claude', action: () => mentionInClaude(app, S, { view, tab }) },
+      { label: 'Comentar o trecho…', title: 'Um comentário para os coautores, que vai junto no commit', icon: 'comment', kb: '⌥⌘M', action: () => app.comments.add(view, tab) },
       { label: 'Copiar', action: () => navigator.clipboard.writeText(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)) },
     ]);
   });
@@ -133,6 +135,7 @@ function buildLayout() {
   app.bottom = new BottomPanel(app, S);
   app.live = setupLive(app, S);
   app.blame = setupBlame(app, S);
+  app.comments = setupComments(app, S);
   setupIde(app, S);
   applyLayoutSizes();
 }
@@ -268,6 +271,7 @@ const editorHooks = (t) => ({
   format: () => tools.formatDoc(app, S),
   addRef: () => addReference(app, S),
   openAt: (file, line) => openFile(file, { line }),
+  comment: (view) => app.comments.add(view, t),
   tablePasted: (r) => tablePasted(r),
   ask: (view) => mentionInClaude(app, S, { view, tab: t }),
   ai: (view, x, y) => menu(x, y, [{ label: 'Perguntar sobre o trecho…', title: 'Anexa o trecho à mensagem no painel Claude', icon: 'claude', action: () => mentionInClaude(app, S, { view, tab: t }) }, 'sep', ...AI_ACTIONS.map((a) => ({ label: a.label, title: a.hint, icon: 'edit', action: () => runAiAction(app, S, a.id, { view, tab: t }) }))]),
@@ -364,6 +368,7 @@ function activate(path) {
     if (app.view.state !== t.state) app.view.setState(t.state);
     applyDiagnostics();
     app.blame.apply(t);
+    app.comments.apply(app.view, t);
   }
   applyMdMode();
   renderTabs();
@@ -710,6 +715,7 @@ async function saveTab(t, { quiet = false } = {}) {
       t.mtime = r2.mtime;
     } else t.mtime = r.mtime;
     if (t.version === version) t.dirty = false;
+    app.comments.saved(t);
     renderTabs();
     app.sidebar.renderIfFiles();
     if (!quiet && t.autoCompile && t.root) compileTab(t);
@@ -1313,7 +1319,7 @@ app.renderActivity = renderActivity;
 function revisaoOpen() {
   const a = S.annots && S.annots.items ? S.annots.items.filter((x) => !x.done).length : 0;
   const r = S.review && S.review.report ? S.review.report.points.filter((x) => !x.done).length : 0;
-  return a + r;
+  return a + r + (app.comments ? app.comments.count() : 0);
 }
 app.refreshRevisao = () => {
   renderActivity();
@@ -1406,6 +1412,7 @@ async function openProject(root) {
   renderActivity();
   refreshSymbolsSoon();
   app.blame.data.clear();
+  app.comments.load();
   refreshGit().then(() => checkOnOpen(app, S));
   // PDF windows of this project that are already open announce themselves.
   call('broadcast', { msg: { type: 'pdfwin:ping' } }).catch(() => {});
@@ -1500,6 +1507,9 @@ async function checkDisk() {
       t.dirty = false;
       t.mtime = data.mtime;
       renderTabs();
+      // Replacing the whole text drops the comment marks: find the passages
+      // again in the new text.
+      if (app.comments.items.length) app.comments.load();
     } else if (!t.warnedMtime || t.warnedMtime !== data.mtime) {
       t.warnedMtime = data.mtime;
       toast(`${t.name} mudou no disco e você tem alterações não salvas. Ao salvar, o TeXugo pergunta antes de sobrescrever.`, 'warn', 7000);
@@ -1514,6 +1524,8 @@ function wireFsEvents() {
     app.sidebar.refreshTreeSoon();
     refreshGitSoon();
     await checkDisk();
+    // A pull (or a coauthor's sync) brought comments.
+    if (e.files.some((f) => f.includes('/.texugo-comments/'))) app.comments.load();
     for (const f of e.files) {
       // A PDF rebuilt outside the app (terminal, build.sh).
       if (f.endsWith('.pdf') && !S.building) {

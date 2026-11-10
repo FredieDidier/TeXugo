@@ -85,6 +85,8 @@ export const SECTIONS = [
       ['Abrir a linha citada como arquivo.tex:123', '⌘-clique', 'Em comentários do response.tex, logs e notas'],
       ['Anotações do PDF (suas ou do coautor), ligadas ao .tex', '', 'Aba Revisão; lista na aba Anotações do painel inferior'],
       ['Comparar com outra versão (PDF com mudanças marcadas)', '', 'Aba Revisão'],
+      ['Comentar o trecho selecionado (vai para os coautores com o commit)', '⌥⌘M', 'Barra da seleção: 💬; botão direito; aba Comentários do painel inferior'],
+      ['Comentários no texto: responder, resolver, ir ao trecho', '', 'Passe o mouse no trecho marcado; aba Comentários; aba Revisão'],
       ['Novidades dos coautores desde a sua última visita (por pessoa e por seção)', '', 'Aba Revisão; aba Novidades no painel de baixo; paleta: “novidades”'],
       ['Quem escreveu cada trecho (iniciais na margem; clique para ver o commit)', '', 'Ícone de pessoas acima do editor; aba Revisão; paleta: “autoria”'],
       ['Checar antes de submeter (anonimato, fontes Type 3)', '', 'Aba Revisão'],

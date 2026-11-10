@@ -11,6 +11,7 @@ import { WebSocketServer } from 'ws';
 import * as project from './project.js';
 import * as gitOps from './git.js';
 import * as coauthors from './coauthors.js';
+import * as comments from './comments.js';
 import * as sync from './synctex.js';
 import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
@@ -439,6 +440,30 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async gitBlame({ root, path: p, text }) {
       mustAllow(root);
       return coauthors.blame(root, { file: mustAllow(p), text });
+    },
+    async commentsList({ root }) {
+      mustAllow(root);
+      return comments.list(root);
+    },
+    async commentAdd({ root, path: p, anchor, text }) {
+      mustAllow(root);
+      return comments.create(root, { file: mustAllow(p), anchor, text });
+    },
+    async commentReply({ root, id, text }) {
+      mustAllow(root);
+      return comments.reply(root, id, text);
+    },
+    async commentResolve({ root, id, done }) {
+      mustAllow(root);
+      return comments.resolve(root, id, !!done);
+    },
+    async commentReanchor({ root, id, anchor }) {
+      mustAllow(root);
+      return comments.reanchor(root, id, anchor);
+    },
+    async commentDelete({ root, id }) {
+      mustAllow(root);
+      return comments.remove(root, id);
     },
     async gitInit({ root }) {
       mustAllow(root);

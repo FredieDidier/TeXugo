@@ -14,6 +14,7 @@ import { viciosExtension } from './vicios/cm.js';
 import { grammarExtension } from './grammar/cm.js';
 import { changesField } from './changes.js';
 import { blameCompartment } from './blame.js';
+import { commentExtension } from './comments.js';
 import { insertGrid } from './table.js';
 import { mathPreviewExtension } from './mathpreview.js';
 
@@ -255,6 +256,7 @@ function selectionBar(path, hooks) {
           btn('B', tex ? 'Negrito: \\textbf{} (⌘B)' : 'Negrito (⌘B)', (v) => wrapSelection(tex ? '\\textbf{' : '**', tex ? '}' : '**')(v), 'b');
           btn('I', tex ? 'Itálico: \\emph{} (⌘I)' : 'Itálico (⌘I)', (v) => wrapSelection(tex ? '\\emph{' : '*', tex ? '}' : '*')(v), 'i');
           if (tex) btn('%', 'Comentar ou descomentar as linhas (⌘/)', (v) => toggleComment(v));
+          if (hooks.comment) btn('💬', 'Deixar um comentário neste trecho para os coautores (⌥⌘M)', (v) => hooks.comment(v), 'note');
           // One Claude button: ask about the passage, or rewrite it.
           if (hooks.ai) btn('✻ Claude ▾', 'Perguntar ao Claude sobre o trecho, ou revisar, humanizar, encurtar, traduzir…', (v, e) => {
             const r = e.currentTarget.getBoundingClientRect();
@@ -357,6 +359,7 @@ export function createState(doc, path, hooks, settings = {}) {
         : [],
       changesField,
       blameCompartment.of([]),
+      commentExtension,
       selectionBar(path, hooks),
       keymap.of([
         { key: 'Mod-s', preventDefault: true, run: () => (hooks.save(), true) },
@@ -364,6 +367,7 @@ export function createState(doc, path, hooks, settings = {}) {
         { key: 'Mod-Shift-Enter', preventDefault: true, run: () => (hooks.compileAll(), true) },
         { key: 'Mod-j', preventDefault: true, run: (v) => (hooks.syncForward(v), true) },
         { key: 'Mod-Alt-r', preventDefault: true, run: () => (hooks.addRef && hooks.addRef(), true) },
+        { key: 'Mod-Alt-m', preventDefault: true, run: (v) => (hooks.comment && hooks.comment(v), true) },
         { key: 'Shift-Alt-f', preventDefault: true, run: () => (hooks.format && hooks.format(), true) },
         { key: 'Mod-b', run: wrapSelection('\\textbf{', '}') },
         { key: 'Mod-i', run: wrapSelection('\\emph{', '}') },

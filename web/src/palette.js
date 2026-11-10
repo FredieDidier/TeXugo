@@ -27,6 +27,8 @@ function commands(app, S) {
     { t: 'Estrutura do documento', i: 'outline', run: () => app.sidebar.show('outline') },
     { t: 'Buscar no projeto', k: '⌘⇧F', i: 'search', run: () => app.sidebar.show('search') },
     { t: 'Referências do projeto (.bib, verificar no Crossref)', kw: 'bib bibtex citar crossref doi papers bibliografia verificar checar', i: 'book', run: () => app.sidebar.show('refs') },
+    { t: 'Comentar o trecho selecionado', kw: 'comentário comentar nota coautor anotação discussão', i: 'comment', run: () => app.comments.add(app.view, app.activeTab()) },
+    { t: 'Comentários no texto (seus e dos coautores)', kw: 'comentários comentário coautor discussão responder resolver', i: 'comment', run: () => app.bottom.show('comentarios') },
     { t: 'Novidades dos coautores desde a sua última visita', kw: 'git commits coautor novidades mudanças quem mudou pull remoto', i: 'users', run: () => app.bottom.show('novidades') },
     { t: 'Mostrar ou esconder quem escreveu cada trecho', kw: 'autoria blame git coautor quem escreveu linha', i: 'users', run: () => app.blame.toggle() },
     { t: 'Revisão: coautores, pareceristas, antes de enviar', kw: 'revisão revisar submissão submeter coautor parecerista checklist', i: 'clipboard', run: () => app.sidebar.show('revisao') },

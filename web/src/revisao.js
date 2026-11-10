@@ -44,6 +44,11 @@ function row(ic, title, status, actions, { cls = '' } = {}) {
 }
 const btn = (label, onclick, primary) => h('button', { class: 'btn sm' + (primary ? ' primary' : ''), onclick }, label);
 
+// The latest message of a thread (the comment or its last reply).
+const lastMsg = (c) => (c.replies && c.replies.length ? c.replies[c.replies.length - 1] : c);
+const lastDate = (c) => lastMsg(c).date;
+const lastBy = (c) => lastMsg(c).author.split(' ')[0];
+
 export async function renderRevisao(app, S, el) {
   const t = app.activeTab();
   const doc = t && t.root;
@@ -75,6 +80,24 @@ export async function renderRevisao(app, S, el) {
       [btn('Comparar…', () => compareDialog(app, S), !diffPdf), diffPdf ? btn('Abrir o último', () => app.openPdf(`${docDir}.texugo/diff/${basename(stem)}-mudancas.pdf`, { activate: true })) : null].filter(Boolean),
     ),
   ];
+  {
+    const cm = app.comments;
+    const open = cm.open();
+    const last = open.length ? open.reduce((a, b) => (lastDate(a) > lastDate(b) ? a : b)) : null;
+    coauthors.push(
+      row(
+        'comment',
+        'Comentários no texto',
+        open.length
+          ? `${open.length} em aberto · último: ${lastBy(last)} ${ago(new Date(lastDate(last)).getTime())}`
+          : cm.items.length
+            ? 'Todos resolvidos.'
+            : 'Selecione um trecho e comente (⌥⌘M): os coautores respondem e resolvem, e tudo vai junto no commit.',
+        [cm.items.length ? btn('Ver', () => app.bottom.show('comentarios'), !!open.length) : null, btn('Comentar trecho', () => cm.add(app.view, t), !cm.items.length)].filter(Boolean),
+        { cls: open.length ? 'open' : '' },
+      ),
+    );
+  }
   if (g && g.repo) {
     const n = S.news && S.news.root === S.project.root ? S.news : null;
     const d = n && n.data;
