@@ -13,6 +13,32 @@ export function getLang() {
 }
 
 const EN = {
+  // replication package
+  'Replicação': 'Replication', 'Pacote de replicação': 'Replication package', 'Ver checklist': 'See checklist', 'Pacote de replicação: checklist da revista': 'Replication package: the journal’s checklist',
+  'README, código, seeds, caminhos e dados conferidos contra o padrão das revistas (DCAS), com o que cada uma pede.': 'README, code, seeds, paths and data checked against the journals’ standard (DCAS), with what each journal asks.',
+  'Pacote de replicação: checklist da revista (DCAS) e rascunho do README': 'Replication package: the journal’s checklist (DCAS) and a README draft', 'Aba Revisão; aba Replicação no painel de baixo; paleta: “replicação”': 'Review tab; Replication tab of the bottom panel; palette: “replication”',
+  'Outra revista': 'Other journal', 'AEA Data and Code Repository (openICPSR)': 'AEA Data and Code Repository (openICPSR)',
+  'Zenodo, comunidade es-replication-repository': 'Zenodo, es-replication-repository community', 'Zenodo, comunidade restud-replication': 'Zenodo, restud-replication community', 'Zenodo, comunidade ej-replication-repository': 'Zenodo, ej-replication-repository community', 'Zenodo, comunidade jeea_replication': 'Zenodo, jeea_replication community',
+  'Harvard Dataverse, coleção do JPE': 'Harvard Dataverse, JPE collection', 'Harvard Dataverse, coleção da REStat': 'Harvard Dataverse, REStat collection', 'Mendeley Data ou outro repositório com DOI': 'Mendeley Data or another repository with a DOI',
+  'O que a revista pedir; sem regra, um repositório com DOI (Zenodo, Dataverse, openICPSR)': 'Whatever the journal asks; with no rule, a repository with a DOI (Zenodo, Dataverse, openICPSR)',
+  'Depois do aceite condicional: depositar no openICPSR e enviar o formulário Data and Code Availability com os arquivos finais. O Data Editor confere antes do aceite final.': 'After conditional acceptance: deposit in openICPSR and send the Data and Code Availability Form with the final files. The Data Editor checks before final acceptance.',
+  'Segue o DCAS e o modelo de README dos Data Editors.': 'Follows the DCAS and the Data Editors’ README template.', 'O GitHub não serve como repositório: precisa ser um arquivo confiável, com DOI.': 'GitHub does not count as a repository: it must be a trusted archive with a DOI.',
+  'Depois do aceite condicional, pelo Editorial Express, com o checklist assinado e cartas ao editor e ao Data Editor. Só se publica no Zenodo depois das checagens.': 'After conditional acceptance, through Editorial Express, with the signed checklist and letters to the editor and the Data Editor. It goes public on Zenodo only after the checks.',
+  'README em PDF (README.pdf), no modelo dos Data Editors.': 'README as a PDF (README.pdf), on the Data Editors’ template.', 'Não coloque o paper nem os apêndices dentro do ZIP do pacote.': 'Do not put the paper or the appendices inside the package ZIP.',
+  'Dados em formato proprietário precisam de uma cópia em formato aberto.': 'Data in proprietary formats need a copy in an open format.', 'Dados confidenciais vão num ZIP separado, marcado como não publicável.': 'Confidential data go in a separate ZIP, marked as not for publication.',
+  'Depois do aceite condicional; o Data Editor reproduz os resultados antes da publicação.': 'After conditional acceptance; the Data Editor reproduces the results before publication.',
+  'Com os arquivos de produção, depois do aceite condicional. Vai para o Zenodo quando as checagens terminam.': 'With the production files, after conditional acceptance. It goes to Zenodo when the checks are done.',
+  'README em PDF, com uma seção própria de citação dos dados igual às referências do paper.': 'README as a PDF, with its own data citation section matching the paper’s references.', 'Pedidos de exceção (dados que não podem ser publicados) na primeira submissão.': 'Exemption requests (data that cannot be published) at first submission.',
+  'Depois do aceite: ZIP pela plataforma de dados, com o checklist preenchido. O aceite formal só sai depois que o Data Editor reproduz os resultados.': 'After acceptance: a ZIP through the data platform, with the completed checklist. Formal acceptance comes only after the Data Editor reproduces the results.',
+  'README em PDF, com citação dos dados.': 'README as a PDF, with data citations.', 'Pedidos de exceção na primeira submissão.': 'Exemption requests at first submission.',
+  'Depois do aceite condicional; o pacote sobe para o Dataverse quando a reprodução do Data Editor dá certo.': 'After conditional acceptance; the package goes up to Dataverse once the Data Editor’s reproduction succeeds.',
+  'README.pdf ou README.md na raiz do pacote; o modelo dos Data Editors é fortemente recomendado.': 'README.pdf or README.md at the package root; the Data Editors’ template is strongly recommended.',
+  'Depois do aceite; as instruções completas vêm com a carta de aceite.': 'After acceptance; full instructions come with the acceptance letter.', 'README em PDF dizendo o que é cada arquivo e como rodar a replicação.': 'README as a PDF saying what each file is and how to run the replication.',
+  'Com dados proprietários: os programas e como outros podem obter os dados.': 'With proprietary data: the programs and how others can obtain the data.',
+  'Antes da publicação. Confira as regras atuais na página da revista: não achamos uma página do Data Editor.': 'Before publication. Check the current rules on the journal’s page: we found no Data Editor page.', 'Dados proprietários: avise já na submissão.': 'Proprietary data: say so at submission.',
+  'Antes da publicação; o editor pode pedir dados e código já na revisão. Cada revista tem o seu Guide for Authors.': 'Before publication; the editor may ask for data and code during review. Each journal has its own Guide for Authors.',
+  'Com dados proprietários, diga se outros pesquisadores podem obtê-los de outro jeito.': 'With proprietary data, say whether other researchers can obtain them another way.',
+  'Veja as instruções da revista. O padrão DCAS é o que a maioria das revistas de economia segue.': 'See the journal’s instructions. The DCAS standard is what most economics journals follow.',
   // comments in the text
   'Comentários': 'Comments', 'Comentários no texto': 'Comments in the text', 'Comentar o trecho': 'Comment on the passage', 'Comentar o trecho…': 'Comment on the passage…', 'Comentar trecho': 'Comment on passage',
   'Comentar o trecho selecionado': 'Comment on the selected passage', 'Comentar': 'Comment', 'Responder': 'Reply', 'Responder…': 'Reply…', 'Resolver': 'Resolve', 'Reabrir': 'Reopen', 'Em aberto': 'Open', 'Resolvidos': 'Resolved', 'Todos': 'All',
@@ -371,6 +397,8 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  [/^(\d+) pendências? · (.+)$/, (m, n, j) => `${n} pending · ${EN[j] || j}`],
+  [/^Tudo certo pelo que dá para conferir · (.+)$/, (m, j) => `All clear, as far as can be checked · ${EN[j] || j}`],
   [/^(\d+) em aberto · último: (.+?) (agora|há \d+ (?:min|h)|\d\d\/\d\d\/\d{4})$/, (m, n, w, t) => `${n} open · latest: ${w} ${t === 'agora' ? 'now' : t.replace(/^há (\d+) (min|h)$/, '$1 $2 ago')}`],
   [/^ · (agora|há \d+ (?:min|h)|\d\d\/\d\d\/\d{4})$/, (m, t) => ` · ${t === 'agora' ? 'now' : t.replace(/^há (\d+) (min|h)$/, '$1 $2 ago')}`],
   [/^resolvido por (.+)$/, (m, w) => `resolved by ${w === 'você' ? 'you' : w}`],

@@ -730,3 +730,32 @@ body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-d
 .cm-panel .split-btn.seg .btn { border-radius: 0; }
 /* Editor tooltips (selection bar, hovers) never float over a dialog. */
 body:has(> .overlay) .cm-editor .cm-tooltip { visibility: hidden; }
+
+/* "Replicação" tab of the bottom panel. */
+.repl { padding: 8px 12px 16px; overflow: auto; height: 100%; }
+.repl-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.repl-head select { padding: 3px 6px; max-width: 320px; }
+.repl-score { font-size: 12px; margin-left: auto; }
+.repl-journal { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; background: var(--raised); font-size: 12.5px; display: flex; flex-direction: column; gap: 3px; margin-bottom: 4px; }
+.repl-journal ul { margin: 2px 0 0; padding-left: 18px; }
+.repl-journal a, .modal a { color: var(--accent); }
+.repl .section-label { margin-top: 12px; }
+.repl-item { display: flex; align-items: flex-start; gap: 8px; padding: 6px 4px; border-bottom: 1px solid var(--border); }
+.repl-ico { flex: none; width: 18px; padding-top: 1px; display: inline-flex; }
+.repl-ico svg { width: 15px; height: 15px; }
+.repl-item.ok .repl-ico, .repl-item.done .repl-ico { color: var(--ok); }
+.repl-item.warn .repl-ico { color: var(--warn); }
+.repl-item.info .repl-ico { color: var(--info); }
+.repl-item.todo .repl-ico { color: var(--faint); }
+.repl-item.na .repl-title { color: var(--muted); text-decoration: line-through; }
+.repl-main { flex: 1; min-width: 0; }
+.repl-title { font-weight: 500; }
+.repl-rule { margin-left: 8px; font: 500 10.5px var(--mono); color: var(--faint); }
+.repl-detail { font-size: 12px; color: var(--muted); margin-top: 1px; }
+.repl-actions { display: flex; gap: 6px; flex: none; }
+.repl-locs { margin-top: 4px; font-size: 12px; }
+.repl-loc { display: flex; gap: 8px; padding: 1px 0; white-space: nowrap; overflow: hidden; }
+.repl-loc .k { font-family: var(--mono); }
+.repl-loc.click:hover .k { color: var(--accent); }
+.repl-loc .faint { overflow: hidden; text-overflow: ellipsis; }
+.repl-readme { width: 100%; height: 55vh; font: 12px/1.45 var(--mono); resize: vertical; }

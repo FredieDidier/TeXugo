@@ -20,6 +20,8 @@ import { Grammar } from './grammar.js';
 import { isInside, dataDir, run, which, toolEnv } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
+import * as replication from './replication.js';
+import { journalById } from './replication-journals.js';
 import * as ai from './ai.js';
 import { Terminals } from './terminal.js';
 import { IdeBridge } from './ide.js';
@@ -567,6 +569,26 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     },
     async exportZip({ doc }) {
       return exportZip(mustAllow(doc));
+    },
+    // Replication package: what the folder shows against the DCAS standard,
+    // the journal chosen and the boxes ticked (.texugo/replication.json).
+    async replicationScan({ root, doc }) {
+      root = mustAllow(root);
+      const out = await replication.scan(root, { doc: doc ? mustAllow(doc) : null });
+      const top = (await run('git', ['rev-parse', '--show-toplevel'], { cwd: root, timeout: 8000 })).stdout.trim();
+      out.gitTop = top && path.resolve(top) !== root && isInside(top, root) ? top : null;
+      out.state = replication.loadState(root);
+      return out;
+    },
+    async replicationState({ root, state }) {
+      return replication.saveState(mustAllow(root), state || {});
+    },
+    async replicationReadme({ root, doc, title, authors, journal }) {
+      root = mustAllow(root);
+      return replication.draftReadme(root, { doc: doc ? mustAllow(doc) : null, title: String(title || '').slice(0, 300), authors: String(authors || '').slice(0, 300), journal: journalById(journal) });
+    },
+    async replicationSaveReadme({ root, text }) {
+      return replication.saveReadme(mustAllow(root), String(text || '').slice(0, 500000));
     },
     // References: look up a DOI / arXiv id / title and append it to a .bib.
     async refLookup({ q }) {

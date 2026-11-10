@@ -13,6 +13,7 @@ import { annotationsDialog } from './annotations.js';
 import { compareDialog } from './compare.js';
 import { summary } from './news.js';
 import { authorColor } from './blame.js';
+import { replicationItems } from './replication.js';
 
 const REC = { reject: 'rejeitar', 'major revision': 'revisão maior', 'minor revision': 'revisão menor', accept: 'aceitar' };
 
@@ -163,6 +164,16 @@ export async function renderRevisao(app, S, el) {
     row('edit', 'Vícios de escrita', n ? `${n} no arquivo aberto (${basename(t.path)}).` : `Nada no arquivo aberto (${basename(t.path)}).`, [btn('Relatório do documento', () => app.tools.viciosReport(app, S), !!n)], { cls: n ? 'open' : '' }),
     row('book', 'Referências', 'Ano, periódico, páginas e DOI conferidos no Crossref.', [btn('Verificar', () => app.sidebar.show('refs'))]),
     row('eye', 'Checar antes de submeter', 'Anonimato (double-blind), caminhos com o seu usuário e fontes Type 3 no PDF.', [btn('Checar', () => app.tools.blindCheck(app, S))]),
+    (() => {
+      const it = S.repl && S.repl.root === S.project.root ? replicationItems(S) : null;
+      return row(
+        'papers',
+        'Pacote de replicação',
+        it ? (it.pending ? `${it.pending} pendência${it.pending > 1 ? 's' : ''} · ${it.j.name}` : `Tudo certo pelo que dá para conferir · ${it.j.name}`) : 'README, código, seeds, caminhos e dados conferidos contra o padrão das revistas (DCAS), com o que cada uma pede.',
+        [btn(it ? 'Ver checklist' : 'Conferir', () => app.bottom.show('replicacao'), !!(it && it.pending))],
+        { cls: it && it.pending ? 'open' : '' },
+      );
+    })(),
     row('down', 'ZIP para submissão', 'Com o .bbl, os arquivos de fora trazidos para dentro, e testado numa pasta vazia.', [btn('Exportar', () => app.tools.exportZip(app, S))]),
     row('check', 'Estilo e tamanho', null, [btn('Revisar estilo (ChkTeX)', () => app.tools.chktex(app, S)), btn('Contar palavras', () => app.tools.wordCount(app, S))]),
   ];

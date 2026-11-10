@@ -91,6 +91,7 @@ export const SECTIONS = [
       ['Quem escreveu cada trecho (iniciais na margem; clique para ver o commit)', '', 'Ícone de pessoas acima do editor; aba Revisão; paleta: “autoria”'],
       ['Checar antes de submeter (anonimato, fontes Type 3)', '', 'Aba Revisão'],
       ['Exportar ZIP para submissão', '', 'Aba Revisão'],
+      ['Pacote de replicação: checklist da revista (DCAS) e rascunho do README', '', 'Aba Revisão; aba Replicação no painel de baixo; paleta: “replicação”'],
       ['Vícios de escrita (tiques de IA)', '', 'Contador “vícios” na barra de status; aba Revisão'],
       ['Revisar estilo (ChkTeX) / contar palavras', '', 'Aba Revisão'],
       ['Médico do TeX (pacotes que faltam)', '', 'Seta ao lado de Compilar'],
