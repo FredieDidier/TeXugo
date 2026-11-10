@@ -14,6 +14,9 @@ const PLURAL_DET = new Set([
 ]);
 // Words ending in -s that are not plural nouns or adjectives.
 const NOT_PLURAL = new Set(['mais', 'menos', 'pois', 'depois', 'antes', 'através', 'apenas', 'jamais', 'atrás', 'após', 'demais', 'nós', 'vós', 'eles', 'elas', 'lhes', 'nos', 'vos', 'os', 'as', 'dos', 'das', 'nas', 'pelos', 'pelas', 'aos', 'às', 'seus', 'suas', 'estes', 'estas', 'esses', 'essas', 'tais', 'quais', 'cujos', 'cujas', 'outros', 'outras', 'todos', 'todas']);
+// Before the determiner, a preposition makes it the object of something
+// else ("O debate sobre os livros permanece": the subject is "O debate").
+const PREPOSITIONS = new Set(['de', 'em', 'sobre', 'para', 'com', 'entre', 'por', 'sob', 'contra', 'ante', 'até', 'após', 'desde', 'perante', 'sem', 'durante', 'mediante', 'exceto', 'salvo']);
 const ADVERBS = new Set(['também', 'ainda', 'não', 'já', 'sempre', 'só', 'apenas', 'claramente', 'nunca', 'raramente', 'geralmente', 'frequentemente', 'realmente', 'certamente', 'provavelmente', 'efetivamente']);
 // Words ending like a singular verb that are not verbs.
 const NOT_VERB = new Set([
@@ -57,6 +60,7 @@ export function ptAgreement(text) {
   const joined = (a, b) => /^[  ]+$/.test(text.slice(a.to, b.from));
   for (let i = 0; i < toks.length; i++) {
     if (!PLURAL_DET.has(toks[i].lw)) continue;
+    if (i > 0 && PREPOSITIONS.has(toks[i - 1].lw) && joined(toks[i - 1], toks[i])) continue;
     let k = i + 1;
     // "todos os livros": the second determiner.
     if ((toks[i].lw === 'todos' || toks[i].lw === 'todas') && toks[k] && /^(os|as)$/.test(toks[k].lw) && joined(toks[i], toks[k])) k++;

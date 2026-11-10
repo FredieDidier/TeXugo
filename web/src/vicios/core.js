@@ -11,10 +11,10 @@ import { RULES, CATEGORIES, VERSION, SOURCES } from './rules.js';
 export { CATEGORIES, VERSION, SOURCES, RULES };
 
 const PT_MARK = new Set(['não', 'que', 'para', 'com', 'uma', 'os', 'das', 'dos', 'é', 'são', 'também', 'mais', 'pelo', 'pela', 'ao', 'à', 'em', 'do', 'da', 'no', 'na', 'se', 'como', 'mas', 'foi', 'entre', 'sobre', 'quando', 'muito', 'nos', 'já', 'está', 'pelos', 'pelas', 'isso', 'esta', 'este', 'essa', 'esse']);
-const EN_MARK = new Set(['the', 'and', 'of', 'to', 'is', 'are', 'that', 'with', 'for', 'this', 'which', 'not', 'be', 'by', 'on', 'from', 'we', 'our', 'it', 'was', 'were', 'these', 'than', 'have', 'has', 'their', 'at', 'an', 'or', 'but', 'when', 'its', 'can', 'more']);
+const EN_MARK = new Set(['the', 'and', 'of', 'to', 'in', 'is', 'are', 'that', 'with', 'for', 'this', 'which', 'not', 'be', 'by', 'on', 'from', 'we', 'our', 'it', 'was', 'were', 'these', 'than', 'have', 'has', 'their', 'at', 'an', 'or', 'but', 'when', 'its', 'can', 'more']);
 const WORD_RE = /[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu;
 
-function guessLang(s) {
+export function guessLang(s) {
   let pt = 0;
   let en = 0;
   for (const m of s.matchAll(WORD_RE)) {
@@ -22,7 +22,8 @@ function guessLang(s) {
     if (PT_MARK.has(w)) pt++;
     if (EN_MARK.has(w)) en++;
   }
-  if (pt + en >= 3) return pt >= en ? 'pt' : 'en';
+  // A tie (a Portuguese name quoted in English) is no evidence either way.
+  if (pt + en >= 3 && pt !== en) return pt > en ? 'pt' : 'en';
   return null;
 }
 

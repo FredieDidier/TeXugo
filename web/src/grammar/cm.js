@@ -7,7 +7,7 @@ import { EditorView, Decoration, ViewPlugin, hoverTooltip, closeHoverTooltips } 
 import { call } from '../api.js';
 import { getLang } from '../i18n.js';
 import { grammarParagraphs, mapMatch, ltLang } from './text.js';
-import { localMatches } from './local.js';
+import { hitsFor } from './hits.js';
 import { kindOf } from '../vicios/core.js';
 
 // Shared switches, set from the settings. status: 'off' | 'missing' |
@@ -64,7 +64,7 @@ function decorate(hits) {
   );
 }
 
-const keyOf = (p) => `${grammarConfig.level}|${grammarConfig.server}|${grammarConfig.disabledRules.join(',')}|${p.lang}|${p.text}`;
+const keyOf = (p) => `${grammarConfig.level}|${grammarConfig.server}|${grammarConfig.disabledRules.join(',')}|${ltLang(p.lang, p.variant)}|${p.text}`;
 
 const plugin = (path) =>
   ViewPlugin.fromClass(
@@ -101,7 +101,7 @@ const plugin = (path) =>
         if (todo.length) {
           setStatus(grammarConfig.status === 'ok' || grammarConfig.status === 'checking' ? 'checking' : 'starting');
           const r = await call('grammarCheck', {
-            paras: todo.map((p) => ({ text: p.text, lang: ltLang(p.lang) })),
+            paras: todo.map((p) => ({ text: p.text, lang: ltLang(p.lang, p.variant) })),
             server: grammarConfig.server,
             level: grammarConfig.level,
             disabledRules: grammarConfig.disabledRules,
@@ -117,22 +117,7 @@ const plugin = (path) =>
         setStatus('ok');
         // The text moved on while LanguageTool was reading: check again.
         if (view.state.doc.toString() !== doc) return this.schedule(300);
-        const words = new Set(grammarConfig.words.map((w) => w.toLowerCase()));
-        const hits = [];
-        for (const p of paras) {
-          const lt = cache.get(keyOf(p)) || [];
-          for (const m of [...localMatches(p, lt), ...lt]) {
-            const at = mapMatch(p, m.offset, m.length);
-            if (!at || at.to <= at.from) continue;
-            const word = p.text.slice(m.offset, m.offset + m.length);
-            if (m.type === 'misspelling' && words.has(word.toLowerCase())) continue;
-            if (grammarConfig.disabledRules.includes(m.rule)) continue;
-            // An acronym that is also a word, read as that word: not ours
-            // to fix.
-            if (m.type !== 'misspelling' && /\b\p{Lu}{2,}\b/u.test(word)) continue;
-            hits.push({ ...at, ...m, word, lang: p.lang });
-          }
-        }
+        const hits = hitsFor(paras, (p) => cache.get(keyOf(p)) || [], grammarConfig);
         hits.sort((a, b) => a.from - b.from);
         const cur = view.state.field(hitsField);
         if (!hits.length && !cur.hits.length) return grammarConfig.onResult && grammarConfig.onResult(view, hits);

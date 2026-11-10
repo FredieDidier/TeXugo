@@ -1,0 +1,35 @@
+\documentclass[11pt]{article}
+\usepackage[british]{babel}
+\usepackage{graphicx}
+\newcommand{\cityname}{Lisbon}
+\begin{document}
+\author[uni]{Ana Silva}
+\title{Gardens, Bicycles and Rain}
+\maketitle
+\addcontentsline{toc}{section}{Introduction}
+
+\section{Introduction}\label{sec:intro}
+The city of \cityname{} organised its gardens in 2019, and the
+programme was summarised by \citet{smith2020markets} in their review. We
+modelled the number of visitors per day with $y_{it} = \alpha_i + \beta x_{it}$,
+as Section~\ref{sec:data} and \satab{tab:visits_by_month} explain.\footnote{The
+counts come from the IPMA and the INE, two public agencies.} About 10\% of the
+visitors arrive by bicycle, the rest by bus or on foot\ldots\\[4pt]
+Panel~A sums every hour of the day, and in Panel B the morning hours are shown.
+
+\begin{figure}[tbp]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/visits.pdf}
+\caption{Visitors per day, 2019--2023.}\label{fig:visits}
+\end{figure}
+
+\begin{itemize}[leftmargin=*]
+\item The data cover 1,200 days; see \url{https://example.org/gardens_data}.
+\item Rainy days are excluded, as in Informa\c{c}\~oes sobre Jardins (S\~ao Paulo).
+\end{itemize}
+
+\section{Dados}\label{sec:data}
+As crianças brincam no jardim, e os pais leem nos bancos. Os dados do
+INMET e do IBGE mostram que a chuva reduz as visitas em dias úteis.
+O debate sobre os jardins permanece aberto, como mostra a Tabela~\ref{tab:a}.
+\end{document}
