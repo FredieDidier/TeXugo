@@ -132,7 +132,7 @@ export class BottomPanel {
               r.pdf ? h('button', { class: 'btn sm ghost', onclick: () => this.app.openPdf(r.pdf, { doc, activate: true }) }, icon('pdf'), 'PDF') : null,
             )
           : null,
-        r && q && !status ? h('div', { class: 'why', style: { color: 'var(--warn)' } }, `${q} referência${q > 1 ? 's' : ''} sai${q > 1 ? 'em' : ''} como ?? no PDF.`) : null,
+        r && q && !status ? h('div', { class: 'why', style: { color: 'var(--warn)' } }, `${q} referência${q > 1 ? 's saem' : ' sai'} como ?? no PDF.`) : null,
       );
     });
     clear(this.body, h('div', { class: 'timeline' }, summary, this.noteText && building ? h('div', { class: 'muted', style: { fontSize: '12px' } }, icon('info'), ' ', this.noteText) : null, h('div', { class: 'tl-docs' }, cards)));
