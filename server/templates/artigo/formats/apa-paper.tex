@@ -1,0 +1,65 @@
+% !TEX program = pdflatex
+% APA 7 (psychology, education, business, health and most social sciences):
+% the apa7 class in manuscript mode (double spacing, running head, title
+% page) with apacite author-year references through natbib.
+\documentclass[man,12pt,natbib]{apa7}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[american]{babel}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs,threeparttable}
+\usepackage{hyperref}\hypersetup{hidelinks}
+\usepackage[capitalise,noabbrev]{cleveref}
+
+\title{{{TITLE}}}
+\shorttitle{{{TITLE}}}
+\authorsnames{{{AUTHOR}}}
+\authorsaffiliations{{{INSTITUTION}}}
+\leftheader{{{AUTHOR}}}
+
+\abstract{One paragraph of at most 250 words: the question, the method, the main result with its size, and why it matters.}
+\keywords{keyword one, keyword two}
+
+\authornote{Correspondence: {{AUTHOR}}, {{INSTITUTION}}.}
+
+\begin{document}
+\maketitle
+
+Open with the question and why it matters; earlier work shows the effect can be large \citep{doleac2015under,smith2016spring}. \Cref{tab:main} reports the main estimates.
+
+\section{Method}\label{sec:method}
+\subsection{Participants and data}
+Describe the sample, how it was collected and the unit of observation.
+
+\subsection{Analysis}
+\begin{equation}\label{eq:main}
+  y_{i} = \beta_0 + \beta_1 x_{i} + \varepsilon_{i}
+\end{equation}
+
+\section{Results}\label{sec:results}
+\Cref{eq:main} gives $\hat\beta_1 = 0.12$, 95\% CI [0.04, 0.20] (\cref{tab:main}).
+
+\begin{table}[t]
+  \caption{Main estimates}\label{tab:main}
+  \begin{tabular}{lcc}
+    \toprule
+    & Model 1 & Model 2 \\
+    \midrule
+    Predictor & 0.12 & 0.10 \\
+              & (0.04) & (0.05) \\
+    \midrule
+    $N$ & 1{,}234 & 1{,}234 \\
+    \bottomrule
+  \end{tabular}
+  \figurenote{Standard errors in parentheses.}
+\end{table}
+
+\section{Discussion}\label{sec:discussion}
+What the results mean, their limits and what comes next.
+
+% apa7 picks the apacite style itself.
+\bibliography{references}
+
+\end{document}

@@ -1,0 +1,62 @@
+% !TEX program = pdflatex
+% Two columns (engineering and computing conferences and journals, IEEE
+% style): IEEEtran in conference mode with numbered references through
+% natbib, so \citep and \citet work as in the other formats. For ACM venues,
+% switch the class to acmart (\documentclass[sigconf]{acmart}).
+\documentclass[conference]{IEEEtran}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[hidelinks]{hyperref}
+\usepackage[capitalise,noabbrev]{cleveref}
+
+\begin{document}
+\title{{{TITLE}}}
+\author{\IEEEauthorblockN{{{AUTHOR}}}
+\IEEEauthorblockA{{{INSTITUTION}}\\author@example.org}}
+\maketitle
+
+\begin{abstract}
+One paragraph: the problem, the approach, the main result with its size, and why it matters.
+\end{abstract}
+
+\begin{IEEEkeywords}
+keyword one, keyword two
+\end{IEEEkeywords}
+
+\section{Introduction}\label{sec:intro}
+State the problem and the contribution; earlier work reports large effects \citep{doleac2015under,smith2016spring}. \Cref{tab:main} summarizes the results.
+
+\section{Method}\label{sec:method}
+\begin{equation}\label{eq:main}
+  y_{i} = \beta_0 + \beta_1 x_{i} + \varepsilon_{i}
+\end{equation}
+
+\section{Results}\label{sec:results}
+\Cref{eq:main} gives $\hat\beta_1 = 0.12$ (\cref{tab:main}).
+
+\begin{table}[!b]
+  \centering
+  \caption{Main results}\label{tab:main}
+  \begin{tabular}{lcc}
+    \toprule
+    & Baseline & Ours \\
+    \midrule
+    Accuracy & 0.81 & 0.88 \\
+    Runtime (s) & 12.4 & 9.7 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\section{Conclusion}\label{sec:conclusion}
+What was shown and what comes next.
+
+\bibliographystyle{IEEEtranN}
+\bibliography{references}
+
+\end{document}

@@ -97,7 +97,7 @@ export async function newProjectDialog(app, S, tpl) {
   });
   folder.addEventListener('input', () => (folder.dataset.touched = '1'));
   const grid = h('div', { class: 'tpl-grid', style: { marginBottom: '14px' } });
-  // Templates with journal formats (Artigo: AEA, Elsevier, Econometrica...).
+  // Templates with journal formats (Artigo: Elsevier, APA, duas colunas...).
   const formatSel = h('select', { style: { width: '100%' } });
   const formatField = h('div', { class: 'field' }, h('label', {}, 'Formato do periódico'), formatSel);
   const renderFormats = () => {
