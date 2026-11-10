@@ -30,6 +30,7 @@ import { responseDialog } from './rr.js';
 import { annotationsDialog } from './annotations.js';
 import { insertGrid } from './table.js';
 import { setupLive, shownPdf } from './live.js';
+import { setupGrammar, grammarItem } from './grammar/ui.js';
 
 export const S = {
   hello: null,
@@ -44,7 +45,7 @@ export const S = {
   building: null, // { id, order, requested }
   queued: false,
   lastSummary: null,
-  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true, vicios: true, changeMarks: true, mathPreview: true, livePreview: false },
+  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true, vicios: true, changeMarks: true, mathPreview: true, livePreview: false, grammar: true, grammarServer: 'local', grammarLevel: 'picky', grammarWords: [], grammarRules: [] },
   cursor: { line: 1, col: 1, words: 0 },
   detached: new Set(), // PDFs shown in their own window
 };
@@ -506,8 +507,10 @@ const mdRenderSoon = debounce(mdRender, 200);
 function liveToggle(t) {
   const st = t.livePreview ? S.live.get(t.root) : null;
   const err = st && st.status === 'error' && st.errors && st.errors[0];
-  const title = !t.livePreview
-    ? 'Prévia ao vivo: atualiza o PDF enquanto você digita, sem salvar. Uma passada rápida; citações novas aparecem ao compilar.'
+  // Always the explanation (like "ao salvar"), plus the state of the last
+  // pass on a second line while it is on.
+  const state = !t.livePreview
+    ? ''
     : st && st.status === 'running'
       ? 'Atualizando a prévia…'
       : err
@@ -515,6 +518,7 @@ function liveToggle(t) {
         : st && st.ms != null
           ? `Prévia atualizada em ${(st.ms / 1000).toFixed(1).replace('.', ',')} s. Clique para desligar.`
           : 'Prévia ao vivo ligada.';
+  const title = tr('Prévia ao vivo: atualiza o PDF enquanto você digita, sem salvar. Uma passada rápida; citações novas aparecem ao compilar.') + (state ? '\n' + tr(state) : '');
   return h(
     'label',
     { class: 'toggle live-toggle' + (st ? ' live-' + st.status : ''), title },
@@ -1222,6 +1226,7 @@ function renderStatus() {
     S.building ? h('span', { class: 'item' }, h('span', { class: 'status-dot building' }), 'compilando') : null,
     h('span', { class: 'grow' }),
     t && !t.binary && viciosConfig.enabled && /\.(tex|ltx|md|markdown|qmd|rmd|txt)$/i.test(t.path) ? viciosItem() : null,
+    t && !t.binary && /\.(tex|ltx|md|markdown|qmd|rmd|txt)$/i.test(t.path) ? grammarItem(app, S) : null,
     t && !t.binary ? h('span', { class: 'item' }, `${S.cursor.words.toLocaleString('pt-BR')} palavras`) : null,
     t && !t.binary ? h('span', { class: 'item' }, `Ln ${S.cursor.line}, Col ${S.cursor.col}`) : null,
     t ? h('span', { class: 'item' }, t.path.endsWith('.bib') ? 'BibTeX' : t.path.endsWith('.tex') ? 'LaTeX' : /\.md$/.test(t.path) ? 'Markdown' : 'Texto') : null,
@@ -1621,6 +1626,7 @@ async function boot() {
   document.body.classList.toggle('no-change-marks', S.settings.changeMarks === false);
   mathPreview.on = S.settings.mathPreview !== false;
   viciosConfig.onResult = (view) => view === app.view && renderStatusSoon();
+  setupGrammar(app, S);
   // Nothing to show before the first build: start with the bottom panel
   // closed; it opens when a build starts.
   S.settings.bottomOpen = false;
