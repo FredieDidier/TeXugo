@@ -1,11 +1,11 @@
 // One PDF viewer per open PDF tab. Each keeps its own scroll and zoom, and a
 // reload after a build returns to the same place in the document.
 import pdfjsLib from './pdfjs-setup.js';
-import { EventBus, PDFLinkService, PDFViewer, ScrollMode, SpreadMode } from 'pdfjs-dist/web/pdf_viewer.mjs';
+import { EventBus, PDFFindController, PDFLinkService, PDFViewer, ScrollMode, SpreadMode } from 'pdfjs-dist/web/pdf_viewer.mjs';
 import { h } from './dom.js';
 
 export class PdfTab {
-  constructor(path, { onInverse, onState }) {
+  constructor(path, { onInverse, onState, find = false }) {
     this.path = path;
     this.onInverse = onInverse;
     this.onState = onState || (() => {});
@@ -14,11 +14,17 @@ export class PdfTab {
     this.el.append(this.inner);
     this.bus = new EventBus();
     this.links = new PDFLinkService({ eventBus: this.bus, externalLinkTarget: 2 });
+    // Find with highlights, for the paper library's reader.
+    this.finder = find ? new PDFFindController({ linkService: this.links, eventBus: this.bus }) : null;
+    this.onMatches = null;
+    this.ready = false;
+    this._readyFns = [];
     this.viewer = new PDFViewer({
       container: this.el,
       viewer: this.inner,
       eventBus: this.bus,
       linkService: this.links,
+      findController: this.finder || undefined,
       textLayerMode: 1,
       annotationMode: 1,
       removePageBorders: true,
@@ -39,7 +45,14 @@ export class PdfTab {
         });
       }
       this.onState(this);
+      this.ready = true;
+      for (const fn of this._readyFns.splice(0)) requestAnimationFrame(fn);
     });
+    if (this.finder) {
+      const tell = (e) => e.matchesCount && this.onMatches && this.onMatches(e.matchesCount);
+      this.bus.on('updatefindmatchescount', tell);
+      this.bus.on('updatefindcontrolstate', tell);
+    }
     this.bus.on('pagechanging', () => this.onState(this));
     this.bus.on('scalechanging', () => this.onState(this));
     this.el.addEventListener('dblclick', (e) => this._inverse(e));
@@ -79,6 +92,19 @@ export class PdfTab {
     this.viewer.setDocument(doc);
     this.links.setDocument(doc);
     if (old) old.destroy();
+  }
+
+  // Runs fn once the pages are laid out (now, if they already are).
+  whenReady(fn) {
+    if (this.ready) fn();
+    else this._readyFns.push(fn);
+  }
+
+  // Highlights every term (case and accents ignored) and moves to the next
+  // match from the current page; `again` steps, `previous` goes back.
+  find(terms, { again = false, previous = false } = {}) {
+    if (!this.finder) return;
+    this.bus.dispatch('find', { source: this, type: again ? 'again' : '', query: terms.length === 1 ? terms[0] : terms, caseSensitive: false, entireWord: false, highlightAll: true, findPrevious: previous, matchDiacritics: false });
   }
 
   get pages() {

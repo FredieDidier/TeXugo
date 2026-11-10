@@ -78,7 +78,7 @@ const MENU_EN = {
   'Novo projeto…': 'New project…', 'Abrir pasta…': 'Open folder…', 'Nova janela': 'New window', 'Tela inicial': 'Start screen', 'Abrir arquivo rápido': 'Quick open',
   'Salvar': 'Save', 'Salvar todos': 'Save all', 'Fechar aba': 'Close tab', 'Fechar janela': 'Close window', 'Editar': 'Edit', 'Compilar': 'Build',
   'Compilar documento da aba': 'Compile the tab’s document', 'Compilar tudo que está aberto': 'Compile everything open', 'Mostrar no PDF': 'Show in PDF',
-  'Visualizar': 'View', 'Paleta de comandos': 'Command palette', 'Painel inferior': 'Bottom panel', 'Ferramentas de desenvolvedor': 'Developer tools', 'Janela': 'Window',
+  'Visualizar': 'View', 'Paleta de comandos': 'Command palette', 'Biblioteca de papers': 'Paper library', 'Painel inferior': 'Bottom panel', 'Ferramentas de desenvolvedor': 'Developer tools', 'Janela': 'Window',
 };
 let menuLang = 'pt';
 try {
@@ -113,7 +113,7 @@ function buildMenu() {
     },
     {
       label: L('Visualizar'),
-      submenu: [item('Paleta de comandos', 'Cmd+K', 'palette'), item('Painel inferior', 'Cmd+Shift+Y', 'toggleBottom'), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools', label: L('Ferramentas de desenvolvedor') }],
+      submenu: [item('Paleta de comandos', 'Cmd+K', 'palette'), item('Biblioteca de papers', 'Cmd+Alt+B', 'library'), item('Painel inferior', 'Cmd+Shift+Y', 'toggleBottom'), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools', label: L('Ferramentas de desenvolvedor') }],
     },
     { role: 'windowMenu', label: L('Janela') },
     { role: 'help', label: L('Ajuda'), submenu: [item('Atalhos e comandos', 'Cmd+Shift+/', 'shortcuts')] },
@@ -136,6 +136,11 @@ ipcMain.handle('pick-pdf', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender);
   const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'PDF', extensions: ['pdf'] }], buttonLabel: 'Ler anotações' });
   return r.canceled ? null : r.filePaths[0];
+});
+ipcMain.handle('pick-pdfs', async (e) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'PDF', extensions: ['pdf'] }], buttonLabel: 'Adicionar' });
+  return r.canceled ? [] : r.filePaths;
 });
 ipcMain.handle('pick-bib', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender);

@@ -167,3 +167,44 @@ export function importBib(target, source) {
   if (added.length) fs.writeFileSync(target, out);
   return { added, skipped };
 }
+
+// The PDFs attached to Zotero items, with the parent item's data, for the
+// paper library. Files Zotero only links to (outside its storage folder)
+// count when they exist.
+export async function pdfAttachments({ db = process.env.TEXUGO_ZOTERO_DB } = {}) {
+  const file = db || path.join(dataDir(), 'zotero.sqlite');
+  if (!fs.existsSync(file)) throw new Error('Não achei o Zotero neste Mac.');
+  const storage = path.join(path.dirname(file), 'storage');
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-zotero-'));
+  const copy = path.join(tmp, 'z.sqlite');
+  let rows;
+  try {
+    fs.copyFileSync(file, copy);
+    if (fs.existsSync(file + '-wal')) fs.copyFileSync(file + '-wal', copy + '-wal');
+    const r = await run('sqlite3', ['-json', '-readonly', copy, `SELECT a.key AS akey, p.key AS pkey, ia.path AS path FROM itemAttachments ia
+      JOIN items a ON a.itemID = ia.itemID LEFT JOIN items p ON p.itemID = ia.parentItemID
+      WHERE ia.contentType = 'application/pdf' AND ia.itemID NOT IN (SELECT itemID FROM deletedItems)`], { timeout: 30000 });
+    if (r.code !== 0) throw new Error('Não deu para ler o banco do Zotero: ' + (r.stderr || '').trim());
+    rows = r.stdout.trim() ? JSON.parse(r.stdout) : [];
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
+  const meta = new Map((await sqliteItems(file)).map((d) => [d.key, d]));
+  const out = [];
+  for (const row of rows) {
+    const p = String(row.path || '');
+    const full = p.startsWith('storage:') ? path.join(storage, row.akey, p.slice(8)) : path.isAbsolute(p) ? p : '';
+    if (!full || !fs.existsSync(full)) continue;
+    const d = meta.get(row.pkey);
+    const ref = d ? fromZotero(d) : null;
+    out.push({
+      path: full,
+      zkey: row.pkey || row.akey,
+      title: ref ? ref.title : '',
+      authors: ref ? ref.authors.map((a) => a.family).join(', ') : '',
+      year: ref ? ref.year : '',
+      doi: ref ? ref.doi : '',
+    });
+  }
+  return out;
+}

@@ -72,6 +72,7 @@ export const SECTIONS = [
       ['Estrutura do documento (seções)', '', 'Segundo ícone da barra da esquerda'],
       ['Referências do .bib, verificar no Crossref', '', 'Ícone do livro na barra da esquerda'],
       ['Importar do Zotero ou de um .bib exportado', '', 'Seta para baixo na aba Referências; paleta: “Zotero”'],
+      ['Biblioteca de papers: ler e buscar no texto de todos os PDFs', '⌥⌘B', 'Menu Visualizar; paleta: “biblioteca”'],
       ['Git: commit (mensagem opcional), sincronizar, pull, push', '', 'Ícone do Git na barra da esquerda'],
       ['Problemas da compilação', '', 'Ícone de alerta embaixo, na barra da esquerda'],
     ],

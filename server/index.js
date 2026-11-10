@@ -32,6 +32,7 @@ import * as refs from './refs.js';
 import * as compare from './compare.js';
 import * as refcheck from './refcheck.js';
 import * as zotero from './zotero.js';
+import * as library from './library.js';
 import * as reviewer from './review.js';
 import * as rr from './rr.js';
 
@@ -91,6 +92,9 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
   const grammar = new Grammar(broadcast);
 
   const allowed = (p) => typeof p === 'string' && [...openProjects].some((r) => isInside(r, p));
+  // The paper library lives in the app's data folder: readable (PDF views,
+  // Preview) though it is in no project.
+  const readable = (p) => allowed(p) || (typeof p === 'string' && isInside(library.libDir(), path.resolve(p)));
   const mustAllow = (p) => {
     if (!allowed(p)) throw httpError(403, 'Caminho fora do projeto aberto.');
     return path.resolve(p);
@@ -254,7 +258,8 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       return true;
     },
     async openExternal({ path: p }) {
-      p = mustAllow(p);
+      if (!readable(p)) throw httpError(403, 'Caminho fora do projeto aberto.');
+      p = path.resolve(p);
       await run('open', [p]);
       return true;
     },
@@ -672,6 +677,45 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       fs.writeFileSync(target, reviewer.toMarkdown(r, mustAllow(root)));
       return target;
     },
+    // Paper library: PDFs kept for every project, searchable by their text.
+    async libList() {
+      return library.list();
+    },
+    async libAddFiles({ files }) {
+      const out = [];
+      for (const f of (Array.isArray(files) ? files : []).slice(0, 500)) {
+        if (!/\.pdf$/i.test(f) || !fs.existsSync(f)) throw httpError(404, 'PDF não encontrado: ' + f);
+        out.push(library.addFile(path.resolve(f)));
+      }
+      return out;
+    },
+    async libAddData({ name, data }) {
+      return library.addBuffer(Buffer.from(String(data || ''), 'base64'), String(name || 'paper.pdf'));
+    },
+    async libSetText({ id, pages, guess }) {
+      return library.setText(id, Array.isArray(pages) ? pages : [], guess || {});
+    },
+    async libUpdate({ id, meta }) {
+      return library.update(id, meta || {});
+    },
+    async libRemove({ id }) {
+      return library.remove(id);
+    },
+    async libSearch({ q }) {
+      return library.search(q);
+    },
+    async libZotero() {
+      return zotero.pdfAttachments();
+    },
+    async libAddZotero({ items }) {
+      const out = [];
+      for (const it of (Array.isArray(items) ? items : []).slice(0, 5000)) {
+        try {
+          out.push(library.addFile(it.path, it));
+        } catch {}
+      }
+      return out;
+    },
     // Zotero and other reference managers.
     async zoteroLibrary() {
       return zotero.library();
@@ -786,7 +830,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
         // and <img> cannot set headers.
         if (url.searchParams.get('t') !== token) return send(res, 401, 'bad token');
         const p = path.resolve(url.searchParams.get('p') || '');
-        if (!allowed(p) || !fs.existsSync(p)) return send(res, 404, 'not found');
+        if (!readable(p) || !fs.existsSync(p)) return send(res, 404, 'not found');
         res.writeHead(200, {
           'content-type': MIME[path.extname(p).toLowerCase()] || 'application/octet-stream',
           'cache-control': 'no-store',

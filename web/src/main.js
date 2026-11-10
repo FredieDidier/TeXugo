@@ -28,6 +28,7 @@ import { mathPreview } from './mathpreview.js';
 import { reviewDialog, loadLastReview } from './review.js';
 import { responseDialog } from './rr.js';
 import { annotationsDialog } from './annotations.js';
+import { libraryDialog } from './library.js';
 import { insertGrid } from './table.js';
 import { setupLive, shownPdf } from './live.js';
 import { setupBlame } from './blame.js';
@@ -240,6 +241,7 @@ app.zotero = () => zoteroDialog(app, S);
 app.review = () => reviewDialog(app, S);
 app.respond = () => responseDialog(app, S);
 app.annotations = () => annotationsDialog(app, S);
+app.library = () => libraryDialog(app, S);
 app.loadLastReview = () => loadLastReview(app, S);
 
 function tablePasted(r) {
@@ -1590,6 +1592,10 @@ function wireKeys() {
     } else if (k === 'j' && !e.defaultPrevented && document.activeElement && !document.activeElement.closest('.cm-editor')) {
       e.preventDefault();
       syncForward();
+    } else if (e.code === 'KeyB' && e.altKey && !native) {
+      // In the Mac app the menu's accelerator does it.
+      e.preventDefault();
+      libraryDialog(app, S);
     } else if (e.code === 'Backslash' && e.altKey) {
       e.preventDefault();
       app.split.toggle();
@@ -1634,6 +1640,7 @@ function wireKeys() {
         toggleBottom: () => toggleBottom(),
         welcome: () => showWelcome(app, S),
         shortcuts: () => shortcutsDialog(),
+        library: () => libraryDialog(app, S),
       };
       map[action] && map[action]();
     });

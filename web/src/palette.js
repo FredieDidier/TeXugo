@@ -49,6 +49,7 @@ function commands(app, S) {
     { t: 'Resposta aos pareceristas (R&R, response letter)', kw: 'r&r revise resubmit response letter referee resposta parecer carta', i: 'letter', run: () => app.respond() },
     { t: 'Anotações do PDF (Preview, Acrobat, coautor)', kw: 'anotações annotations highlight destaque nota comentários pdf coautor preview acrobat', i: 'edit', run: () => app.annotations() },
     { t: 'Comparar com outra versão (PDF com mudanças)', kw: 'latexdiff diff coautor overleaf zip commit revisão mudanças marcadas', i: 'columns', run: () => app.compare() },
+    { t: 'Biblioteca de papers (ler e buscar no texto)', kw: 'biblioteca library papers pdf ler leitura buscar busca texto artigos literatura zotero', k: '⌥⌘B', i: 'papers', run: () => app.library() },
     { t: 'Importar do Zotero (ou .bib do Mendeley, Paperpile)', kw: 'zotero mendeley paperpile bib bibtex biblioteca importar referências', i: 'down', run: () => app.zotero() },
     { t: 'Adicionar referência (DOI, arXiv, título)', kw: 'bib bibtex citar cite crossref paper doi arxiv', k: '⌥⌘R', i: 'plus', run: () => app.addReference() },
     { t: 'Colar tabela (Excel, CSV) como LaTeX', kw: 'csv planilha excel numbers sheets booktabs tabular', i: 'outline', run: () => app.pasteTable() },

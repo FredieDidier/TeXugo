@@ -787,3 +787,32 @@ body:has(> .overlay) .cm-editor .cm-tooltip { visibility: hidden; }
 .ann-changed { font-size: 11.5px; color: var(--warn); margin-top: 2px; }
 .sc-hint { font-size: 12px; margin: 8px 0 0; }
 @media (max-width: 700px) { .sug-three { grid-template-columns: 1fr; } }
+
+/* Paper library */
+.modal.lib-modal { width: min(980px, 95vw); max-height: 84vh; }
+.overlay:has(.lib-modal) { padding-top: 7vh; }
+.modal.lib-modal.drop { outline: 2px dashed var(--accent); outline-offset: -6px; }
+.lib-q { width: 100%; font-size: 14px; padding: 9px 11px; }
+.lib-list { margin-top: 10px; display: flex; flex-direction: column; }
+.lib-paper { padding: 8px 2px; border-bottom: 1px solid var(--border); }
+.lib-head { display: flex; align-items: center; gap: 8px; }
+.lib-head > svg { flex: none; color: var(--muted); }
+.lib-meta { flex: 1; min-width: 0; }
+.lib-meta .faint { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+.lib-title { font-weight: 600; color: var(--text) !important; text-decoration: none; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lib-title:hover { color: var(--accent) !important; }
+.lib-hits { margin: 4px 0 2px 24px; display: flex; flex-direction: column; gap: 2px; }
+.lib-hit { display: flex; gap: 8px; padding: 4px 6px; border-radius: 6px; color: var(--text) !important; text-decoration: none; font-size: 12.5px; line-height: 1.45; }
+.lib-hit:hover { background: var(--hover, rgba(127, 127, 127, 0.1)); }
+.lib-page { flex: none; width: 44px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.lib-snip mark { background: rgba(255, 196, 0, 0.45); color: inherit; border-radius: 2px; padding: 0 1px; }
+.lib-more { margin-left: 58px; font-size: 12px; }
+.lib-empty { padding: 26px 8px; text-align: center; }
+.lib-status { font-size: 12px; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.overlay.lib-reader-overlay { padding: 2.5vh 2.5vw; align-items: stretch; }
+.lib-reader { flex: 1; display: flex; flex-direction: column; background: var(--raised); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.lib-reader .pdf-stack { flex: 1; min-height: 0; position: relative; }
+.lib-tools { gap: 4px; }
+.lib-reader-title { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 12.5px; max-width: 34%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.lib-find { width: 240px; padding: 4px 8px; font-size: 12.5px; }
+.lib-count { font-size: 12px; min-width: 52px; }

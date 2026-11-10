@@ -13,6 +13,18 @@ export function getLang() {
 }
 
 const EN = {
+  // paper library
+  'Biblioteca de papers': 'Paper library', ' Biblioteca de papers': ' Paper library', 'Biblioteca de papers (ler e buscar no texto)': 'Paper library (read and search the text)',
+  'Biblioteca de papers: ler e buscar no texto de todos os PDFs': 'Paper library: read and search the text of every PDF', 'Menu Visualizar; paleta: “biblioteca”': 'View menu; palette: “library”',
+  'Buscar no texto de todos os papers (palavras na mesma página; "frase exata")': 'Search the text of every paper (words on the same page; "exact phrase")',
+  'Adicione PDFs (ou arraste-os para cá) ou traga os PDFs anexados no Zotero. O texto de cada um é lido uma vez e entra na busca.': 'Add PDFs (or drag them here) or bring in the PDFs attached in Zotero. Each one’s text is read once and goes into the search.',
+  'Adicionar PDFs…': 'Add PDFs…', 'PDFs do Zotero': 'Zotero PDFs', 'Os PDFs anexados aos itens do Zotero, com título, autores e ano': 'The PDFs attached to Zotero items, with title, authors and year',
+  'Ler': 'Read', 'Abrir no painel do PDF, ao lado do texto': 'Open in the PDF pane, beside the text', 'Corrigir título, autores e ano': 'Fix title, authors and year', 'Tirar da biblioteca': 'Remove from the library',
+  ' · lendo o texto…': ' · reading the text…', 'Adicionar PDF': 'Add PDF', 'Caminho completo do PDF': 'Full path of the PDF', 'Arraste arquivos PDF.': 'Drag PDF files.',
+  'Procurando os PDFs anexados no Zotero…': 'Looking for the PDFs attached in Zotero…', 'Todos os PDFs do Zotero já estão na biblioteca.': 'Every Zotero PDF is already in the library.', 'Nenhum PDF anexado no Zotero.': 'No PDF attached in Zotero.',
+  'Trazer': 'Bring in', ' Dados do paper': ' Paper details', 'Autores': 'Authors', 'Ano': 'Year',
+  'Buscar neste paper': 'Search this paper', 'Anterior (⇧Enter)': 'Previous (⇧Enter)', 'Próximo (Enter)': 'Next (Enter)', 'Fechar (Esc)': 'Close (Esc)', 'nada': 'none',
+  'Não achei o Zotero neste Mac.': 'Could not find Zotero on this Mac.',
   // PDF annotation kinds
   'Destaque': 'Highlight', 'Sublinhado': 'Underline', 'Tachado': 'Strike-out', 'Nota': 'Note', 'Ondulado': 'Squiggly', 'Caixa': 'Box', 'Desenho': 'Drawing', 'Ler outro PDF': 'Read another PDF',
   // news as a PDF
@@ -413,6 +425,20 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  // paper library
+  [/^(\d+) papers?$/, (m, n) => `${n} paper${n === '1' ? '' : 's'}`],
+  [/^(\d+) de (\d+)$/, '$1 of $2'],
+  [/^e mais (\d+) páginas?$/, (m, n) => `and ${n} more page${n === '1' ? '' : 's'}`],
+  [/^(\d+) já estavam? na biblioteca\.$/, (m, n) => `${n} ${n === '1' ? 'was' : 'were'} already in the library.`],
+  [/^Lendo o texto: (.+) \(faltam (\d+)\)$/, 'Reading the text: $1 ($2 to go)'],
+  [/^Trazer (\d+) PDFs? anexados? no Zotero, com título, autores e ano de lá\? Os PDFs são copiados; o Zotero não é alterado\.$/, (m, n) => `Bring in ${n} PDF${n === '1' ? '' : 's'} attached in Zotero, with title, authors and year from there? The PDFs are copied; Zotero is not changed.`],
+  [/^Tirar “(.+)” da biblioteca\? A cópia do PDF guardada pelo TeXugo é apagada; o arquivo original não\.$/s, 'Remove “$1” from the library? The copy of the PDF kept by TeXugo is deleted; the original file is not.'],
+  [/^(.+): o PDF não tem texto \(é imagem escaneada\)\. Ele fica na biblioteca, mas a busca não o alcança\.$/s, '$1: the PDF has no text (it is a scanned image). It stays in the library, but the search cannot reach it.'],
+  [/^Não deu para ler (.+): (.+)$/s, 'Could not read $1: $2'],
+  [/^Não deu para abrir o PDF: (.+)$/s, 'Could not open the PDF: $1'],
+  [/^(.+) passa de 35 MB; use “Adicionar PDFs…”\.$/s, '$1 is over 35 MB; use “Add PDFs…”.'],
+  [/^PDF não encontrado: (.+)$/s, 'PDF not found: $1'],
+  [/^(.+) não é um PDF\.$/s, '$1 is not a PDF.'],
   [/^(\d+) trechos mudaram \((.*)\): azul entrou, vermelho riscado saiu\.$/, '$1 passages changed ($2): blue came in, red struck out went out.'],
   [/^O que chegou em (.+)$/, 'What arrived in $1'],
   [/^(\d+) sugest(?:ão|ões) em aberto · de (.+)$/, (m, n, w) => `${n} open suggestion${n === '1' ? '' : 's'} · from ${w}`],
