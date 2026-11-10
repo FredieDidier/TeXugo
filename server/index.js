@@ -35,6 +35,7 @@ import * as zotero from './zotero.js';
 import * as library from './library.js';
 import * as reviewer from './review.js';
 import * as rr from './rr.js';
+import { openCommand, revealCommand, terminalCommand } from './platform.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -254,18 +255,20 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async reveal({ path: p }) {
       p = mustAllow(p);
       if (hooks.reveal) hooks.reveal(p);
-      else await run('open', ['-R', p]);
+      else await run(...revealCommand(p));
       return true;
     },
     async openExternal({ path: p }) {
       if (!readable(p)) throw httpError(403, 'Caminho fora do projeto aberto.');
       p = path.resolve(p);
-      await run('open', [p]);
+      if (hooks.openPath) await hooks.openPath(p);
+      else await run(...openCommand(p));
       return true;
     },
     async openUrl({ url }) {
       if (!/^https:\/\//.test(url)) throw httpError(400, 'Só links https.');
-      await run('open', [url]);
+      if (hooks.openUrl) await hooks.openUrl(url);
+      else await run(...openCommand(url));
       return true;
     },
     async broadcast({ msg }) {
@@ -784,7 +787,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     },
     async openTerminal({ path: p }) {
       p = mustAllow(p);
-      await run('open', ['-a', 'Terminal', fs.statSync(p).isDirectory() ? p : path.dirname(p)]);
+      await run(...terminalCommand(fs.statSync(p).isDirectory() ? p : path.dirname(p)));
       return true;
     },
     async wordCount({ doc }) {

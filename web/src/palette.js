@@ -2,7 +2,7 @@
 import { AI_ACTIONS, runAiAction } from './ai.js';
 import { call } from './api.js';
 import { tr } from './i18n.js';
-import { h, clear, icon, fileIcon, relPath } from './dom.js';
+import { h, clear, icon, fileIcon, relPath, basename } from './dom.js';
 import { openSettings } from './settings.js';
 import { newProjectDialog, showWelcome, cloneDialog } from './welcome.js';
 import { markDialog, feedbackDialog } from './sent.js';
@@ -10,7 +10,7 @@ import { markDialog, feedbackDialog } from './sent.js';
 function commands(app, S) {
   const t = app.activeTab();
   return [
-    { t: 'Compilar documento da aba', d: t && t.root ? t.root.split('/').pop() : '', k: '⌘↵', i: 'play', run: () => app.compileTab() },
+    { t: 'Compilar documento da aba', d: t && t.root ? basename(t.root) : '', k: '⌘↵', i: 'play', run: () => app.compileTab() },
     { t: 'Compilar tudo que está aberto', k: '⌘⇧↵', i: 'playAll', run: () => app.compileAll() },
     { t: 'Compilar do zero (limpa auxiliares)', i: 'broom', run: () => app.compileTab(null, { clean: true }) },
     ...(S.project.docs || []).map((d) => ({ t: `Compilar ${relPath(S.project.root, d.path)}`, d: d.kind === 'slides' ? 'slides' : d.engine, i: 'play', run: () => app.compileDocs([d.path]) })),
@@ -120,7 +120,7 @@ export async function openPalette(app, S, mode = 'commands') {
       items = files
         .map((f) => {
           const rel = relPath(S.project.root, f);
-          return { t: rel.split('/').pop(), d: rel, path: f, s: q ? score(rel, q) + (open.has(f) ? 2 : 0) : open.has(f) ? 1 : 0, run: () => app.openFile(f) };
+          return { t: basename(rel), d: rel, path: f, s: q ? score(rel, q) + (open.has(f) ? 2 : 0) : open.has(f) ? 1 : 0, run: () => app.openFile(f) };
         })
         .filter((c) => c.s >= 0)
         .sort((a, b) => b.s - a.s)

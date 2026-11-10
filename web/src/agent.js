@@ -5,7 +5,7 @@
 // errors, so "fix this" and "fix the build" work without copying anything.
 import { Marked } from 'marked';
 import { call, on } from './api.js';
-import { h, clear, icon, toast, basename, relPath } from './dom.js';
+import { h, clear, icon, toast, basename, relPath, joinPath } from './dom.js';
 import { fileDiff } from './ide.js';
 
 // What the panel and the Claude terminal run with. Default: Opus 5.5, medium.
@@ -263,7 +263,7 @@ export class AgentPanel {
     const what = file ? relPath(this.S.project.root, file) : inp.pattern || inp.command || inp.skill || inp.url || inp.query || inp.description || '';
     return h(
       'div',
-      { class: 'agent-tool', onclick: file && /\.\w+$/.test(file) ? () => this.app.openFile(file.startsWith('/') ? file : this.S.project.root + '/' + file) : null },
+      { class: 'agent-tool', onclick: file && /\.\w+$/.test(file) ? () => this.app.openFile(joinPath(this.S.project.root, file)) : null },
       icon(e.name === 'Bash' ? 'command' : /Edit|Write/.test(e.name) ? 'edit' : e.name === 'Grep' || e.name === 'WebSearch' ? 'search' : 'file'),
       h('span', {}, TOOL_PT[e.name] || e.name),
       what ? h('code', {}, document.createTextNode(String(what).slice(0, 90))) : null,

@@ -90,6 +90,8 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border);
 #app { display: grid; grid-template-rows: 44px 1fr 24px; height: 100vh; }
 .topbar { display: flex; align-items: center; gap: 10px; padding: 0 10px 0 84px; background: var(--panel); border-bottom: 1px solid var(--border); -webkit-app-region: drag; }
 .topbar.browser { padding-left: 12px; }
+/* Windows/Linux: no traffic lights on the left; the system's window buttons sit over the right end. */
+.topbar.os-other { padding: 0 150px 0 12px; }
 .topbar > * { -webkit-app-region: no-drag; }
 .topbar .brand { display: flex; align-items: center; gap: 8px; font-size: 16px; -webkit-app-region: drag; }
 .topbar .brand img { width: 22px; height: 22px; }

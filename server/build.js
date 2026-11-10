@@ -21,6 +21,7 @@ import path from 'node:path';
 import { docInfo, projectSymbols, includeClosure } from './project.js';
 import { parseLog, auxFingerprint, auxLabels } from './logparse.js';
 import { toolEnv, which } from './util.js';
+import { killTree, texInstallHint } from './platform.js';
 
 const MAX_PASSES = 6;
 const ENGINE_FLAG = { pdflatex: '-pdf', xelatex: '-pdfxe', lualatex: '-pdflua' };
@@ -63,11 +64,7 @@ export class BuildManager extends EventEmitter {
     if (this.running) {
       this.running.cancelled = true;
       if (this.running.child) {
-        try {
-          process.kill(-this.running.child.pid, 'SIGTERM');
-        } catch {
-          this.running.child.kill('SIGTERM');
-        }
+        killTree(this.running.child);
       }
     }
   }
@@ -118,7 +115,7 @@ export class BuildManager extends EventEmitter {
   async _build(req) {
     const latexmk = await which('latexmk');
     if (!latexmk) {
-      throw new Error('latexmk não encontrado. Instale o MacTeX (https://tug.org/mactex/) ou adicione /Library/TeX/texbin ao PATH.');
+      throw new Error('latexmk não encontrado. ' + texInstallHint());
     }
     const { order, infos } = this.plan(req.docs);
     const missingExternal = [];
@@ -289,7 +286,7 @@ export class BuildManager extends EventEmitter {
         if (stalled) return;
         stalled = why;
         this.emit('event', { type: 'build:log', id, doc, text: `\n! TeXugo: ${why}\n` });
-        try { process.kill(-child.pid, 'SIGKILL'); } catch { child.kill('SIGKILL'); }
+        killTree(child, 'SIGKILL');
       };
       let timer = setTimeout(() => stop(STALL_MSG), STALL_MS);
       const onData = (d) => {

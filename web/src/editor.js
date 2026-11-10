@@ -17,6 +17,7 @@ import { blameCompartment } from './blame.js';
 import { commentExtension } from './comments.js';
 import { insertGrid } from './table.js';
 import { mathPreviewExtension } from './mathpreview.js';
+import { basename, dirname, joinPath } from './dom.js';
 
 const latex = StreamLanguage.define(stex);
 
@@ -167,7 +168,7 @@ function latexCompletions(ctx) {
 
 function labelDetail(k) {
   const l = symbols.labels.find((x) => x.key === k);
-  return l ? l.file.split('/').pop() + ':' + l.line : '';
+  return l ? basename(l.file) + ':' + l.line : '';
 }
 function dedupe(a) {
   return [...new Set(a)];
@@ -331,11 +332,7 @@ export function createState(doc, path, hooks, settings = {}) {
             const a = line.from + m.index;
             if (pos >= a && pos <= a + m[0].length) {
               e.preventDefault();
-              const dir = path.replace(/[^/]*$/, '');
-              const target = m[1].startsWith('/') ? m[1] : dir + m[1];
-              const parts = [];
-              for (const seg of target.split('/')) seg === '..' ? parts.pop() : seg !== '.' && parts.push(seg);
-              hooks.openAt(parts.join('/'), Number(m[2]));
+              hooks.openAt(joinPath(dirname(path), m[1]), Number(m[2]));
               return true;
             }
           }

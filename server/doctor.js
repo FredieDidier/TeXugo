@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { run, toolEnv, which } from './util.js';
+import { IS_MAC, IS_WIN } from './platform.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const PERL_SHIM = path.join(HERE, 'vendor', 'perl');
@@ -30,7 +31,9 @@ export async function texInfo({ refresh = false } = {}) {
   try {
     if (root) fs.accessSync(path.join(root, 'tlpkg'), fs.constants.W_OK), (writable = true);
   } catch {}
-  infoCache = { tlmgr, year, root, frozen, writable, repository: frozen ? historic(year) : null, latexindent: await latexindentStatus() };
+  // MiKTeX (Windows, sometimes Linux) has its own package manager.
+  const miktex = tlmgr ? null : await which('miktex');
+  infoCache = { tlmgr, miktex, year, root, frozen, writable, repository: frozen ? historic(year) : null, latexindent: await latexindentStatus() };
   return infoCache;
 }
 
@@ -42,7 +45,7 @@ async function latexindentStatus() {
 
 function indentEnv() {
   const env = toolEnv();
-  env.PERL5LIB = [PERL_SHIM, process.env.PERL5LIB].filter(Boolean).join(':');
+  env.PERL5LIB = [PERL_SHIM, process.env.PERL5LIB].filter(Boolean).join(path.delimiter);
   return env;
 }
 
@@ -52,6 +55,8 @@ const repoArgs = (info) => (info.repository ? ['--repository', info.repository] 
 const pkgCache = new Map();
 export async function findPackages(files) {
   const info = await texInfo();
+  // MiKTeX names packages after the .sty/.cls in nearly every case.
+  if (!info.tlmgr && info.miktex) return files.filter((f) => /^[\w.@+-]+$/.test(f)).map((file) => ({ file, package: file.replace(/\.(sty|cls|bst|def|cfg)$/, '').toLowerCase() }));
   if (!info.tlmgr) throw new Error('tlmgr não encontrado: o TeX Live não parece estar instalado.');
   const out = [];
   for (const file of files) {
@@ -87,11 +92,24 @@ export async function installPackages(pkgs) {
   if (!pkgs.length) throw new Error('Nenhum pacote válido.');
   const info = await texInfo();
   const tlmgr = info.tlmgr;
+  let r;
+  if (!tlmgr && info.miktex) {
+    r = await run('miktex', ['packages', 'install', ...pkgs], { timeout: 15 * 60000 });
+    const output = (r.stdout + r.stderr).trim();
+    return { ok: r.code === 0, installed: r.code === 0 ? pkgs : [], output: output.split('\n').slice(-40).join('\n') };
+  }
   const repo = repoArgs(info).join(' ');
   const script = `(${tlmgr} ${repo} update --self; ${tlmgr} ${repo} install ${pkgs.join(' ')}) 2>&1`;
-  let r;
-  if (info.writable) r = await run('/bin/sh', ['-c', script], { timeout: 15 * 60000 });
-  else {
+  if (info.writable || IS_WIN) {
+    // Windows' TeX Live is usually the user's own: no password, no shell.
+    const a = await run(tlmgr, [...repoArgs(info), 'update', '--self'], { timeout: 15 * 60000 });
+    const b = await run(tlmgr, [...repoArgs(info), 'install', ...pkgs], { timeout: 15 * 60000 });
+    r = { code: b.code, stdout: a.stdout + a.stderr + b.stdout, stderr: b.stderr };
+  } else if (!IS_MAC) {
+    // Linux: the desktop's own password dialog (polkit).
+    r = await run('pkexec', ['/bin/sh', '-c', script], { timeout: 15 * 60000 });
+    if (r.code === 126) return { ok: false, cancelled: true, output: '' };
+  } else {
     const as = `do shell script "${script.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}" with administrator privileges with prompt "O TeXugo quer instalar pacotes do TeX Live: ${pkgs.join(', ')}"`;
     r = await run('osascript', ['-e', as], { timeout: 15 * 60000 });
   }

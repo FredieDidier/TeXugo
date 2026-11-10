@@ -26,6 +26,7 @@ import path from 'node:path';
 import { docInfo } from './project.js';
 import { parseLog } from './logparse.js';
 import { toolEnv, sha1, isInside } from './util.js';
+import { killTree } from './platform.js';
 
 // Files a full build leaves next to the document that a live pass reads back.
 const AUX_EXT = ['.aux', '.toc', '.lof', '.lot', '.loa', '.out', '.nav', '.snm', '.vrb', '.thm', '.bcf'];
@@ -86,7 +87,7 @@ export class LiveManager extends EventEmitter {
     if (!job) return;
     job.pending = null;
     if (job.child) {
-      try { process.kill(-job.child.pid, 'SIGKILL'); } catch { job.child.kill('SIGKILL'); }
+      killTree(job.child, 'SIGKILL');
     }
   }
 
@@ -149,7 +150,7 @@ export class LiveManager extends EventEmitter {
     fs.rmSync(outPdf, { force: true });
     const engine = ['pdflatex', 'xelatex', 'lualatex'].includes(info.engine) ? info.engine : 'pdflatex';
     const args = ['-interaction=nonstopmode', '-file-line-error', '-synctex=1', `-output-directory=${dirs.out}`, `-jobname=${stem}`, main];
-    const sep = process.env.TEXINPUTS ? `:${process.env.TEXINPUTS}` : ':';
+    const sep = path.delimiter + (process.env.TEXINPUTS || '');
     const code = await this._spawn(job, engine, args, docDir, { TEXINPUTS: dirs.src + sep });
     const logText = readMaybe(path.join(dirs.out, stem + '.log'));
     const parsed = logText ? parseLog(logText, docDir) : { errors: [] };
@@ -179,7 +180,7 @@ export class LiveManager extends EventEmitter {
       let stalled = false;
       const timer = setTimeout(() => {
         stalled = true;
-        try { process.kill(-child.pid, 'SIGKILL'); } catch { child.kill('SIGKILL'); }
+        killTree(child, 'SIGKILL');
       }, STALL_MS);
       child.on('error', () => (clearTimeout(timer), resolve(-1)));
       child.on('close', (c) => {

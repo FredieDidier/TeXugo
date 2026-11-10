@@ -6,7 +6,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { toolEnv, which } from './util.js';
+import { toolEnv, which, winSpawn } from './util.js';
 import { claudeFlags } from './agent.js';
 
 export const ACTIONS = {
@@ -85,7 +85,8 @@ export async function runClaude(prompt, opts) {
   if (!claude) throw new Error('Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash (e entre na sua conta com "claude" no Terminal).');
   if (current) throw new Error('Já há uma ação de IA em andamento.');
   const out = await new Promise((resolve) => {
-    const child = spawn(claude, ['-p', '--output-format', 'json', '--tools', opts.tools || 'Skill,Read', '--no-session-persistence', ...claudeFlags(opts)], { cwd: opts.root, env: toolEnv() });
+    const [cmd, cargs, copts] = winSpawn(claude, ['-p', '--output-format', 'json', '--tools', opts.tools || 'Skill,Read', '--no-session-persistence', ...claudeFlags(opts)], toolEnv());
+    const child = spawn(cmd, cargs, { cwd: opts.root, env: toolEnv(), ...copts });
     current = child;
     let stdout = '';
     let stderr = '';

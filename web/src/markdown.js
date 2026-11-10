@@ -2,22 +2,17 @@
 // images from the project folder, and relative links that open in the app.
 import { marked } from 'marked';
 import { fileUrl, call } from './api.js';
+import { dirname, joinPath } from './dom.js';
 
 marked.setOptions({ gfm: true, breaks: false });
 
 function resolve(baseDir, href) {
   if (/^(https?:|mailto:|#|data:)/.test(href)) return null;
-  const parts = (href.startsWith('/') ? href : baseDir + '/' + href).split('/');
-  const out = [];
-  for (const p of parts) {
-    if (p === '..') out.pop();
-    else if (p !== '.' && p !== '') out.push(p);
-  }
-  return '/' + out.join('/');
+  return joinPath(baseDir, decodeURIComponent(href));
 }
 
 export function renderMarkdown(el, text, filePath, app) {
-  const baseDir = filePath.slice(0, filePath.lastIndexOf('/'));
+  const baseDir = dirname(filePath);
   // Front matter (--- yaml ---) shows as a small table, like GitHub.
   let front = '';
   const fm = text.match(/^---\n([\s\S]*?)\n---\n?/);

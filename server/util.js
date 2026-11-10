@@ -4,24 +4,12 @@ import { createHash } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { extraPaths, appDataDir, IS_WIN } from './platform.js';
 
-// Apps launched from Finder do not inherit the login shell PATH, so TeX Live
-// and Homebrew binaries would be invisible. Add the usual locations explicitly.
-const EXTRA_PATHS = [
-  '/Library/TeX/texbin',
-  '/usr/local/texlive/2026/bin/universal-darwin',
-  '/usr/local/texlive/2025/bin/universal-darwin',
-  '/usr/local/texlive/2024/bin/universal-darwin',
-  '/opt/homebrew/bin',
-  // Claude Code's native installer.
-  path.join(os.homedir(), '.local', 'bin'),
-  path.join(os.homedir(), '.claude', 'local'),
-  '/usr/local/bin',
-  '/usr/bin',
-  '/bin',
-  '/usr/sbin',
-  '/sbin',
-];
+// Apps launched from Finder (or the Start menu, or a desktop launcher) do
+// not inherit the login shell PATH, so TeX and other tools would be
+// invisible. platform.js lists the usual places on each system.
+const EXTRA_PATHS = extraPaths();
 
 // Variables a parent Claude Code session (or the desktop app that launched
 // TeXugo from one) leaves in the environment. Passed on, they make the
@@ -36,11 +24,14 @@ export function cleanEnv(env = process.env) {
 }
 
 export function toolEnv(extra = {}) {
-  const parts = (process.env.PATH || '').split(':').filter(Boolean);
+  const env = cleanEnv();
+  // Windows spells it Path; keep the one key it already has.
+  const key = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') || 'PATH';
+  const parts = (env[key] || '').split(path.delimiter).filter(Boolean);
   for (const p of EXTRA_PATHS) if (!parts.includes(p)) parts.push(p);
   return {
-    ...cleanEnv(),
-    PATH: parts.join(':'),
+    ...env,
+    [key]: parts.join(path.delimiter),
     // Keep TeX from wrapping log lines at 79 characters; the log parser
     // relies on file paths and messages staying on one line.
     max_print_line: '10000',
@@ -56,7 +47,9 @@ export function run(cmd, args, { cwd, input, timeout = 60000, env } = {}) {
   return new Promise((resolve) => {
     let child;
     try {
-      child = spawn(cmd, args, { cwd, env: env || toolEnv() });
+      const e = env || toolEnv();
+      const [c, a, o] = winSpawn(cmd, args, e);
+      child = spawn(c, a, { cwd, env: e, ...o });
     } catch (err) {
       resolve({ code: -1, stdout: '', stderr: String(err) });
       return;
@@ -78,11 +71,37 @@ export function run(cmd, args, { cwd, input, timeout = 60000, env } = {}) {
   });
 }
 
+// Where a command lives on the PATH (with Windows' .exe/.cmd/.bat), or null.
+export function findOnPath(bin, env = toolEnv()) {
+  if (path.isAbsolute(bin)) return fs.existsSync(bin) ? bin : null;
+  const key = Object.keys(env).find((k) => k.toUpperCase() === 'PATH') || 'PATH';
+  const exts = IS_WIN ? ['', ...(env.PATHEXT || '.COM;.EXE;.BAT;.CMD').toLowerCase().split(';')] : [''];
+  for (const dir of (env[key] || '').split(path.delimiter).filter(Boolean)) {
+    for (const ext of exts) {
+      const f = path.join(dir, bin + ext);
+      try {
+        if (fs.statSync(f).isFile() && (IS_WIN ? ext || /\.(exe|com|bat|cmd)$/i.test(f) : true)) return f;
+      } catch {}
+    }
+  }
+  return null;
+}
+
+// On Windows, spawn finds .exe files by itself but not npm's .cmd shims
+// (claude, latexindent from some installs) and Node refuses .bat/.cmd
+// without a shell: run those through cmd.exe with each argument quoted.
+export function winSpawn(cmd, args, env) {
+  if (!IS_WIN) return [cmd, args, {}];
+  const full = findOnPath(cmd, env) || cmd;
+  if (!/\.(bat|cmd)$/i.test(full)) return [full, args, {}];
+  const q = (x) => '"' + String(x).replace(/"/g, '""') + '"';
+  return [process.env.ComSpec || 'cmd.exe', ['/d', '/s', '/c', '"' + [full, ...args].map(q).join(' ') + '"'], { windowsVerbatimArguments: true }];
+}
+
 let whichCache = new Map();
 export async function which(bin) {
   if (whichCache.has(bin)) return whichCache.get(bin);
-  const r = await run('/usr/bin/which', [bin], { timeout: 5000 });
-  const found = r.code === 0 ? r.stdout.trim() : null;
+  const found = findOnPath(bin);
   whichCache.set(bin, found);
   return found;
 }
@@ -106,7 +125,7 @@ export function readText(file) {
 }
 
 export function dataDir() {
-  const dir = process.env.TEXUGO_DATA_DIR || path.join(os.homedir(), 'Library', 'Application Support', 'TeXugo');
+  const dir = process.env.TEXUGO_DATA_DIR || appDataDir();
   fs.mkdirSync(dir, { recursive: true });
   return dir;
 }

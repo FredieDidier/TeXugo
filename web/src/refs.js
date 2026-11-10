@@ -1,7 +1,7 @@
 // "Adicionar referência": paste a DOI, an arXiv id or a title, pick the
 // match, append it to the document's .bib and cite it at the cursor.
 import { call } from './api.js';
-import { h, clear, icon, basename, relPath, toast, modal } from './dom.js';
+import { h, clear, icon, basename, relPath, toast, modal, dirname, joinPath } from './dom.js';
 import { focusedTarget } from './ai.js';
 import { symbols } from './editor.js';
 
@@ -97,6 +97,6 @@ export async function addReference(app, S) {
   // The document's own \bibliography files come first; fill in when known.
   const own = doc ? await call('refBibs', { doc }).catch(() => []) : [];
   bibs = [...new Set([...own, ...bibs])];
-  if (!bibs.length && doc) bibs = [doc.replace(/[^/]*$/, 'references.bib')];
+  if (!bibs.length && doc) bibs = [joinPath(dirname(doc), 'references.bib')];
   clear(bibSel, bibs.map((b) => h('option', { value: b }, S.project ? relPath(S.project.root, b) : basename(b))));
 }

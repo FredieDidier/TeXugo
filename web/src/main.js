@@ -1,6 +1,6 @@
 // TeXugo UI entry point: layout, tabs, compile flow, PDF panes, problems.
 import { call, connect, on, fileUrl, native } from './api.js';
-import { h, clear, icon, wordmark, fileIcon, fileKind, basename, relPath, debounce, toast, menu, modal, prompt, confirmBox, gutter } from './dom.js';
+import { h, clear, icon, wordmark, fileIcon, fileKind, basename, relPath, debounce, toast, menu, modal, prompt, confirmBox, gutter, isUnder, relParts } from './dom.js';
 import { createState, createView, jumpTo, showDiagnostics, symbols, EditorView, wrapCompartment } from './editor.js';
 import { PdfTab } from './pdfview.js';
 import { Sidebar } from './sidebar.js';
@@ -60,7 +60,7 @@ export default app;
 // ---------------------------------------------------------------- layout
 function buildLayout() {
   const root = document.getElementById('app');
-  app.topbar = h('div', { class: 'topbar' + (native ? '' : ' browser') });
+  app.topbar = h('div', { class: 'topbar' + (native ? (native.platform && native.platform !== 'darwin' ? ' os-other' : '') : ' browser') });
   app.activity = h('div', { class: 'activitybar' });
   app.sidebarEl = h('div', { class: 'sidebar' });
   app.tabsEl = h('div', { class: 'tabs' });
@@ -558,7 +558,7 @@ function renderDocBar() {
     return;
   }
   app.docBar.classList.remove('hidden');
-  const rel = relPath(S.project.root, t.path).split('/');
+  const rel = relParts(S.project.root, t.path);
   const crumbs = h('div', { class: 'crumbs' }, rel.slice(0, -1).map((p) => [p, ' / ']), h('b', {}, rel[rel.length - 1]));
   const items = [crumbs];
   if (t.roots.length) {
@@ -792,7 +792,7 @@ const mine = (e) => {
   if (!S.project) return false;
   if (e.root) return e.root === S.project.root;
   const d = e.doc || (e.docs && e.docs[0]);
-  return !d || d.startsWith(S.project.root + '/') || (S.building && S.building.id === e.id);
+  return !d || isUnder(S.project.root, d) || (S.building && S.building.id === e.id);
 };
 
 function wireBuildEvents() {

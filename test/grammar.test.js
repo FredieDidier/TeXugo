@@ -62,6 +62,7 @@ test('Portuguese verbal agreement: plural subject, singular verb', () => {
     'Os cachorros fugiu.': 'fugiram',
     'As folhas caiu.': 'caíram',
     'As lojas inclui o sábado.': 'incluem',
+    'As árvores que dá frutos.': 'dão',
   };
   for (const [t, fix] of Object.entries(bad)) {
     const m = ptAgreement(t);
@@ -71,7 +72,7 @@ test('Portuguese verbal agreement: plural subject, singular verb', () => {
   const good = [
     'As crianças brincam no quintal.', 'Os livros da estante ficaram velhos.', 'Os dias de chuva são longos.',
     'Os copos e as xícaras foram lavados.', 'Os doces desta padaria vêm de longe.', 'As crianças, porém, brincam à tarde.',
-    'As árvores que dá frutos.', 'Os barcos ancorados na baía.', 'Os preços em dezembro subiram.', 'Os jardins floridos.',
+    'Os barcos ancorados na baía.', 'Os preços em dezembro subiram.', 'Os jardins floridos.',
   ];
   for (const t of good) assert.deepEqual(ptAgreement(t), [], t);
   assert.equal(pluralVerb('da'), null);
@@ -172,4 +173,16 @@ test('fixture documents, checked by LanguageTool in strict mode', { timeout: 180
   } finally {
     g.stop();
   }
+});
+
+test('agreement after "que" on a plural subject, and FEWER_LESS before a verb', () => {
+  const hit = (t) => ptAgreement(t).map((m) => m.replacements[0]);
+  assert.deepEqual(hit('Os alunos que frequenta a escola tiveram notas maiores.'), ['frequentam']);
+  assert.deepEqual(hit('Os alunos que não frequenta a escola.'), ['frequentam']);
+  assert.deepEqual(hit('Os dados que ela usa são bons.'), []);
+  assert.deepEqual(hit('Os modelos que o autor estima convergem.'), []);
+  assert.deepEqual(hit('As escolas que recebem alunos.'), []);
+  const p = { text: 'Much less does it change sign.' };
+  assert.equal(dropped({ rule: 'FEWER_LESS', offset: 5, length: 4, type: 'grammar' }, 'less', p, {}), true);
+  assert.equal(dropped({ rule: 'FEWER_LESS', offset: 8, length: 4, type: 'grammar' }, 'less', { text: 'We have less observations.' }, {}), false);
 });

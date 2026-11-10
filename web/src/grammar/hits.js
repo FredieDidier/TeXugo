@@ -48,6 +48,8 @@ export function dropped(m, word, p, at) {
   const toks = word.split(/\s+/).filter(Boolean);
   const before = p.text.slice(0, m.offset);
   const after = p.text.slice(m.offset + m.length);
+  // "much less does it change": "less" before a verb is not a quantity.
+  if (m.rule === 'FEWER_LESS' && /^\s*(?:does|do|did|is|are|was|were|has|have|had|can|could|will|would|should|may|might)\b/i.test(after)) return true;
   if (m.type === 'misspelling') {
     // A dictionary cannot know acronyms, codes, identifiers, including a
     // flagged piece of one ("datazoom" in "datazoom.social").

@@ -2,7 +2,7 @@
 // them to the project's .bib (duplicates by DOI are recognized), or merge a
 // .bib exported from any reference manager.
 import { call, native } from './api.js';
-import { h, clear, icon, basename, relPath, toast, modal, prompt } from './dom.js';
+import { h, clear, icon, basename, relPath, toast, modal, prompt, dirname, joinPath } from './dom.js';
 import { symbols } from './editor.js';
 
 const shortAuthors = (r) => {
@@ -13,7 +13,7 @@ const shortAuthors = (r) => {
 export async function zoteroDialog(app, S) {
   const bibs = [...new Set(symbols.bibKeys.map((b) => b.file))];
   const t = app.activeTab();
-  if (!bibs.length && t && t.root) bibs.push(t.root.replace(/[^/]*$/, 'references.bib'));
+  if (!bibs.length && t && t.root) bibs.push(joinPath(dirname(t.root), 'references.bib'));
   if (!bibs.length) return toast('Abra um arquivo do documento primeiro.', 'warn');
   const bibSel = h('select', {}, bibs.map((b) => h('option', { value: b }, relPath(S.project.root, b))));
   const q = h('input', { placeholder: 'Buscar na sua biblioteca: autor, título, ano…', style: { width: '100%' } });

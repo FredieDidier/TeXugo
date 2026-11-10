@@ -14,6 +14,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { run, toolEnv, readText } from './util.js';
 import { includeClosure, docInfo } from './project.js';
+import { unzipCommand } from './platform.js';
 
 const DEPTH = 6; // how many ../ levels an \input may climb in the mirror
 
@@ -75,7 +76,7 @@ async function sourceReader(doc, source, tmp) {
   } else if (/\.zip$/i.test(p)) {
     base = path.join(tmp, 'zip');
     fs.mkdirSync(base, { recursive: true });
-    const r = await run('ditto', ['-x', '-k', p, base], { timeout: 60000 });
+    const r = await run(...unzipCommand(p, base), { timeout: 60000 });
     if (r.code !== 0) throw new Error('Não deu para abrir o ZIP: ' + (r.stderr || '').trim());
     main = findMain(base, path.basename(doc));
   } else if (/\.tex$/i.test(p)) {

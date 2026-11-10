@@ -1,6 +1,6 @@
 // Sidebar views: files, outline, project search, git.
 import { call } from './api.js';
-import { h, clear, icon, fileIcon, fileKind, basename, relPath, debounce, toast, menu, prompt, confirmBox, modal } from './dom.js';
+import { h, clear, icon, fileIcon, fileKind, basename, relPath, debounce, toast, menu, prompt, confirmBox, modal, dirname, joinPath } from './dom.js';
 import { renderRefs } from './references.js';
 import { renderRevisao } from './revisao.js';
 
@@ -93,10 +93,10 @@ export class Sidebar {
     // active; after that the user's own collapsing wins (Recolher pastas).
     if (activePath && this.revealedFor !== activePath) {
       this.revealedFor = activePath;
-      let d = activePath.slice(0, activePath.lastIndexOf('/'));
+      let d = dirname(activePath);
       while (d.startsWith(S.project.root) && d.length >= S.project.root.length) {
         this.expanded.add(d);
-        d = d.slice(0, d.lastIndexOf('/'));
+        d = dirname(d);
       }
     }
     const rows = [];
@@ -178,7 +178,7 @@ export class Sidebar {
   fileMenu(e, n) {
     e.preventDefault();
     const S = this.S;
-    const dir = n.dir ? n.path : n.path.slice(0, n.path.lastIndexOf('/'));
+    const dir = n.dir ? n.path : dirname(n.path);
     const isDoc = (S.project.docs || []).some((d) => d.path === n.path);
     menu(e.clientX, e.clientY, [
       !n.dir ? { label: 'Abrir', icon: 'file', action: () => this.app.openFile(n.path) } : null,
@@ -198,7 +198,7 @@ export class Sidebar {
   async newFile(dir, isDir = false) {
     const name = await prompt(isDir ? 'Nova pasta' : 'Novo arquivo', { value: isDir ? 'nova-pasta' : 'secao.tex', ok: 'Criar' });
     if (!name) return;
-    const path = dir + '/' + name;
+    const path = joinPath(dir, name);
     try {
       await call('createFile', { path, dir: isDir });
       await this.loadTree();
@@ -211,7 +211,7 @@ export class Sidebar {
   async rename(n) {
     const name = await prompt('Renomear', { value: n.name, ok: 'Renomear' });
     if (!name || name === n.name) return;
-    const to = n.path.slice(0, n.path.lastIndexOf('/') + 1) + name;
+    const to = joinPath(dirname(n.path), name);
     try {
       await call('rename', { from: n.path, to });
       const t = this.S.tabs.find((x) => x.path === n.path);

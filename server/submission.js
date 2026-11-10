@@ -6,6 +6,7 @@ import path from 'node:path';
 import { includeClosure, docInfo } from './project.js';
 import { parseLog } from './logparse.js';
 import { readText, run, stripComments } from './util.js';
+import { zipCommand, unzipCommand } from './platform.js';
 
 const stem = (d) => d.replace(/\.tex$/, '');
 
@@ -56,7 +57,7 @@ export function sourceFiles(doc) {
 
 const isInDir = (dir, f) => f.startsWith(dir + path.sep);
 const stripUp = (rel) => {
-  const parts = rel.split('/');
+  const parts = rel.split(/[\\/]/);
   while (parts[0] === '..') parts.shift();
   return parts.join('/');
 };
@@ -124,7 +125,7 @@ export async function exportZip(doc, { check = true } = {}) {
     const outName = `${path.basename(stem(doc))}-submissao.zip`;
     const out = path.join(dir, outName);
     fs.rmSync(out, { force: true });
-    const r = await run('zip', ['-X', '-q', out, ...names], { cwd: stage, timeout: 120000 });
+    const r = await run(...zipCommand(out, names), { cwd: stage, timeout: 120000 });
     if (r.code !== 0) throw new Error('zip falhou: ' + (r.stderr || r.stdout));
     const moved = outside.map((f) => ({ from: f, to: map.get(f) }));
     const result = { zip: out, files: names, moved, rewritten, size: fs.statSync(out).size };
@@ -142,7 +143,7 @@ export async function exportZip(doc, { check = true } = {}) {
 export async function checkZip(zip, mainRel, engine = 'pdflatex', origLog = null) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-check-'));
   try {
-    const u = await run('unzip', ['-q', zip, '-d', tmp], { timeout: 120000 });
+    const u = await run(...unzipCommand(zip, tmp), { timeout: 120000 });
     if (u.code !== 0) return { ok: false, fatal: 'unzip falhou: ' + (u.stderr || u.stdout) };
     const main = path.join(tmp, mainRel);
     const cwd = path.dirname(main);

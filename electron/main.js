@@ -12,6 +12,17 @@ const { createServer } = await import('../server/index.js');
 let server;
 const windows = new Set();
 
+const IS_MAC = process.platform === 'darwin';
+
+// macOS: the traffic lights inset in the page's top bar. Windows and
+// Linux: the page's top bar is the title bar too, with the system's own
+// minimize/maximize/close drawn over its right end.
+function titleBar() {
+  if (IS_MAC) return { titleBarStyle: 'hiddenInset', trafficLightPosition: { x: 14, y: 14 } };
+  const dark = nativeTheme.shouldUseDarkColors;
+  return { titleBarStyle: 'hidden', titleBarOverlay: { color: dark ? '#1b1e24' : '#efebe3', symbolColor: dark ? '#d6d3cc' : '#3b3a36', height: 44 }, autoHideMenuBar: true };
+}
+
 function createWindow(openPath) {
   const win = new BrowserWindow({
     width: 1480,
@@ -19,8 +30,7 @@ function createWindow(openPath) {
     minWidth: 900,
     minHeight: 560,
     title: 'TeXugo',
-    titleBarStyle: 'hiddenInset',
-    trafficLightPosition: { x: 14, y: 14 },
+    ...titleBar(),
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#15171c' : '#f7f4ee',
     icon: path.join(HERE, '..', 'build', 'icon.png'),
     webPreferences: {
@@ -44,8 +54,7 @@ function createWindow(openPath) {
           width: 900,
           height: 1000,
           title: 'TeXugo — PDF',
-          titleBarStyle: 'hiddenInset',
-          trafficLightPosition: { x: 14, y: 14 },
+          ...titleBar(),
           backgroundColor: nativeTheme.shouldUseDarkColors ? '#15171c' : '#f7f4ee',
           webPreferences: { preload: path.join(HERE, 'preload.cjs'), contextIsolation: true, sandbox: true, nodeIntegration: false },
         },
@@ -76,7 +85,7 @@ const MENU_EN = {
   'Ajuda': 'Help', 'Atalhos e comandos': 'Shortcuts and commands',
   'Sobre o TeXugo': 'About TeXugo', 'Preferências…': 'Settings…', 'Ocultar TeXugo': 'Hide TeXugo', 'Encerrar TeXugo': 'Quit TeXugo', 'Arquivo': 'File',
   'Novo projeto…': 'New project…', 'Abrir pasta…': 'Open folder…', 'Nova janela': 'New window', 'Tela inicial': 'Start screen', 'Abrir arquivo rápido': 'Quick open',
-  'Salvar': 'Save', 'Salvar todos': 'Save all', 'Fechar aba': 'Close tab', 'Fechar janela': 'Close window', 'Editar': 'Edit', 'Compilar': 'Build',
+  'Salvar': 'Save', 'Salvar todos': 'Save all', 'Fechar aba': 'Close tab', 'Fechar janela': 'Close window', 'Sair': 'Exit', 'Editar': 'Edit', 'Compilar': 'Build',
   'Compilar documento da aba': 'Compile the tab’s document', 'Compilar tudo que está aberto': 'Compile everything open', 'Mostrar no PDF': 'Show in PDF',
   'Visualizar': 'View', 'Paleta de comandos': 'Command palette', 'Biblioteca de papers': 'Paper library', 'Painel inferior': 'Bottom panel', 'Ferramentas de desenvolvedor': 'Developer tools', 'Janela': 'Window',
 };
@@ -89,36 +98,38 @@ const L = (label) => (menuLang === 'en' && MENU_EN[label]) || label;
 function buildMenu() {
   const item = (label, accelerator, action) => ({ label: L(label), accelerator, click: () => send(action) });
   const template = [
-    { role: 'appMenu', submenu: [{ role: 'about', label: L('Sobre o TeXugo') }, { type: 'separator' }, item('Preferências…', 'Cmd+,', 'settings'), { type: 'separator' }, { role: 'hide', label: L('Ocultar TeXugo') }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { role: 'quit', label: L('Encerrar TeXugo') }] },
+    !IS_MAC ? null : { role: 'appMenu', submenu: [{ role: 'about', label: L('Sobre o TeXugo') }, { type: 'separator' }, item('Preferências…', 'CmdOrCtrl+,', 'settings'), { type: 'separator' }, { role: 'hide', label: L('Ocultar TeXugo') }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { role: 'quit', label: L('Encerrar TeXugo') }] },
     {
       label: L('Arquivo'),
       submenu: [
-        item('Novo projeto…', 'Cmd+Shift+N', 'newProject'),
-        item('Abrir pasta…', 'Cmd+O', 'open'),
-        { label: L('Nova janela'), accelerator: 'Cmd+Alt+N', click: () => createWindow() },
+        item('Novo projeto…', 'CmdOrCtrl+Shift+N', 'newProject'),
+        ...(IS_MAC ? [] : [item('Preferências…', 'CmdOrCtrl+,', 'settings')]),
+        item('Abrir pasta…', 'CmdOrCtrl+O', 'open'),
+        { label: L('Nova janela'), accelerator: 'CmdOrCtrl+Alt+N', click: () => createWindow() },
         item('Tela inicial', null, 'welcome'),
         { type: 'separator' },
-        item('Abrir arquivo rápido', 'Cmd+P', 'quickOpen'),
-        item('Salvar', 'Cmd+S', 'save'),
-        item('Salvar todos', 'Cmd+Alt+S', 'saveAll'),
-        item('Fechar aba', 'Cmd+W', 'closeTab'),
+        item('Abrir arquivo rápido', 'CmdOrCtrl+P', 'quickOpen'),
+        item('Salvar', 'CmdOrCtrl+S', 'save'),
+        item('Salvar todos', 'CmdOrCtrl+Alt+S', 'saveAll'),
+        item('Fechar aba', 'CmdOrCtrl+W', 'closeTab'),
         { type: 'separator' },
-        { role: 'close', label: L('Fechar janela'), accelerator: 'Cmd+Shift+W' },
+        { role: 'close', label: L('Fechar janela'), accelerator: 'CmdOrCtrl+Shift+W' },
+        ...(IS_MAC ? [] : [{ type: 'separator' }, { role: 'quit', label: L('Sair') }]),
       ],
     },
     { role: 'editMenu', label: L('Editar') },
     {
       label: L('Compilar'),
-      submenu: [item('Compilar documento da aba', 'Cmd+Enter', 'compile'), item('Compilar tudo que está aberto', 'Cmd+Shift+Enter', 'compileAll'), { type: 'separator' }, item('Mostrar no PDF', 'Cmd+J', 'syncForward')],
+      submenu: [item('Compilar documento da aba', 'CmdOrCtrl+Enter', 'compile'), item('Compilar tudo que está aberto', 'CmdOrCtrl+Shift+Enter', 'compileAll'), { type: 'separator' }, item('Mostrar no PDF', 'CmdOrCtrl+J', 'syncForward')],
     },
     {
       label: L('Visualizar'),
-      submenu: [item('Paleta de comandos', 'Cmd+K', 'palette'), item('Biblioteca de papers', 'Cmd+Alt+B', 'library'), item('Painel inferior', 'Cmd+Shift+Y', 'toggleBottom'), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools', label: L('Ferramentas de desenvolvedor') }],
+      submenu: [item('Paleta de comandos', 'CmdOrCtrl+K', 'palette'), item('Biblioteca de papers', 'CmdOrCtrl+Alt+B', 'library'), item('Painel inferior', 'CmdOrCtrl+Shift+Y', 'toggleBottom'), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools', label: L('Ferramentas de desenvolvedor') }],
     },
     { role: 'windowMenu', label: L('Janela') },
-    { role: 'help', label: L('Ajuda'), submenu: [item('Atalhos e comandos', 'Cmd+Shift+/', 'shortcuts')] },
+    { role: 'help', label: L('Ajuda'), submenu: [item('Atalhos e comandos', 'CmdOrCtrl+Shift+/', 'shortcuts')] },
   ];
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template.filter(Boolean)));
 }
 
 ipcMain.handle('pick-folder', async (e) => {
@@ -171,11 +182,16 @@ app.whenReady().then(async () => {
     hooks: {
       trash: (p) => shell.trashItem(p),
       reveal: (p) => shell.showItemInFolder(p),
+      openPath: async (p) => {
+        const err = await shell.openPath(p);
+        if (err) throw new Error(err);
+      },
+      openUrl: (u) => shell.openExternal(u),
     },
   });
   buildMenu();
-  if (process.platform === 'darwin' && app.dock) app.dock.setIcon(path.join(HERE, '..', 'build', 'icon.png'));
-  const argPath = process.argv.slice(1).find((a) => a.startsWith('/') && !a.includes('electron'));
+  if (IS_MAC && app.dock) app.dock.setIcon(path.join(HERE, '..', 'build', 'icon.png'));
+  const argPath = process.argv.slice(1).find((a) => path.isAbsolute(a) && !/electron/i.test(a) && fs.existsSync(a));
   createWindow(argPath);
   app.on('activate', () => {
     if (!windows.size) createWindow();

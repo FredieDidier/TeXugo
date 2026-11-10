@@ -7,7 +7,7 @@
 // authors know is a box they tick. Lives in the "Replicação" tab of the
 // bottom panel; the Revisão view shows how many items are pending.
 import { call } from './api.js';
-import { h, clear, icon, toast, modal } from './dom.js';
+import { h, clear, icon, toast, modal, basename } from './dom.js';
 import { getLang } from './i18n.js';
 import { JOURNALS, journalById, DCAS_URL, README_URL } from '../../server/replication-journals.js';
 
@@ -228,7 +228,7 @@ export async function readmeDialog(app, S) {
             try {
               const file = await call('replicationSaveReadme', { root: R.root, text: area.value });
               m.close();
-              toast(L(`Salvo em ${file.split('/').pop()}.`, `Saved as ${file.split('/').pop()}.`), 'ok');
+              toast(L(`Salvo em ${basename(file)}.`, `Saved as ${basename(file)}.`), 'ok');
               await app.openFile(file);
               await loadReplication(app, S);
               app.bottom.render();

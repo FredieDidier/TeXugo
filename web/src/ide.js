@@ -2,12 +2,12 @@
 // and the selection while Claude Code is connected, and answers its requests
 // (show a proposed edit as a diff, open a file, save).
 import { call, on } from './api.js';
-import { h, icon, toast, modal, basename, debounce } from './dom.js';
+import { h, icon, toast, modal, basename, debounce, isUnder } from './dom.js';
 import { wordDiff } from './diff.js';
 
 export function setupIde(app, S) {
   S.ideClients = 0;
-  const mine = (p) => S.project && p && p.startsWith(S.project.root + '/');
+  const mine = (p) => S.project && isUnder(S.project.root, p);
   const reply = (askId, answer) => call('uiReply', { askId, answer }).catch(() => {});
 
   // ------------------------------------------------------------ state out

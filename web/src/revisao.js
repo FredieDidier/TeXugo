@@ -5,7 +5,7 @@
 // things stand ("3 notes open") and opens the tool; the long lists stay in
 // the bottom panel.
 import { call } from './api.js';
-import { h, clear, icon, basename, relPath, toast } from './dom.js';
+import { h, clear, icon, basename, relPath, toast, dirname, sepOf } from './dom.js';
 import { viciosOf } from './vicios/cm.js';
 import { reviewDialog, loadLastReview } from './review.js';
 import { responseDialog } from './rr.js';
@@ -60,7 +60,7 @@ export async function renderRevisao(app, S, el) {
   }
   await loadLastReview(app, S);
   const stem = doc.replace(/\.tex$/, '');
-  const docDir = doc.replace(/[^/]*$/, '');
+  const docDir = dirname(doc) + sepOf(doc);
   const [diffPdf, response] = await Promise.all([exists(`${docDir}.texugo/diff/${basename(stem)}-mudancas.pdf`), exists(`${docDir}response.tex`)]);
   const g = S.git;
 

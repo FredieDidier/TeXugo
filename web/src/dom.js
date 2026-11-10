@@ -130,13 +130,44 @@ export function fileKind(name) {
   return 'text';
 }
 
+// Paths come from the server as the system writes them: / on macOS and
+// Linux, \ on Windows (C:\Users\…). These helpers take either.
+export const SEP_RE = /[\\/]/;
+export const sepOf = (p) => (/^[A-Za-z]:\\|^\\\\/.test(p || '') || (!(p || '').includes('/') && (p || '').includes('\\')) ? '\\' : '/');
+
 export function basename(p) {
-  return p.split('/').pop();
+  return String(p || '').split(SEP_RE).pop();
+}
+
+// The folder of a path, without the trailing separator.
+export function dirname(p) {
+  const i = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'));
+  return i < 0 ? '' : p.slice(0, i);
+}
+
+// dir + name with the separator dir already uses; '..' and '.' resolved.
+export function joinPath(dir, rel) {
+  const sep = sepOf(dir);
+  const abs = /^([A-Za-z]:)?[\\/]/.test(rel);
+  const parts = (abs ? rel : dir + sep + rel).split(SEP_RE);
+  const out = [];
+  for (const [i, s] of parts.entries()) {
+    if (s === '..') out.length > 1 && out.pop();
+    else if (s !== '.' && !(s === '' && i > 0)) out.push(s);
+  }
+  return out.join(sep);
+}
+
+export function isUnder(root, p) {
+  return !!root && !!p && p.length > root.length && p.startsWith(root) && SEP_RE.test(p[root.length]);
 }
 
 export function relPath(root, p) {
-  return p.startsWith(root + '/') ? p.slice(root.length + 1) : p;
+  return isUnder(root, p) ? p.slice(root.length + 1) : p;
 }
+
+// Path parts relative to root, for breadcrumbs.
+export const relParts = (root, p) => relPath(root, p).split(SEP_RE);
 
 export function debounce(fn, ms) {
   let t;

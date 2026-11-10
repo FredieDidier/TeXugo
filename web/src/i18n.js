@@ -13,6 +13,8 @@ export function getLang() {
 }
 
 const EN = {
+  'No Windows e no Linux, instale o Java e o LanguageTool (https://languagetool.org/download/) com o languagetool-server no PATH, ou escolha o servidor online em Preferências.': 'On Windows and Linux, install Java and LanguageTool (https://languagetool.org/download/) with languagetool-server on the PATH, or pick the online server in Preferences.',
+  'Sair': 'Exit',
   // paper library
   'Biblioteca de papers': 'Paper library', ' Biblioteca de papers': ' Paper library', 'Biblioteca de papers (ler e buscar no texto)': 'Paper library (read and search the text)',
   'Biblioteca de papers: ler e buscar no texto de todos os PDFs': 'Paper library: read and search the text of every PDF', 'Menu Visualizar; paleta: “biblioteca”': 'View menu; palette: “library”',
@@ -622,7 +624,24 @@ const PATTERNS = [
   [/^(.+): (\d+)\? com o motivo provável\.$/, '$1: $2'],
 ];
 
+// Windows and Linux: the Mac key symbols in labels become Ctrl+, Alt+…
+// (the key handlers already take Ctrl where the Mac takes ⌘).
+const MAC = typeof navigator === 'undefined' || /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || '');
+const KEYS = { '⌃': 'Ctrl', '⌘': 'Ctrl', '⌥': 'Alt', '⇧': 'Shift' };
+export function keyLabel(s, mac = MAC) {
+  if (mac || typeof s !== 'string' || !/[⌃⌥⇧⌘]/.test(s)) return s;
+  return s.replace(/[⌃⌥⇧⌘]+/g, (m, at) => {
+    const names = [...new Set([...m].map((c) => KEYS[c]))].sort((a, b) => ['Ctrl', 'Alt', 'Shift'].indexOf(a) - ['Ctrl', 'Alt', 'Shift'].indexOf(b));
+    const next = s[at + m.length];
+    return names.join('+') + (!next || /[\s-]/.test(next) ? '' : '+');
+  });
+}
+
 export function tr(s) {
+  return keyLabel(trText(s));
+}
+
+function trText(s) {
   if (lang !== 'en' || typeof s !== 'string' || !s) return s;
   if (Object.hasOwn(EN, s)) return EN[s];
   for (const [re, rep] of PATTERNS) {

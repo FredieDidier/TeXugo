@@ -11,7 +11,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { toolEnv, which } from './util.js';
+import { toolEnv, which, winSpawn } from './util.js';
 
 // Model and effort picked in the panel (or Preferências). The CLI gets the
 // full id; an older Claude Code that does not know it says so, and we explain.
@@ -49,7 +49,8 @@ export class Agents {
     if (!claude) throw new Error('Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash');
     const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--permission-prompt-tool', 'stdio', '--allowedTools', FREE.join(','), '--append-system-prompt', SYSTEM, ...claudeFlags(opts)];
     if (opts.resume) args.push('--resume', opts.resume);
-    const child = spawn(claude, args, { cwd: root, env: toolEnv() });
+    const [cmd, cargs, copts] = winSpawn(claude, args, toolEnv());
+    const child = spawn(cmd, cargs, { cwd: root, env: toolEnv(), ...copts });
     const s = { root, child, buf: '', pending: new Map(), running: false, sessionId: opts.resume || null, err: '', flags: claudeFlags(opts).join(' ') };
     this.sessions.set(root, s);
     child.stdout.on('data', (d) => {

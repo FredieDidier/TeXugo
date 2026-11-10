@@ -1,6 +1,6 @@
 // Welcome screen and the "new project from template" dialog.
 import { call, native } from './api.js';
-import { h, clear, icon, wordmark, toast, modal } from './dom.js';
+import { h, clear, icon, wordmark, toast, modal, basename, dirname, joinPath } from './dom.js';
 import { shortcutsDialog } from './shortcuts.js';
 
 export async function showWelcome(app, S) {
@@ -56,7 +56,7 @@ export async function showWelcome(app, S) {
               'div',
               { class: 'recent', onclick: () => app.openProject(r), title: r },
               icon('folder'),
-              h('div', { style: { minWidth: 0 } }, h('div', {}, r.split('/').pop()), h('div', { class: 'p' }, r.replace(S.hello.home, '~'))),
+              h('div', { style: { minWidth: 0 } }, h('div', {}, basename(r)), h('div', { class: 'p' }, r.replace(S.hello.home, '~'))),
               h(
                 'button',
                 {
@@ -86,7 +86,7 @@ export async function newProjectDialog(app, S, tpl) {
     templates = await call('templates');
   } catch {}
   let chosen = tpl || templates[0];
-  const defaultParent = S.project ? S.project.root.split('/').slice(0, -1).join('/') : (S.hello.home || '') + '/Documents';
+  const defaultParent = S.project ? dirname(S.project.root) : joinPath(S.hello.home || '', 'Documents');
   const title = h('input', { placeholder: 'Ex.: Darker Evenings' });
   const author = h('input', { value: S.settings.author || '', placeholder: 'Seu nome' });
   const inst = h('input', { value: S.settings.institution || '', placeholder: 'Instituição' });

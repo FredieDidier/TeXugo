@@ -27,6 +27,7 @@ const NOT_VERB = new Set([
   'presente', 'seguinte', 'onde', 'ora', 'logo', 'tampouco', 'sequer', 'nenhuma', 'alguma', 'qualquer', 'tanto', 'quanto',
   'inclusive', 'exclusive', 'abaixo', 'acima', 'fora', 'dentro', 'perto', 'longe', 'agora', 'hoje', 'sempre', 'ainda', 'então',
   'já', 'nunca', 'também', 'não', 'só', 'mesmo', 'ou', 'nem', 'mas', 'porque', 'pois', 'embora', 'enquanto', 'caso', 'quando',
+  'ele', 'ela', 'você', 'alguém', 'ninguém', 'tudo', 'nada', 'isso', 'isto', 'aquilo', 'cada', 'qual', 'quem', 'ali', 'aqui', 'lá',
 ]);
 const IRREGULAR = {
   'é': 'são', foi: 'foram', tem: 'têm', 'está': 'estão', era: 'eram', fez: 'fizeram', teve: 'tiveram', vem: 'vêm', veio: 'vieram',
@@ -72,17 +73,26 @@ export function ptAgreement(text) {
     }
     if (!n) continue;
     if (toks[k] && ADVERBS.has(toks[k].lw) && joined(toks[k - 1], toks[k])) k++;
+    // Relative clause on the subject: "Os alunos que frequenta" (the verb
+    // right after "que", or after "que não"). "Os dados que ela usa" has
+    // its own subject after "que", which pluralVerb turns down.
+    let relative = false;
+    if (toks[k] && toks[k].lw === 'que' && joined(toks[k - 1], toks[k])) {
+      k++;
+      relative = true;
+      if (toks[k] && ADVERBS.has(toks[k].lw) && joined(toks[k - 1], toks[k])) k++;
+    }
     const v = toks[k];
     if (!v || !joined(toks[k - 1], v)) continue;
     // A capitalized word mid-sentence is a name, not a verb.
     if (v.w[0] !== v.w[0].toLowerCase()) continue;
     const plural = pluralVerb(v.w);
     if (!plural) continue;
-    const subject = text.slice(toks[i].from, toks[k - 1].to);
+    const subject = text.slice(toks[i].from, toks[k - 1].to).replace(/\s+que(?:\s+\S+)?$/u, '');
     out.push({
       offset: v.from,
       length: v.to - v.from,
-      message: `Concordância verbal: o sujeito “${subject}” está no plural, então o verbo também: “${plural}”.`,
+      message: relative ? `Concordância verbal: “que” retoma “${subject}”, que está no plural, então o verbo também: “${plural}”.` : `Concordância verbal: o sujeito “${subject}” está no plural, então o verbo também: “${plural}”.`,
       short: 'Concordância verbal',
       rule: 'TEXUGO_CONCORDANCIA_VERBAL',
       ruleDesc: 'Sujeito no plural com verbo no singular (regra do TeXugo)',

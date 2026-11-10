@@ -8,6 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { toolEnv } from './util.js';
+import { userShell, IS_WIN } from './platform.js';
 
 const require = createRequire(import.meta.url);
 let pty = null;
@@ -35,7 +36,7 @@ export class Terminals {
 
   create({ cwd, kind = 'shell', cols = 100, rows = 30, env = {}, title, claudeArgs = [] }) {
     const P = loadPty();
-    const shell = process.env.SHELL || '/bin/zsh';
+    const { shell, login } = userShell();
     const dir = cwd && fs.existsSync(cwd) ? cwd : os.homedir();
     // A login shell reads the user's profile, so PATH, nvm and the like match
     // Terminal.app. Claude Code runs inside that shell: quitting it leaves a
@@ -43,7 +44,8 @@ export class Terminals {
     // claudeArgs are fixed flags (--model id --effort level), checked by
     // claudeFlags, so quoting each one is enough.
     const flags = claudeArgs.map((a) => `'${String(a).replace(/'/g, '')}'`).join(' ');
-    const args = kind === 'claude' ? ['-l', '-i', '-c', `claude ${flags}; exec "$SHELL" -l`] : ['-l'];
+    // Windows: cmd.exe /k keeps the prompt after Claude Code quits.
+    const args = IS_WIN ? (kind === 'claude' ? ['/k', `claude ${claudeArgs.map((a) => String(a).replace(/[^\w.=-]/g, '')).join(' ')}`] : []) : kind === 'claude' ? ['-l', '-i', '-c', `claude ${flags}; exec "$SHELL" -l`] : login;
     const p = P.spawn(shell, args, {
       name: 'xterm-256color',
       cols,

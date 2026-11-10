@@ -52,6 +52,26 @@ export function fromZotero(d) {
   return ref;
 }
 
+// Read-only query on a copy of the database: Node's own SQLite when this
+// Node has it (Windows has no sqlite3 program), else the sqlite3 command.
+async function querySqlite(file, sql) {
+  let DatabaseSync = null;
+  try {
+    ({ DatabaseSync } = await import('node:sqlite'));
+  } catch {}
+  if (DatabaseSync) {
+    const db = new DatabaseSync(file, { readOnly: true });
+    try {
+      return db.prepare(sql).all().map((r) => ({ ...r }));
+    } finally {
+      db.close();
+    }
+  }
+  const r = await run('sqlite3', ['-json', '-readonly', file, sql], { timeout: 30000 });
+  if (r.code !== 0) throw new Error('Não deu para ler o banco do Zotero: ' + (r.stderr || '').trim());
+  return r.stdout.trim() ? JSON.parse(r.stdout) : [];
+}
+
 async function apiAvailable() {
   try {
     const r = await fetch(`${API}/items?limit=1`, { signal: AbortSignal.timeout(1500) });
@@ -64,7 +84,12 @@ async function apiAvailable() {
 // Where Zotero keeps its data: the profile's prefs.js may move it.
 export function dataDir() {
   const home = os.homedir();
-  const profiles = path.join(home, 'Library', 'Application Support', 'Zotero', 'Profiles');
+  const profiles =
+    process.platform === 'darwin'
+      ? path.join(home, 'Library', 'Application Support', 'Zotero', 'Profiles')
+      : process.platform === 'win32'
+        ? path.join(process.env.APPDATA || path.join(home, 'AppData', 'Roaming'), 'Zotero', 'Zotero', 'Profiles')
+        : path.join(home, '.zotero', 'zotero');
   try {
     for (const p of fs.readdirSync(profiles)) {
       const prefs = path.join(profiles, p, 'prefs.js');
@@ -82,11 +107,7 @@ async function sqliteItems(dbFile) {
   try {
     fs.copyFileSync(dbFile, copy);
     if (fs.existsSync(dbFile + '-wal')) fs.copyFileSync(dbFile + '-wal', copy + '-wal');
-    const q = async (sql) => {
-      const r = await run('sqlite3', ['-json', '-readonly', copy, sql], { timeout: 30000 });
-      if (r.code !== 0) throw new Error('Não deu para ler o banco do Zotero: ' + (r.stderr || '').trim());
-      return r.stdout.trim() ? JSON.parse(r.stdout) : [];
-    };
+    const q = (sql) => querySqlite(copy, sql);
     const items = await q(`SELECT i.itemID AS id, i.key AS key, t.typeName AS itemType FROM items i JOIN itemTypes t USING(itemTypeID)
       WHERE t.typeName NOT IN ('attachment','note','annotation') AND i.itemID NOT IN (SELECT itemID FROM deletedItems)`);
     const fields = await q(`SELECT d.itemID AS id, f.fieldName AS f, v.value AS v FROM itemData d JOIN fields f USING(fieldID) JOIN itemDataValues v USING(valueID)`);
@@ -181,11 +202,9 @@ export async function pdfAttachments({ db = process.env.TEXUGO_ZOTERO_DB } = {})
   try {
     fs.copyFileSync(file, copy);
     if (fs.existsSync(file + '-wal')) fs.copyFileSync(file + '-wal', copy + '-wal');
-    const r = await run('sqlite3', ['-json', '-readonly', copy, `SELECT a.key AS akey, p.key AS pkey, ia.path AS path FROM itemAttachments ia
+    rows = await querySqlite(copy, `SELECT a.key AS akey, p.key AS pkey, ia.path AS path FROM itemAttachments ia
       JOIN items a ON a.itemID = ia.itemID LEFT JOIN items p ON p.itemID = ia.parentItemID
-      WHERE ia.contentType = 'application/pdf' AND ia.itemID NOT IN (SELECT itemID FROM deletedItems)`], { timeout: 30000 });
-    if (r.code !== 0) throw new Error('Não deu para ler o banco do Zotero: ' + (r.stderr || '').trim());
-    rows = r.stdout.trim() ? JSON.parse(r.stdout) : [];
+      WHERE ia.contentType = 'application/pdf' AND ia.itemID NOT IN (SELECT itemID FROM deletedItems)`);
   } finally {
     fs.rmSync(tmp, { recursive: true, force: true });
   }

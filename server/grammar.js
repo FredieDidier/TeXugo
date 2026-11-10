@@ -17,6 +17,7 @@ import path from 'node:path';
 import net from 'node:net';
 import { toolEnv, which, sha1 } from './util.js';
 import { ACADEMIC_WORDS } from './academic-words.js';
+import { killTree } from './platform.js';
 
 const ONLINE = 'https://api.languagetool.org';
 const SEP = '\n\n';
@@ -35,16 +36,19 @@ const DISABLED = [
 // outcome", "an offset" taken as an error, the Oxford comma, the straight
 // apostrophe that LaTeX prints curly, "nº", "de um" -> "dum", CEP numbers,
 // a heading without a period. Off in both modes.
+// Re-audited 10/11/2026 over 37 files: FEWER_LESS ("less observations")
+// gave one false alarm and ERRO_DE_CONCORDNCIA_DO_GÉNERO_FEMININO_A ("a
+// impacto") none, so both are back on.
 const AUDITED = [
   'TYPOGRAPHICAL_APOSTROPHE', 'COMMA_BEFORE_AND', 'ARTICLE_MISSING', 'TOO_LONG_SENTENCE', 'ENGLISH_WORD_REPEAT_BEGINNING_RULE',
   'ARTICLE_UNNECESSARY', 'COMMA_WHICH', 'SERIAL_COMMA_ON', 'SERIAL_COMMA_OFF', 'REP_PASSIVE_VOICE', 'DID_FOUND_AMBIGUOUS', 'NOUN_AROUND_IT',
   'PRP_COMMA', 'AFTERWARDS_US', 'ONES', 'SO_AS_TO', 'WHETHER', 'SMALL_NUMBER_OF', 'OF_ANY_OF', 'MISSING_COMMA_AFTER_INTRODUCTORY_PHRASE',
   'POSSESSIVE_APOSTROPHE', 'APOS_ARE', 'RELATIVE_CLAUSE_AGREEMENT', 'THE_WORSE_OF', 'A_INFINITIVE', 'PCT_SINGULAR_NOUN_PLURAL_VERB_AGREEMENT',
-  'GRADUATE_FROM', 'FEWER_LESS', 'COLLECTIVE_NOUN_VERB_AGREEMENT_VBP', 'OUR_OUT', 'THE_MOST', 'THE_SUPERLATIVE', 'PRP_JJ',
+  'GRADUATE_FROM', 'COLLECTIVE_NOUN_VERB_AGREEMENT_VBP', 'OUR_OUT', 'THE_MOST', 'THE_SUPERLATIVE', 'PRP_JJ',
   'AGREEMENT_SENT_START_2', 'ADVERB_WORD_ORDER', 'SENTENCE_FRAGMENT', 'A_INSTALL', 'AT_IN_THE_MORNING', 'CONCENTRATE_WITH_ON', 'GETS_WORST',
   'MISSING_COMMA_AFTER_YEAR', 'ARE_WE_HAVE', 'ADVERB_OR_HYPHENATED_ADJECTIVE', 'WHAT_VBZ', 'COMMA_COMPOUND_SENTENCE', 'COMMA_COMPOUND_SENTENCE_2',
   'EN_COMPOUNDS_BIRTH_DATE', 'EN_COMPOUNDS_BIRTH_DATES', 'PLURAL_THAT_AGREEMENT', 'PRP_HAVE_VB',
-  'NUMBER_ABREVIATION', 'CONTRACAO_DUM', 'EM_QUE_ONDE_NO_QUAL', 'ERRO_DE_CONCORDNCIA_DO_GÉNERO_FEMININO_A', 'ERRO_DE_CONCORDNCIA_DO_NMERO_DO_VERBO_3P-2',
+  'NUMBER_ABREVIATION', 'CONTRACAO_DUM', 'EM_QUE_ONDE_NO_QUAL', 'ERRO_DE_CONCORDNCIA_DO_NMERO_DO_VERBO_3P-2',
   'PERCENT_WITH_SPACE', 'GENERAL_NUMBER_FORMAT', 'FINAL_STOPS', 'DASH_ENUMERATION_NO_SPACE_RULE', 'SENT_START_NUM',
 ];
 // Families of rules with many ids: "this word was used in a nearby
@@ -63,6 +67,7 @@ const OTHERS = { 'en-US': ['en-GB', 'pt-BR'], 'en-GB': ['en-US', 'pt-BR'], 'pt-B
 // rules LanguageTool ships switched off (default="off"/"temp_off" in its
 // grammar.xml), except a few that flag correct text.
 const NEVER = /E_PRIME|PASSIVE|SENT_START_COMMA_CONJUNCTION/;
+const isSpeller = (id) => /^(MORFOLOGIK_RULE_|HUNSPELL_RULE)/.test(id || '');
 const isAudited = (id) => AUDITED.includes(id) || AUDITED_FAMILY.test(id);
 
 const CANDIDATES = [
@@ -161,6 +166,9 @@ export class Grammar {
   // hyphenated compounds whose parts are all known words.
   async keepRealTypos(base, lang, paras, per) {
     const flagged = [];
+    // Only the speller's own flags: LanguageTool also files grammar rules
+    // such as EN_A_VS_AN ("a instrumental"), THEIR_IS and IT_IS under
+    // "misspelling", and their words ("a", "their") are real words.
     per.forEach((ms, k) => ms.forEach((m) => m.type === 'misspelling' && flagged.push({ m, k, w: paras[k].text.slice(m.offset, m.offset + m.length) })));
     if (!flagged.length) return per;
     const words = flagged.map((f) => f.w).filter((w) => /^[\p{L}'’-]+$/u.test(w));
@@ -228,11 +236,7 @@ export class Grammar {
 
   stop() {
     if (!this.child) return;
-    try {
-      process.kill(-this.child.pid, 'SIGTERM');
-    } catch {
-      this.child.kill('SIGTERM');
-    }
+    killTree(this.child);
     this.child = null;
     this.base = null;
   }
@@ -294,7 +298,8 @@ export class Grammar {
           rule: m.rule && m.rule.id,
           ruleDesc: m.rule && m.rule.description,
           category: m.rule && m.rule.category && m.rule.category.name,
-          type: (m.rule && m.rule.issueType) || '',
+          // Grammar rules LanguageTool files as "misspelling" are grammar here.
+          type: m.rule && m.rule.issueType === 'misspelling' && !isSpeller(m.rule.id) ? 'grammar' : (m.rule && m.rule.issueType) || '',
           replacements: (m.replacements || []).slice(0, 5).map((x) => x.value),
         });
       }
@@ -319,6 +324,8 @@ export class Grammar {
     if (this.installing) return this.installing;
     this.installing = (async () => {
       const brew = await which('brew');
+      if (!brew && process.platform !== 'darwin')
+        throw new Error('No Windows e no Linux, instale o Java e o LanguageTool (https://languagetool.org/download/) com o languagetool-server no PATH, ou escolha o servidor online em Preferências.');
       if (!brew) throw new Error('Homebrew não encontrado. Instale em https://brew.sh e tente de novo.');
       const code = await new Promise((resolve) => {
         const child = spawn(brew, ['install', 'languagetool'], { env: { ...toolEnv(), HOMEBREW_NO_AUTO_UPDATE: '1' } });
