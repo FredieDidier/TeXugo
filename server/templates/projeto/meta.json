@@ -1,1 +1,1 @@
-{"name": "Projeto de pesquisa", "description": "Proposta para edital (CNPq, CAPES, FAPs) ou projeto de tese: problema, objetivos, metodologia, cronograma e orçamento.", "icon": "outline", "order": 5, "main": "projeto.tex", "mainEn": "proposal.tex"}
+{"name": "Projeto de pesquisa", "description": "Proposta para edital ou projeto de tese: problema, objetivos, metodologia, cronograma e orçamento.", "icon": "outline", "order": 5, "main": "projeto.tex", "mainEn": "proposal.tex"}

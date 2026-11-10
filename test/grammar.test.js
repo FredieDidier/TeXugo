@@ -13,14 +13,14 @@ const SRC = [
   '\\usepackage{amsmath}',
   '\\begin{document}',
   '\\section{Introduction}\\label{s:intro}',
-  'We estimates the effect of $x$ on~$y$ in Section~\\ref{s:body}, as \\citet{card} shows.',
-  "Results are \\emph{very} robust\\footnote{See the appendix.} and ``clean'' --- mostly. About 10\\% of firms.",
+  'She walk to the park with $n$ dogs every~$t$ days, as Section~\\ref{s:body} and \\citet{smith} explain.',
+  "The garden is \\emph{very} green\\footnote{See the photos.} and ``quiet'' --- mostly. About 10\\% of the roses bloom.",
   '',
   '\\begin{equation}',
-  'y = \\beta x',
+  'a^2 + b^2 = c^2',
   '\\end{equation}',
   '',
-  'Os resultados mostra que a política teve efeito, como em \\cite{a}.',
+  'As crianças brinca no quintal depois da escola, como em \\cite{b}.',
   '% comment here',
   '\\end{document}',
 ].join('\n');
@@ -31,10 +31,10 @@ test('LaTeX becomes readable plain text, mapped back to the source', () => {
   const [en, fn, pt] = ps;
   assert.equal(en.lang, 'en');
   assert.equal(pt.lang, 'pt');
-  assert.ok(en.text.startsWith('Introduction\n\nWe estimates the effect of Dummy on Dummy in Section Dummy, as Dummy shows.'), en.text);
-  assert.match(en.text, /very robust and “clean” — mostly\. About 10% of firms\.$/);
-  assert.equal(fn.text, 'See the appendix.');
-  for (const w of ['estimates', 'very', 'clean']) {
+  assert.ok(en.text.startsWith('Introduction\n\nShe walk to the park with Dummy dogs every Dummy days, as Section Dummy and Dummy explain.'), en.text);
+  assert.match(en.text, /very green and “quiet” — mostly\. About 10% of the roses bloom\.$/);
+  assert.equal(fn.text, 'See the photos.');
+  for (const w of ['walk', 'very', 'quiet']) {
     const o = en.text.indexOf(w);
     const m = mapMatch(en, o, w.length);
     assert.equal(SRC.slice(m.from, m.to), w);
@@ -45,13 +45,15 @@ test('LaTeX becomes readable plain text, mapped back to the source', () => {
 
 test('Portuguese verbal agreement: plural subject, singular verb', () => {
   const bad = {
-    'Os resultados mostra que a política teve efeito.': 'mostram',
-    'Os principais resultados obtidos indica queda.': 'indicam',
-    'Os autores mostrou que não.': 'mostraram',
-    'Estes dados também revela algo.': 'revelam',
-    'Todos os coeficientes é positivo.': 'são',
-    'Os pesquisadores concluiu.': 'concluíram',
-    'As taxas diminui.': 'diminuem',
+    'As crianças brinca no quintal.': 'brincam',
+    'As meninas toca violão.': 'tocam',
+    'Os novos vizinhos simpáticos reclama do barulho.': 'reclamam',
+    'Os turistas chegou cedo.': 'chegaram',
+    'Estes gatos também dorme no sofá.': 'dormem',
+    'Todos os pães é de ontem.': 'são',
+    'Os cachorros fugiu.': 'fugiram',
+    'As folhas caiu.': 'caíram',
+    'As lojas inclui o sábado.': 'incluem',
   };
   for (const [t, fix] of Object.entries(bad)) {
     const m = ptAgreement(t);
@@ -59,16 +61,16 @@ test('Portuguese verbal agreement: plural subject, singular verb', () => {
     assert.equal(m[0].replacements[0], fix, t);
   }
   const good = [
-    'Os resultados mostram que a política teve efeito.', 'Os resultados da tabela indicam queda.', 'Os efeitos de longo prazo são grandes.',
-    'Os dados e as variáveis foram limpos.', 'Os dados desta pesquisa vêm do SIM.', 'Os resultados, porém, mostram queda.',
-    'As políticas que reduz a pobreza.', 'Os resultados apresentados na Tabela 2.', 'Os gastos em saúde cresceram.', 'Os países ricos.',
+    'As crianças brincam no quintal.', 'Os livros da estante ficaram velhos.', 'Os dias de chuva são longos.',
+    'Os copos e as xícaras foram lavados.', 'Os doces desta padaria vêm de longe.', 'As crianças, porém, brincam à tarde.',
+    'As árvores que dá frutos.', 'Os barcos ancorados na baía.', 'Os preços em dezembro subiram.', 'Os jardins floridos.',
   ];
   for (const t of good) assert.deepEqual(ptAgreement(t), [], t);
   assert.equal(pluralVerb('da'), null);
   // Not repeated where LanguageTool already flagged agreement.
-  const para = { lang: 'pt', text: 'Os resultados mostra algo.' };
-  assert.equal(localMatches(para, [{ offset: 0, length: 20, rule: 'GENERAL_VERB_AGREEMENT_ERRORS' }]).length, 0);
-  assert.equal(localMatches(para, [{ offset: 14, length: 6, rule: 'EVIDENCIAR_COMPROVAR_DEMONSTRAR' }]).length, 1);
+  const para = { lang: 'pt', text: 'As meninas toca violão.' };
+  assert.equal(localMatches(para, [{ offset: 0, length: 16, rule: 'GENERAL_VERB_AGREEMENT_ERRORS' }]).length, 0);
+  assert.equal(localMatches(para, [{ offset: 12, length: 4, rule: 'SOME_STYLE_RULE' }]).length, 1);
 });
 
 test('LanguageTool, strict mode, end to end', { timeout: 120000 }, async (t) => {
@@ -80,7 +82,7 @@ test('LanguageTool, strict mode, end to end', { timeout: 120000 }, async (t) => 
     assert.ok(!off.some((id) => /E_PRIME|PASSIVE/.test(id)));
     const [en, pt] = await g.check([
       { text: 'This are a test with recieve.', lang: 'en-US' },
-      { text: 'Os dados indica que houve queda. Nós fez a análise.', lang: 'pt-BR' },
+      { text: 'Os gatos dorme no sofá. Nós fez um bolo.', lang: 'pt-BR' },
     ]);
     assert.ok(en.some((m) => m.type === 'misspelling' && m.replacements.includes('receive')));
     assert.ok(en.some((m) => m.type !== 'misspelling'));

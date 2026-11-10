@@ -127,7 +127,7 @@ const plugin = (path) =>
             const word = p.text.slice(m.offset, m.offset + m.length);
             if (m.type === 'misspelling' && words.has(word.toLowerCase())) continue;
             if (grammarConfig.disabledRules.includes(m.rule)) continue;
-            // An acronym read as a word ("do SIM" taken as "sim"): not ours
+            // An acronym that is also a word, read as that word: not ours
             // to fix.
             if (m.type !== 'misspelling' && /\b\p{Lu}{2,}\b/u.test(word)) continue;
             hits.push({ ...at, ...m, word, lang: p.lang });

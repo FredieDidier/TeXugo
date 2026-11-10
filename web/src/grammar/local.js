@@ -1,8 +1,8 @@
 // Rules of TeXugo's own that run next to LanguageTool.
 //
-// Verbal agreement in Portuguese: LanguageTool catches "Os dados indica"
-// but not "Os resultados mostra", because "mostra" is also a noun ("a
-// mostra") and its tagger gives up. A plural subject (plural determiner +
+// Verbal agreement in Portuguese: LanguageTool catches "Os gatos dorme"
+// but not "As crianças brinca" or "As meninas toca", because "brinca" and
+// "toca" are also nouns ("a toca") and its tagger gives up. A plural subject (plural determiner +
 // noun, optionally plural adjectives or an adverb) followed right away by a
 // third-person-singular verb form is flagged, with the plural form as fix.
 // Same shape LanguageTool returns, so the editor treats both alike.
@@ -58,9 +58,9 @@ export function ptAgreement(text) {
   for (let i = 0; i < toks.length; i++) {
     if (!PLURAL_DET.has(toks[i].lw)) continue;
     let k = i + 1;
-    // "todos os resultados": the second determiner.
+    // "todos os livros": the second determiner.
     if ((toks[i].lw === 'todos' || toks[i].lw === 'todas') && toks[k] && /^(os|as)$/.test(toks[k].lw) && joined(toks[i], toks[k])) k++;
-    // Noun plus up to two plural adjectives ("os principais resultados obtidos").
+    // Noun plus up to two plural adjectives ("os novos vizinhos simpáticos").
     let n = 0;
     while (toks[k] && n < 3 && joined(toks[k - 1], toks[k]) && /s$/.test(toks[k].lw) && toks[k].lw.length > 2 && !NOT_PLURAL.has(toks[k].lw)) {
       k++;

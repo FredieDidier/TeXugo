@@ -40,7 +40,7 @@ export function classify(q) {
 const STOP = new Set(['a', 'an', 'the', 'on', 'of', 'in', 'for', 'and', 'to', 'do', 'da', 'de', 'o', 'os', 'as', 'um', 'uma', 'el', 'la', 'los', 'is', 'are', 'does', 'how', 'what', 'why', 'when', 'with']);
 const ascii = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ß/g, 'ss').replace(/[øØ]/g, 'o').replace(/[^A-Za-z0-9]/g, '').toLowerCase();
 
-// Google Scholar style: deschenes2011climate.
+// Google Scholar style: smith2020markets.
 export function makeKey(ref, taken = new Set()) {
   const last = ref.authors[0] ? ascii(ref.authors[0].family) : 'anon';
   const word = (String(ref.title || '').split(/[\s\-:]+/).map(ascii).find((w) => w && !STOP.has(w)) || '');
