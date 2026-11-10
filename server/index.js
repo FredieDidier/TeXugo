@@ -13,6 +13,7 @@ import * as gitOps from './git.js';
 import * as sync from './synctex.js';
 import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
+import { LiveManager, overlayPath, realPath } from './live.js';
 import { isInside, dataDir, run, which, toolEnv } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
@@ -79,6 +80,8 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     for (const ws of clients) if (ws.readyState === 1) ws.send(data);
   };
   builds.on('event', broadcast);
+  const live = new LiveManager();
+  live.on('event', broadcast);
 
   const allowed = (p) => typeof p === 'string' && [...openProjects].some((r) => isInside(r, p));
   const mustAllow = (p) => {
@@ -121,7 +124,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     try {
       const w = fs.watch(root, { recursive: true }, (_ev, rel) => {
         if (!rel) return;
-        if (/(^|\/)(\.git|node_modules)(\/|$)/.test(rel) || rel.endsWith('.texugo-tmp')) return;
+        if (/(^|\/)(\.git|node_modules)(\/|$)/.test(rel) || rel.endsWith('.texugo-tmp') || rel.startsWith('.texugo/live/')) return;
         const full = path.join(root, rel);
         pending.set(full, true);
         clearTimeout(timer);
@@ -330,11 +333,31 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async syncForward(args) {
       mustAllow(args.file);
       mustAllow(args.pdf);
+      // A live PDF knows unsaved files by their overlay copy.
+      const ov = live.overlayFor(args.pdf);
+      if (ov) {
+        const o = overlayPath(ov.dirs, ov.doc, args.file);
+        if (o && fs.existsSync(o)) return sync.forward({ ...args, file: o });
+      }
       return sync.forward(args);
     },
     async syncInverse(args) {
       mustAllow(args.pdf);
-      return sync.inverse(args);
+      const r = await sync.inverse(args);
+      const ov = live.overlayFor(args.pdf);
+      if (ov && r.ok) r.file = realPath(ov.dirs, ov.doc, r.file);
+      return r;
+    },
+    // Live preview of `doc` with the unsaved buffers [{ path, text }].
+    async livePreview({ root, doc, buffers, tolerate }) {
+      mustAllow(root);
+      doc = mustAllow(doc);
+      for (const b of buffers || []) mustAllow(b.path);
+      return live.request(path.resolve(root), doc, buffers, { tolerate });
+    },
+    async liveStop({ doc }) {
+      live.stop(mustAllow(doc));
+      return true;
     },
     async gitStatus({ root }) {
       mustAllow(root);
@@ -711,6 +734,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
           ide.removeLock();
           for (const w of watchers.values()) w.close();
           builds.cancel();
+          live.stopAll();
           server.close();
         },
       });

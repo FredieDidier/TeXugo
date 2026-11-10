@@ -23,6 +23,7 @@ export const SECTIONS = [
       ['Compilar todos os documentos abertos (paper + apêndice)', '⇧⌘↵', 'Botão “Compilar tudo” no topo'],
       ['Compilar do zero (apaga auxiliares)', '', 'Seta ao lado de Compilar'],
       ['Compilar ao salvar', '', 'Chave “ao salvar” ao lado de Compilar'],
+      ['Prévia ao vivo (o PDF segue o que você digita, sem salvar)', '', 'Chave “ao vivo” ao lado de Compilar; paleta: “prévia ao vivo”'],
       ['Mostrar no PDF a linha do cursor', '⌘J', 'Menu Compilar → Mostrar no PDF'],
       ['Ir do PDF para o código', 'clique duplo', 'No trecho do PDF; funciona até em PDF compilado fora do TeXugo'],
       ['PDF em janela separada, modo escuro, apresentação', '', 'Botões na barra do PDF'],

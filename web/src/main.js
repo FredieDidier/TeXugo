@@ -29,6 +29,7 @@ import { reviewDialog, loadLastReview } from './review.js';
 import { responseDialog } from './rr.js';
 import { annotationsDialog } from './annotations.js';
 import { insertGrid } from './table.js';
+import { setupLive, shownPdf } from './live.js';
 
 export const S = {
   hello: null,
@@ -43,7 +44,7 @@ export const S = {
   building: null, // { id, order, requested }
   queued: false,
   lastSummary: null,
-  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true, vicios: true, changeMarks: true, mathPreview: true },
+  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true, vicios: true, changeMarks: true, mathPreview: true, livePreview: false },
   cursor: { line: 1, col: 1, words: 0 },
   detached: new Set(), // PDFs shown in their own window
 };
@@ -127,6 +128,7 @@ function buildLayout() {
   app.terminals = new TerminalPanel(app, S);
   app.agent = new AgentPanel(app, S);
   app.bottom = new BottomPanel(app, S);
+  app.live = setupLive(app, S);
   setupIde(app, S);
   applyLayoutSizes();
 }
@@ -273,6 +275,7 @@ const editorHooks = (t) => ({
       app.sidebar.renderIfFiles();
     }
     t.version = (t.version || 0) + 1;
+    app.live.changed(t);
     countWordsSoon();
     if (isMd(t) && t.mdMode === 'split') mdRenderSoon();
   },
@@ -303,7 +306,7 @@ export async function openFile(path, { line, col, focus = true, preview = false 
       toast(err.message, 'error');
       return;
     }
-    t = { path, name: basename(path), kind, dirty: false, mtime: data.mtime, binary: data.binary || kind === 'image', roots: [], root: null, autoCompile: S.settings.autoCompile };
+    t = { path, name: basename(path), kind, dirty: false, mtime: data.mtime, binary: data.binary || kind === 'image', roots: [], root: null, autoCompile: S.settings.autoCompile, livePreview: !!S.settings.livePreview };
     t.hooks = editorHooks(t);
     if (!t.binary) t.state = createState(data.text, path, t.hooks, S.settings);
     const idx = S.tabs.findIndex((x) => x.path === S.active);
@@ -499,6 +502,36 @@ function mdRender() {
 }
 const mdRenderSoon = debounce(mdRender, 200);
 
+// "ao vivo" switch of the doc bar, with the state of the last live pass.
+function liveToggle(t) {
+  const st = t.livePreview ? S.live.get(t.root) : null;
+  const err = st && st.status === 'error' && st.errors && st.errors[0];
+  const title = !t.livePreview
+    ? 'Prévia ao vivo: atualiza o PDF enquanto você digita, sem salvar. Uma passada rápida; citações novas aparecem ao compilar.'
+    : st && st.status === 'running'
+      ? 'Atualizando a prévia…'
+      : err
+        ? `A prévia parou${err.line ? ` na linha ${err.line}` : ''}: ${err.message.replace(/\s*\.$/, '')}${st.shown ? '' : '. O PDF mostra a última versão boa.'}`
+        : st && st.ms != null
+          ? `Prévia atualizada em ${(st.ms / 1000).toFixed(1).replace('.', ',')} s. Clique para desligar.`
+          : 'Prévia ao vivo ligada.';
+  return h(
+    'label',
+    { class: 'toggle live-toggle' + (st ? ' live-' + st.status : ''), title },
+    h('input', {
+      type: 'checkbox',
+      checked: !!t.livePreview,
+      onchange: (e) => {
+        app.live.setOn(t, e.target.checked);
+        saveUiSoon();
+      },
+    }),
+    h('span', { class: 'sw' }),
+    'ao vivo',
+    t.livePreview ? h('span', { class: 'live-dot' }) : null,
+  );
+}
+
 function renderDocBar() {
   const t = activeTab();
   if (!t) {
@@ -548,6 +581,7 @@ function renderDocBar() {
         'ao salvar',
       ),
     );
+    items.push(liveToggle(t));
     const building = st === 'building';
     items.push(
       h(
@@ -796,6 +830,7 @@ function wireBuildEvents() {
     for (const d of e.docs || []) {
       if (!d.pdf) continue;
       const tab = S.pdfTabs.find((p) => p.path === d.pdf);
+      if (tab) tab.live = null;
       if (tab) reloadPdf(tab);
       else if (d.requested && !S.detached.has(d.pdf) && (wantPdf === d.doc || !S.pdfTabs.length)) openPdf(d.pdf, { doc: d.doc, activate: true });
     }
@@ -868,12 +903,12 @@ function applyDiagnostics() {
 app.applyDiagnostics = applyDiagnostics;
 
 // ---------------------------------------------------------------- PDF
-function openPdf(path, { doc, activate: act = true } = {}) {
+function openPdf(path, { doc, activate: act = true, live = null } = {}) {
   if (S.detached.has(path)) return;
   let p = S.pdfTabs.find((x) => x.path === path);
   if (!p) {
     const viewer = new PdfTab(path, { onInverse: inverseSync, onState: () => p === pdfActive() && renderPdfTools() });
-    p = { path, doc: doc || guessDoc(path), viewer };
+    p = { path, doc: doc || guessDoc(path), viewer, live };
     S.pdfTabs.push(p);
     app.pdfStack.append(viewer.el);
     viewer.el.classList.toggle('invert', !!S.settings.invertPdf && isDark());
@@ -890,9 +925,11 @@ function guessDoc(pdf) {
   return S.project && S.project.docs.some((d) => d.path === tex) ? tex : null;
 }
 
+app.reloadPdf = (p) => reloadPdf(p);
+app.saveUiSoon = () => saveUiSoon();
 async function reloadPdf(p) {
   try {
-    await p.viewer.load(fileUrl(p.path));
+    await p.viewer.load(fileUrl(p.live || p.path));
     p.missing = false;
   } catch {
     p.missing = true;
@@ -1078,7 +1115,7 @@ async function syncForward({ quiet = false, tab, line, col } = {}) {
     if (!p || p.missing || S.building) return;
     if (S.activePdf !== pdf) activatePdf(pdf);
     try {
-      const r = await call('syncForward', { file: t.path, line: ln, column: cl, pdf });
+      const r = await call('syncForward', { file: t.path, line: ln, column: cl, pdf: shownPdf(S, pdf) });
       if (r.ok) p.viewer.showSync(r.hits[0]);
     } catch {}
     return;
@@ -1091,7 +1128,7 @@ async function syncForward({ quiet = false, tab, line, col } = {}) {
     await new Promise((r) => setTimeout(r, 700));
   }
   activatePdf(pdf);
-  if (!(await hasSynctex(pdf))) {
+  if (!(await hasSynctex(shownPdf(S, pdf)))) {
     try {
       const words = await call('syncLineWords', { file: t.path, line: ln });
       const hit = p && p.viewer && words.length >= 3 ? await p.viewer.findWords(words) : null;
@@ -1105,7 +1142,7 @@ async function syncForward({ quiet = false, tab, line, col } = {}) {
     return;
   }
   try {
-    const r = await call('syncForward', { file: t.path, line: ln, column: cl, pdf });
+    const r = await call('syncForward', { file: t.path, line: ln, column: cl, pdf: shownPdf(S, pdf) });
     if (r.ok) p.viewer.showSync(r.hits[0]);
     else toast('Sem posição no PDF para esta linha. Compile de novo.', 'warn');
   } catch (err) {
@@ -1133,6 +1170,7 @@ function noteTextSync(pdf) {
 }
 
 async function inverseSync(args) {
+  args = { ...args, pdf: shownPdf(S, args.pdf) };
   if (!(await hasSynctex(args.pdf))) {
     if (!args.viewer) return toast('Este PDF não tem SyncTeX. Compile pelo TeXugo.', 'warn');
     const doc = args.pdf.replace(/\.pdf$/, '.tex');
@@ -1313,7 +1351,10 @@ async function openProject(root) {
   if (tabs.length) {
     for (const t of tabs) await openFile(t.path, { focus: false }).then(() => {
       const tab = tabByPath(t.path);
-      if (tab) tab.autoCompile = !!t.autoCompile;
+      if (tab) {
+        tab.autoCompile = !!t.autoCompile;
+        tab.livePreview = !!t.livePreview;
+      }
     });
     if (ui.active && tabByPath(ui.active)) activate(ui.active);
     if (ui.split && tabByPath(ui.split)) app.split.show(tabByPath(ui.split));
@@ -1359,7 +1400,7 @@ const saveUiSoon = debounce(() => {
   call('saveProjectUi', {
     root: S.project.root,
     ui: {
-      tabs: S.tabs.map((t) => ({ path: t.path, autoCompile: t.autoCompile })),
+      tabs: S.tabs.map((t) => ({ path: t.path, autoCompile: t.autoCompile, livePreview: !!t.livePreview })),
       active: S.active,
       pdfs: S.pdfTabs.map((p) => p.path),
       activePdf: S.activePdf,

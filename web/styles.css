@@ -418,6 +418,10 @@ kbd { font: 11px var(--mono); padding: 1px 5px; border: 1px solid var(--border);
 .doc-bar .root-pick select { max-width: 140px; }
 @container (max-width: 620px) { .doc-bar > .chip:not(.ok):not(.error):not(.undefined) { display: none; } .doc-bar .root-pick > :not(select) { display: none; } }
 @container (max-width: 520px) { .doc-bar > .toggle { display: none; } }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok); flex: none; }
+.live-toggle.live-running .live-dot { background: var(--accent); animation: live-pulse 0.9s ease-in-out infinite; }
+.live-toggle.live-error .live-dot { background: var(--err); }
+@keyframes live-pulse { 50% { opacity: 0.3; } }
 @container (max-width: 430px) { .doc-bar > .chip { display: none; } .doc-bar .crumbs { display: none; } }
 @container (max-width: 330px) { .doc-bar .root-pick { display: none; } }
 

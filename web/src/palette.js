@@ -13,6 +13,7 @@ function commands(app, S) {
     { t: 'Compilar tudo que está aberto', k: '⌘⇧↵', i: 'playAll', run: () => app.compileAll() },
     { t: 'Compilar do zero (limpa auxiliares)', i: 'broom', run: () => app.compileTab(null, { clean: true }) },
     ...(S.project.docs || []).map((d) => ({ t: `Compilar ${relPath(S.project.root, d.path)}`, d: d.kind === 'slides' ? 'slides' : d.engine, i: 'play', run: () => app.compileDocs([d.path]) })),
+    ...(t && t.root ? [{ t: t.livePreview ? 'Desligar a prévia ao vivo' : 'Ligar a prévia ao vivo (PDF enquanto digita)', kw: 'live preview ao vivo tempo real enquanto digita automático', i: 'play', run: () => app.live.setOn(t, !t.livePreview) }] : []),
     { t: 'Mostrar no PDF', kw: 'synctex', k: '⌘J', i: 'target', run: () => app.syncForward() },
     { t: 'Salvar', k: '⌘S', i: 'check', run: () => app.saveTab(app.activeTab()) },
     { t: 'Salvar todos', k: '⌥⌘S', i: 'check', run: () => app.saveAll() },
