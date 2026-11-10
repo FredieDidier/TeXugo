@@ -13,6 +13,24 @@ export function getLang() {
 }
 
 const EN = {
+  // coauthors on Git: news since the last visit, who wrote each passage
+  'Novidades': 'News', 'Novidades desde a sua última visita': 'News since your last visit', 'Ver o que mudou': 'See what changed',
+  'Desde a sua última visita': 'Since your last visit', 'Últimos 7 dias': 'Last 7 days', 'Últimos 30 dias': 'Last 30 days',
+  'Buscar no remoto': 'Fetch from remote', 'Pergunta ao remoto (GitHub) se chegou algo, sem mudar nada aqui': 'Asks the remote (GitHub) whether anything arrived, without changing anything here',
+  'Baixar (pull)': 'Download (pull)', 'Ver commits': 'See commits', 'Esconder commits': 'Hide commits', 'Ver mudanças': 'See changes', 'Ver o commit': 'See the commit',
+  'Ir para a seção': 'Go to the section', 'Ir para o início do arquivo': 'Go to the start of the file', 'início do arquivo': 'start of file', 'Abrir arquivo': 'Open file', 'Abrir o Git': 'Open Git',
+  'Tudo o que mudou neste arquivo desde a sua visita (de todos, inclusive você)': 'Everything that changed in this file since your visit (by everyone, you included)',
+  'Nada novo dos coautores desde a sua última visita.': 'Nothing new from your coauthors since your last visit.', 'Nenhum commit dos coautores nesse período.': 'No commits by your coauthors in that period.',
+  'Primeira visita: daqui em diante o TeXugo anota o que os coautores mudam entre uma visita e outra. Para ver o que já houve, escolha os últimos 7 ou 30 dias.': 'First visit: from now on TeXugo notes what your coauthors change between visits. To see what already happened, choose the last 7 or 30 days.',
+  'Primeira visita: a partir de agora o TeXugo anota o que muda entre uma visita e outra.': 'First visit: from now on TeXugo notes what changes between visits.',
+  'O que cada coautor mudou desde a última vez que você olhou, seção por seção.': 'What each coauthor changed since you last looked, section by section.',
+  'Lendo os commits…': 'Reading the commits…', 'Este projeto não está no Git. As novidades dos coautores vêm dos commits deles.': 'This project is not in Git. Coauthor news comes from their commits.',
+  'Quem escreveu cada trecho': 'Who wrote each passage', 'Mostrar na margem': 'Show in the margin', 'Esconder': 'Hide', 'Lendo a autoria…': 'Reading authorship…', 'Você': 'You',
+  'Esconder a autoria': 'Hide authorship', 'Quem escreveu cada trecho: as iniciais de quem mudou cada linha por último, pelo Git': 'Who wrote each passage: the initials of whoever last changed each line, from Git',
+  'Iniciais na margem de quem mudou cada linha por último, pelo Git; clique para ver o commit.': 'Initials in the margin of whoever last changed each line, from Git; click to see the commit.',
+  'Autoria ligada: as iniciais na margem dizem quem escreveu cada trecho. Clique nelas para ver o commit.': 'Authorship on: the initials in the margin say who wrote each passage. Click them to see the commit.',
+  'Você, ainda sem commit': 'You, not committed yet', 'Este projeto não está no Git: não há autoria a mostrar.': 'This project is not in Git: there is no authorship to show.',
+  'Novidades dos coautores desde a sua última visita': 'Coauthor news since your last visit', 'Mostrar ou esconder quem escreveu cada trecho': 'Show or hide who wrote each passage',
   // general
   'Cancelar': 'Cancel', 'Confirmar': 'Confirm', 'OK': 'OK', 'Fechar': 'Close', 'Abrir': 'Open', 'Salvar': 'Save', 'Criar': 'Create', 'Renomear': 'Rename',
   'Carregando…': 'Loading…', 'Nada encontrado.': 'Nothing found.', 'Procurar': 'Search', 'Escolher…': 'Choose…', 'Mais': 'More', 'Atualizar': 'Refresh',
@@ -203,6 +221,12 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  [/^Desde a sua visita de (.+)\.$/, 'Since your visit on $1.'],
+  [/^Desde o commit de (.+)\.$/, 'Since the commit of $1.'],
+  [/^(\d+) commits? no remoto, ainda não baixados?(\.?)$/, (m, n, dot) => `${n} commit${n === '1' ? '' : 's'} on the remote, not pulled yet${dot}`],
+  [/^O que mudou em (.+)$/, 'What changed in $1'],
+  [/^(\d+) commits? · $/, (m, n) => `${n} commit${n === '1' ? '' : 's'} · `],
+  [/^ linhas$/, ' lines'],
   [/^(Erros|Avisos|Caixas|Estilo|\?\?) (\d+)$/, (m, k, n) => `${{ Erros: 'Errors', Avisos: 'Warnings', Caixas: 'Boxes', Estilo: 'Style', '??': '??' }[k]} ${n}`],
   [/^Erro (\d+) em (.+)$/, 'Error $1 in $2'],
   [/^ TeX Live (\d*) · tudo pronto$/, ' TeX Live $1 · all set'],

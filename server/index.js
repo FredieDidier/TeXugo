@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import * as project from './project.js';
 import * as gitOps from './git.js';
+import * as coauthors from './coauthors.js';
 import * as sync from './synctex.js';
 import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
@@ -415,6 +416,29 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async gitLog({ root, path: p }) {
       mustAllow(root);
       return gitOps.log(root, p);
+    },
+    async gitNews({ root, since, base }) {
+      mustAllow(root);
+      return coauthors.news(root, { since, base });
+    },
+    async gitMarkSeen({ root, hash }) {
+      mustAllow(root);
+      if (hash != null && !/^[0-9a-f]{7,40}$/.test(hash)) throw httpError(400, 'Commit inválido.');
+      return coauthors.markSeen(root, hash);
+    },
+    async gitNewsDiff({ root, from, to, path: p }) {
+      mustAllow(root);
+      for (const r of [from, to || 'HEAD']) if (!/^([0-9a-f]{7,40}|HEAD|@\{u\})$/.test(r)) throw httpError(400, 'Commit inválido.');
+      return coauthors.newsDiff(root, { from, to, file: p ? mustAllow(p) : null });
+    },
+    async gitShow({ root, rev, path: p }) {
+      mustAllow(root);
+      if (!/^[0-9a-f]{7,40}$/.test(rev)) throw httpError(400, 'Commit inválido.');
+      return coauthors.showCommit(root, { rev, file: p ? mustAllow(p) : null });
+    },
+    async gitBlame({ root, path: p, text }) {
+      mustAllow(root);
+      return coauthors.blame(root, { file: mustAllow(p), text });
     },
     async gitInit({ root }) {
       mustAllow(root);

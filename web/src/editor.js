@@ -13,6 +13,7 @@ import { tags as t } from '@lezer/highlight';
 import { viciosExtension } from './vicios/cm.js';
 import { grammarExtension } from './grammar/cm.js';
 import { changesField } from './changes.js';
+import { blameCompartment } from './blame.js';
 import { insertGrid } from './table.js';
 import { mathPreviewExtension } from './mathpreview.js';
 
@@ -355,6 +356,7 @@ export function createState(doc, path, hooks, settings = {}) {
           })
         : [],
       changesField,
+      blameCompartment.of([]),
       selectionBar(path, hooks),
       keymap.of([
         { key: 'Mod-s', preventDefault: true, run: () => (hooks.save(), true) },

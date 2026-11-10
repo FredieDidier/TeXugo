@@ -11,9 +11,10 @@ import { reviewDialog, loadLastReview } from './review.js';
 import { responseDialog } from './rr.js';
 import { annotationsDialog } from './annotations.js';
 import { compareDialog } from './compare.js';
+import { summary } from './news.js';
+import { authorColor } from './blame.js';
 
 const REC = { reject: 'rejeitar', 'major revision': 'revisão maior', 'minor revision': 'revisão menor', accept: 'aceitar' };
-let fetchedAt = null;
 
 const exists = async (p) => {
   try {
@@ -74,33 +75,33 @@ export async function renderRevisao(app, S, el) {
       [btn('Comparar…', () => compareDialog(app, S), !diffPdf), diffPdf ? btn('Abrir o último', () => app.openPdf(`${docDir}.texugo/diff/${basename(stem)}-mudancas.pdf`, { activate: true })) : null].filter(Boolean),
     ),
   ];
-  if (g && g.repo && g.remote) {
-    const behind = g.behind || 0;
+  if (g && g.repo) {
+    const n = S.news && S.news.root === S.project.root ? S.news : null;
+    const d = n && n.data;
+    const cnt = d ? (d.count || 0) + (d.remoteCount || 0) : 0;
+    const st = !d
+      ? 'O que cada coautor mudou desde a última vez que você olhou, seção por seção.'
+      : d.count
+        ? summary(n)
+        : d.remoteCount
+          ? `${d.remoteCount} commit${d.remoteCount > 1 ? 's' : ''} no remoto, ainda não baixado${d.remoteCount > 1 ? 's' : ''}.`
+          : d.firstVisit
+            ? 'Primeira visita: a partir de agora o TeXugo anota o que muda entre uma visita e outra.'
+            : 'Nada novo dos coautores desde a sua última visita.';
+    coauthors.push(
+      row('users', 'Novidades desde a sua última visita', st, [btn(cnt ? 'Ver o que mudou' : 'Abrir', () => app.bottom.show('novidades'), !!cnt), btn('Abrir o Git', () => app.sidebar.show('git'))], { cls: cnt ? 'open' : '' }),
+    );
+    const sh = app.blame.on ? app.blame.stats(t) : [];
     coauthors.push(
       row(
-        'git',
-        'Commits dos coautores',
-        behind ? `${behind} commit${behind > 1 ? 's' : ''} novo${behind > 1 ? 's' : ''} no remoto, ainda não baixado${behind > 1 ? 's' : ''}.` : fetchedAt ? `Nada novo no remoto (visto ${ago(fetchedAt)}).` : 'Veja se alguém mandou commits.',
-        [
-          behind
-            ? btn('Baixar (pull)', async () => {
-                const r = await call('gitPull', { root: S.project.root });
-                if (r.code === 0) toast('Pull: ok.', 'ok');
-                else toast((r.stderr || r.stdout || '').trim().split('\n').slice(-2).join(' '), 'error', 9000);
-                await app.refreshGit();
-                renderRevisao(app, S, el);
-              }, true)
-            : btn('Ver novidades', async (e) => {
-                e.target.disabled = true;
-                const r = await call('gitFetch', { root: S.project.root });
-                if (r.code !== 0) toast((r.stderr || '').trim().split('\n').slice(-2).join(' ') || 'Não deu para falar com o remoto.', 'error', 9000);
-                fetchedAt = Date.now();
-                await app.refreshGit();
-                renderRevisao(app, S, el);
-              }),
-          btn('Abrir o Git', () => app.sidebar.show('git')),
-        ],
-        { cls: behind ? 'open' : '' },
+        'users',
+        'Quem escreveu cada trecho',
+        app.blame.on
+          ? sh.length
+            ? h('span', { class: 'rev-shares' }, sh.slice(0, 4).map((x) => h('span', { class: 'rev-share' }, h('i', { style: { background: authorColor(x.c) } }), `${x.name} ${x.pct}%`)))
+            : 'Lendo a autoria…'
+          : 'Iniciais na margem de quem mudou cada linha por último, pelo Git; clique para ver o commit.',
+        [btn(app.blame.on ? 'Esconder' : 'Mostrar na margem', () => app.blame.toggle(), !app.blame.on)],
       ),
     );
   }

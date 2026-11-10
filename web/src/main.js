@@ -30,6 +30,8 @@ import { responseDialog } from './rr.js';
 import { annotationsDialog } from './annotations.js';
 import { insertGrid } from './table.js';
 import { setupLive, shownPdf } from './live.js';
+import { setupBlame } from './blame.js';
+import { checkOnOpen } from './news.js';
 import { setupGrammar, grammarItem } from './grammar/ui.js';
 
 export const S = {
@@ -130,6 +132,7 @@ function buildLayout() {
   app.agent = new AgentPanel(app, S);
   app.bottom = new BottomPanel(app, S);
   app.live = setupLive(app, S);
+  app.blame = setupBlame(app, S);
   setupIde(app, S);
   applyLayoutSizes();
 }
@@ -277,6 +280,7 @@ const editorHooks = (t) => ({
     }
     t.version = (t.version || 0) + 1;
     app.live.changed(t);
+    app.blame.changed(t);
     countWordsSoon();
     if (isMd(t) && t.mdMode === 'split') mdRenderSoon();
   },
@@ -359,6 +363,7 @@ function activate(path) {
     app.view.dom.classList.remove('hidden');
     if (app.view.state !== t.state) app.view.setState(t.state);
     applyDiagnostics();
+    app.blame.apply(t);
   }
   applyMdMode();
   renderTabs();
@@ -633,6 +638,18 @@ function renderDocBar() {
   } else if (/\.tex$/.test(t.path)) {
     items.push(h('span', { class: 'chip', title: 'Nenhum documento do projeto faz \\input deste arquivo. Adicione "% !TEX root = ../paper.tex" no topo para dizer qual é.' }, icon('info'), 'fora de qualquer documento'));
   }
+  if (!t.binary && S.git && S.git.repo)
+    items.push(
+      h(
+        'button',
+        {
+          class: 'icon-btn' + (app.blame.on ? ' on' : ''),
+          title: app.blame.on ? 'Esconder a autoria' : 'Quem escreveu cada trecho: as iniciais de quem mudou cada linha por último, pelo Git',
+          onclick: () => app.blame.toggle(),
+        },
+        icon('users'),
+      ),
+    );
   if (!t.binary)
     items.push(
       h(
@@ -1388,7 +1405,8 @@ async function openProject(root) {
   renderTopbar();
   renderActivity();
   refreshSymbolsSoon();
-  refreshGit();
+  app.blame.data.clear();
+  refreshGit().then(() => checkOnOpen(app, S));
   // PDF windows of this project that are already open announce themselves.
   call('broadcast', { msg: { type: 'pdfwin:ping' } }).catch(() => {});
   // Previous results from this app session (other window or reopen).
@@ -1439,6 +1457,10 @@ async function refreshGit() {
   renderStatus();
   renderActivity();
   app.sidebar.renderIfGit();
+  // The authorship button shows only in a Git project.
+  const repo = !!(S.git && S.git.repo);
+  if (repo !== app.docBarRepo) ((app.docBarRepo = repo), renderDocBar());
+  if (app.blame.on) app.blame.changed(activeTab());
 }
 app.refreshGit = refreshGit;
 const refreshGitSoon = debounce(refreshGit, 800);
