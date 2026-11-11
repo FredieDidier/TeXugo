@@ -106,6 +106,7 @@ const MENU_EN = {
   'Compilar documento da aba': 'Compile the tab’s document', 'Compilar tudo que está aberto': 'Compile everything open', 'Mostrar no PDF': 'Show in PDF',
   'Há alterações não salvas.': 'There are unsaved changes.', 'Se você não salvar, o que foi digitado desde o último salvamento se perde.': 'If you do not save, what was typed since the last save is lost.',
   'Salvar tudo e fechar': 'Save all and close', 'Descartar': 'Discard', 'Cancelar': 'Cancel',
+  'Abrir': 'Open', 'Comparar': 'Compare', 'Ler anotações': 'Read annotations', 'Adicionar': 'Add', 'Importar': 'Import', 'LaTeX, ZIP ou pasta': 'LaTeX, ZIP or folder',
   'Visualizar': 'View', 'Paleta de comandos': 'Command palette', 'Biblioteca de papers': 'Paper library', 'Painel inferior': 'Bottom panel', 'Ferramentas de desenvolvedor': 'Developer tools', 'Janela': 'Window',
 };
 let menuLang = 'pt';
@@ -153,28 +154,28 @@ function buildMenu() {
 
 ipcMain.handle('pick-folder', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender);
-  const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'], buttonLabel: 'Abrir' });
+  const r = await dialog.showOpenDialog(win, { properties: ['openDirectory', 'createDirectory'], buttonLabel: L('Abrir') });
   return r.canceled ? null : r.filePaths[0];
 });
 // A received version: a .tex, a .zip or a folder.
 ipcMain.handle('pick-version', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender);
-  const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'openDirectory'], filters: [{ name: 'LaTeX, ZIP ou pasta', extensions: ['tex', 'zip'] }], buttonLabel: 'Comparar' });
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'openDirectory'], filters: [{ name: L('LaTeX, ZIP ou pasta'), extensions: ['tex', 'zip'] }], buttonLabel: L('Comparar') });
   return r.canceled ? null : r.filePaths[0];
 });
 ipcMain.handle('pick-pdf', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender);
-  const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'PDF', extensions: ['pdf'] }], buttonLabel: 'Ler anotações' });
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'PDF', extensions: ['pdf'] }], buttonLabel: L('Ler anotações') });
   return r.canceled ? null : r.filePaths[0];
 });
 ipcMain.handle('pick-pdfs', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender);
-  const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'PDF', extensions: ['pdf'] }], buttonLabel: 'Adicionar' });
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'PDF', extensions: ['pdf'] }], buttonLabel: L('Adicionar') });
   return r.canceled ? [] : r.filePaths;
 });
 ipcMain.handle('pick-bib', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender);
-  const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'BibTeX', extensions: ['bib'] }], buttonLabel: 'Importar' });
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile'], filters: [{ name: 'BibTeX', extensions: ['bib'] }], buttonLabel: L('Importar') });
   return r.canceled ? null : r.filePaths[0];
 });
 ipcMain.handle('focus-self', (e) => {

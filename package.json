@@ -13,6 +13,7 @@
     "serve": "npm run build:web && node server/standalone.js",
     "start": "npm run build:web && electron .",
     "test": "node --test test/*.test.js",
+    "test:ui": "npm run build:web && electron test/ui/smoke.mjs",
     "icon": "node scripts/make-icon.mjs",
     "package": "npm run build:web && node scripts/package-mac.mjs"
   },

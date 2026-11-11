@@ -56,6 +56,20 @@ export class PdfTab {
     this.bus.on('pagechanging', () => this.onState(this));
     this.bus.on('scalechanging', () => this.onState(this));
     this.el.addEventListener('dblclick', (e) => this._inverse(e));
+    // "Page width" and "whole page" follow the pane: dragging a divider,
+    // resizing the window or opening a side panel refits the page.
+    if (typeof ResizeObserver !== 'undefined') {
+      let w = 0;
+      let timer = null;
+      this.resizer = new ResizeObserver(() => {
+        const now = this.el.clientWidth;
+        if (!now || Math.abs(now - w) < 2) return;
+        w = now;
+        clearTimeout(timer);
+        timer = setTimeout(() => this.refit(), 120);
+      });
+      this.resizer.observe(this.el);
+    }
     // Pinch / ctrl+wheel zoom.
     this.el.addEventListener(
       'wheel',
@@ -116,6 +130,13 @@ export class PdfTab {
   set page(n) {
     if (this.doc) this.viewer.currentPageNumber = Math.max(1, Math.min(this.pages, n));
   }
+  refit() {
+    if (!this.doc || !this.ready || typeof this.scale !== 'string' || this.el.classList.contains('presenting')) return;
+    const top = this.el.scrollTop / Math.max(1, this.el.scrollHeight);
+    this.viewer.currentScaleValue = this.scale;
+    requestAnimationFrame(() => (this.el.scrollTop = top * this.el.scrollHeight));
+  }
+
   setScale(v) {
     this.scale = v;
     if (this.doc) this.viewer.currentScaleValue = String(v);
@@ -240,6 +261,7 @@ export class PdfTab {
   }
 
   destroy() {
+    if (this.resizer) this.resizer.disconnect();
     if (this.doc) this.doc.destroy();
     this.el.remove();
   }

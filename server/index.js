@@ -169,6 +169,8 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
         recents: (state.recents || []).filter((r) => fs.existsSync(r)),
         settings: state.settings || {},
         home: process.env.HOME,
+        // Nothing chosen and nothing opened yet: the page picks the language.
+        firstRun: !(state.recents || []).length && !state.projects && !(state.settings || {}).lang,
       };
     },
     async saveSettings({ settings }) {

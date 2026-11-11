@@ -156,6 +156,7 @@ const P = {
   comment: '<path d="M4 5.5A1.5 1.5 0 0 1 5.5 4h13A1.5 1.5 0 0 1 20 5.5v9a1.5 1.5 0 0 1-1.5 1.5H10l-4.5 4v-4h0A1.5 1.5 0 0 1 4 14.5z"/><path d="M8 9h8M8 12.5h5"/>',
   users: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M15.5 4.8a3.2 3.2 0 0 1 0 6.4M17.5 14.3c2 .8 3.5 3 3.5 5.7"/>',
   wrap: '<path d="M4 6h16M4 12h13a3 3 0 0 1 0 6h-4M4 18h5M15 16l-2 2 2 2"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/>',
 };
 
 export function icon(name, cls = '') {
@@ -240,13 +241,15 @@ export function debounce(fn, ms) {
 let toastBox;
 // Errors stay until dismissed: a failed save or sync must not vanish while
 // the user looks elsewhere. The rest leaves by itself, pausing under the mouse.
-export function toast(message, kind = 'info', ms = 4200) {
+export function toast(message, kind = 'info', ms = 4200, opts = {}) {
   if (!toastBox) document.body.append((toastBox = h('div', { class: 'toasts', 'aria-live': 'polite' })));
   const ico = { error: 'error', ok: 'checkCircle', warn: 'warn', info: 'info' }[kind] || 'info';
   const text = typeof message === 'string' ? tr(message) : null;
   // The same message again replaces the one on screen instead of piling up.
   if (text) for (const old of [...toastBox.children]) if (old.dataset.text === text) old.remove();
-  const sticky = kind === 'error';
+  // sticky: false is for an error that another surface keeps on screen
+  // (a failed build: the Problems panel opens with it).
+  const sticky = kind === 'error' && opts.sticky !== false;
   const el = h('div', { class: `toast ${kind}`, role: sticky ? 'alert' : 'status' }, icon(ico), h('div', { class: 'toast-msg' }, message), h('button', { class: 'icon-btn toast-x', title: 'Fechar', onclick: () => el.remove() }, icon('x')));
   if (text) el.dataset.text = text;
   toastBox.append(el);
@@ -314,9 +317,12 @@ export function closeMenus() {
 // Modal dialog. Returns { el, close }. The focus moves in, Tab stays inside,
 // Esc closes the dialog on top, and the focus returns to where it was.
 let modalSeq = 0;
+let focusHome = null;
+// Where the focus goes when a dialog closes and its opener no longer exists.
+export const setFocusHome = (fn) => (focusHome = fn);
 const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 export function modal({ title, body, footer, wide, onClose }) {
-  const opener = document.activeElement;
+  const opener = document.activeElement === document.body ? null : document.activeElement;
   const overlay = h('div', { class: 'overlay' });
   let closed = false;
   const close = () => {
@@ -327,6 +333,9 @@ export function modal({ title, body, footer, wide, onClose }) {
     onClose && onClose();
     if (opener && opener.isConnected && !document.querySelector('.overlay')) opener.focus({ preventScroll: true });
     else if (opener && opener.isConnected && document.querySelector('.overlay')?.contains(opener)) opener.focus({ preventScroll: true });
+    // Opened from something that is gone (the palette, a menu): the focus
+    // must not fall to the page, where no key does anything.
+    else if (!document.querySelector('.overlay')) setTimeout(() => (!document.activeElement || document.activeElement === document.body) && focusHome && focusHome(), 0);
   };
   const onKey = (e) => {
     const all = document.querySelectorAll('.overlay');

@@ -2,6 +2,7 @@
 import { call, native } from './api.js';
 import { h, clear, icon, wordmark, toast, modal, basename, dirname, joinPath } from './dom.js';
 import { shortcutsDialog } from './shortcuts.js';
+import { openSettings } from './settings.js';
 
 export async function showWelcome(app, S) {
   document.querySelector('.welcome')?.remove();
@@ -9,8 +10,15 @@ export async function showWelcome(app, S) {
   try {
     templates = await call('templates');
   } catch {}
+  // The list as it is now: a project opened in this session is a recent too.
+  try {
+    const now = await call('hello');
+    S.hello.recents = now.recents;
+    S.hello.tools = now.tools;
+    S.hello.tex = now.tex;
+  } catch {}
   const recents = (S.hello.recents || []).slice(0, 8);
-  const t = S.hello.tools || {};
+  const missing = toolsMissing(S);
   const el = h(
     'div',
     { class: 'welcome' },
@@ -24,6 +32,8 @@ export async function showWelcome(app, S) {
         h('div', {}, h('h1', {}, wordmark()), h('p', {}, 'Bravo com os erros, manso com você.')),
         S.project ? h('button', { class: 'btn', style: { marginLeft: 'auto' }, onclick: () => el.remove() }, icon('x'), 'Voltar ao projeto') : null,
       ),
+      // What stops the app from working comes before everything else.
+      missing ? toolsLine(S) : null,
       h(
         'div',
         { class: 'cols' },
@@ -48,7 +58,13 @@ export async function showWelcome(app, S) {
             { style: { display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' } },
             h('button', { class: 'btn primary', onclick: () => app.pickAndOpen() }, icon('folderOpen'), 'Abrir pasta…'),
             h('button', { class: 'btn', onclick: () => cloneDialog(app, S) }, icon('github'), 'Clonar do GitHub…'),
+          ),
+          h(
+            'div',
+            { class: 'welcome-links' },
             h('button', { class: 'btn ghost', title: 'Todos os atalhos e onde achar cada comando (⌘?)', onclick: () => shortcutsDialog() }, icon('command'), 'Atalhos (⌘?)'),
+            h('button', { class: 'btn ghost', title: 'Preferências (⌘,)', onclick: () => openSettings(app, S) }, icon('gear'), 'Preferências'),
+            langSwitch(app, S),
           ),
           recents.length ? h('h3', { style: { marginTop: '8px' } }, 'Recentes') : null,
           recents.map((r) =>
@@ -74,7 +90,7 @@ export async function showWelcome(app, S) {
           ),
         ),
       ),
-      toolsLine(S),
+      missing ? null : toolsLine(S),
     ),
   );
   document.body.append(el);
@@ -87,7 +103,7 @@ export async function newProjectDialog(app, S, tpl) {
   } catch {}
   let chosen = tpl || templates[0];
   const defaultParent = S.project ? dirname(S.project.root) : joinPath(S.hello.home || '', 'Documents');
-  const title = h('input', { placeholder: 'Ex.: Darker Evenings' });
+  const title = h('input', { placeholder: 'Ex.: Título do trabalho' });
   const author = h('input', { value: S.settings.author || '', placeholder: 'Seu nome' });
   const inst = h('input', { value: S.settings.institution || '', placeholder: 'Instituição' });
   const parent = h('input', { value: S.settings.lastParent || defaultParent });
@@ -251,6 +267,28 @@ const TOOL_ROLE = {
   synctex: 'clique duplo no PDF',
   git: 'painel Git',
 };
+const toolsMissing = (S) => Object.keys(TOOL_ROLE).some((k) => !(S.hello.tools || {})[k]);
+
+// The two languages by their own names, so the switch can be read by
+// someone who does not read the language the app opened in.
+function langSwitch(app, S) {
+  const cur = S.settings.lang === 'en' ? 'en' : 'pt';
+  const set = (l) => {
+    if (l === cur) return;
+    S.settings.lang = l;
+    call('saveSettings', { settings: { lang: l } })
+      .catch(() => {})
+      .then(() => {
+        if (native && native.setLang) native.setLang(l);
+        location.reload();
+      });
+  };
+  // Each name in its own language, whatever the interface language is.
+  const b = (l, label) => named(h('button', { class: 'btn ghost sm' + (l === cur ? ' on' : ''), lang: l === 'en' ? 'en' : 'pt-BR', 'aria-pressed': l === cur ? 'true' : 'false', onclick: () => set(l) }), label);
+  const named = (el, label) => ((el.textContent = label), el);
+  return h('span', { class: 'lang-switch', role: 'group', 'aria-label': 'Idioma' }, icon('globe'), b('pt', 'Português'), b('en', 'English'));
+}
+
 function toolsLine(S) {
   const t = S.hello.tools || {};
   const missing = Object.keys(TOOL_ROLE).filter((k) => !t[k]);

@@ -268,33 +268,47 @@ export class Sidebar {
     const t = this.app.activeTab();
     const head = h('div', { class: 'sidebar-head' }, h('span', { class: 'title' }, 'Estrutura'));
     if (!t || t.binary) return clear(this.el, head, h('div', { class: 'pad faint' }, 'Abra um arquivo .tex.'));
-    // Outline of the document: the root and the files it inputs, in order.
-    const files = [t.path];
-    let items = [];
-    try {
-      const text = t.path === this.S.active ? this.app.view.state.doc.toString() : t.state.doc.toString();
-      items = await call('outline', { path: t.path, text });
-    } catch {}
-    const symbols = await call('symbols', { root: this.S.project.root }).catch(() => ({ labels: [] }));
+    // Outline of the whole document: the root and the files it inputs, in
+    // the order they are read. A paper split into sections/*.tex shows its
+    // sections whichever of its files is open.
+    const S = this.S;
+    const textOf = (p) => {
+      const tab = S.tabs.find((x) => x.path === p);
+      if (!tab || tab.binary) return undefined;
+      return p === S.active ? this.app.view.state.doc.toString() : tab.state.doc.toString();
+    };
+    let files = [t.path];
+    if (t.root) {
+      try {
+        const all = await call('docFiles', { doc: t.root });
+        if (all.includes(t.path)) files = all;
+      } catch {}
+    }
+    const parts = await Promise.all(files.map((f) => call('outline', { path: f, text: textOf(f) }).then((items) => items.map((it) => ({ ...it, file: f }))).catch(() => [])));
+    if (this.app.activeTab() !== t || S.sidebarView !== 'outline') return;
+    const items = parts.flat();
+    const symbols = await call('symbols', { root: S.project.root }).catch(() => ({ labels: [] }));
     const labels = symbols.labels.filter((l) => files.includes(l.file));
-    this.outlineItems = items;
+    this.outlineItems = items.filter((it) => it.file === t.path);
+    const many = files.length > 1;
+    const top = items.length ? Math.min(...items.map((it) => it.level)) : 0;
     clear(
       this.el,
       head,
       h(
         'div',
         { class: 'sidebar-body' },
-        h('div', { class: 'section-label' }, basename(t.path)),
+        h('div', { class: 'section-label', title: many ? files.map((f) => relPath(S.project.root, f)).join('\n') : null }, basename(t.root || t.path), many ? h('span', { class: 'faint', style: { textTransform: 'none', letterSpacing: 0, fontWeight: 400 } }, `${files.length} arquivos`) : null),
         items.length
           ? items.map((it) =>
               h(
                 'div',
-                { class: 'list-row', style: { paddingLeft: 10 + Math.max(0, it.level - 1) * 12 + 'px' }, onclick: () => this.app.openFile(t.path, { line: it.line }), 'data-line': it.line },
+                { class: 'list-row' + (it.file === t.path ? '' : ' other'), title: many ? `${relPath(S.project.root, it.file)}:${it.line}` : null, style: { paddingLeft: 10 + Math.max(0, it.level - top) * 12 + 'px' }, onclick: () => this.app.openFile(it.file, { line: it.line }), 'data-line': it.file === t.path ? it.line : null },
                 h('span', { class: 'k' }, it.kind === 'frame' ? '▭' : it.kind === 'section' ? '§' : it.kind === 'subsection' ? '§§' : it.kind.slice(0, 3)),
                 h('span', { class: 't' }, it.title || '(sem título)'),
               ),
             )
-          : h('div', { class: 'pad faint' }, 'Nenhuma seção ou slide neste arquivo.'),
+          : h('div', { class: 'pad faint' }, many ? 'Nenhuma seção ou slide neste documento.' : 'Nenhuma seção ou slide neste arquivo.'),
         labels.length ? h('div', { class: 'section-label' }, `Rótulos (${labels.length})`) : null,
         labels.map((l) =>
           h(
@@ -306,6 +320,7 @@ export class Sidebar {
         ),
       ),
     );
+    this.cursorMoved(S.cursor.line);
   }
   cursorMoved(line) {
     if (this.S.sidebarView !== 'outline' || !this.outlineItems) return;
@@ -391,7 +406,7 @@ export class Sidebar {
         ),
       );
     }
-    const msg = h('textarea', { rows: 2, placeholder: 'Mensagem do commit (opcional: vazia, o TeXugo escreve uma a partir dos arquivos)', style: { width: '100%', resize: 'vertical' } });
+    const msg = h('textarea', { rows: 2, title: 'Opcional: vazia, o TeXugo escreve uma a partir dos arquivos que mudaram', placeholder: 'Mensagem do commit (opcional)', style: { width: '100%', resize: 'vertical' } });
     if (S.commitDraft) (msg.value = S.commitDraft), (S.commitDraft = null);
     const staged = g.files.filter((f) => f.staged);
     const unstaged = g.files.filter((f) => !f.staged || f.work !== ' ');
@@ -481,7 +496,7 @@ export class Sidebar {
     );
     try {
       const log = await call('gitLog', { root: S.project.root });
-      clear(this.historyEl, log.slice(0, 25).map((c) => h('div', { class: 'list-row', title: `${c.hash} · ${c.author} · ${new Date(c.date).toLocaleString(document.documentElement.lang || 'pt-BR')}` }, h('span', { class: 'k' }, c.hash.slice(0, 7)), h('span', { class: 't' }, c.subject))));
+      clear(this.historyEl, log.slice(0, 25).map((c) => h('div', { class: 'list-row', title: `${c.hash} · ${c.author} · ${new Date(c.date).toLocaleString(document.documentElement.lang || 'pt-BR')}` }, h('span', { class: 'k hash' }, c.hash.slice(0, 7)), h('span', { class: 't' }, c.subject))));
     } catch {}
   }
 

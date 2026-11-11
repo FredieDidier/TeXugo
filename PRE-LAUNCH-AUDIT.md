@@ -9,6 +9,45 @@ Nenhum arquivo do repositório foi alterado. Este relatório é o único arquivo
 
 Marcados com ✅ e **CORRIGIDO** no título. Feitos em 11/11/2026, na passada de design, UX e acessibilidade (Claude Fable 5.2): **B1, B2, B3, I14, D1 e D6**. Cada um traz uma linha "Estado" com o que foi feito, como foi verificado e o que sobrou. O resto do relatório segue pendente.
 
+## Segunda passada de UX (11/11/2026)
+
+Feita no app Electron real, com perfil e projeto temporários (modelo *Artigo + apêndice*, textos neutros), em 1480×870, 1200×760, 1000×640 e 900×560, tema claro e escuro, português e inglês. Capturas por `capturePage`, teclado por eventos reais (`sendInputEvent`), contraste calculado sobre as cores computadas de cada texto visível, árvore de acessibilidade lida pelo protocolo do Chromium. **Nenhum bloqueador mudou de estado nesta passada.** Os achados novos levam a letra U; todos os listados abaixo estão corrigidos, com teste.
+
+| # | Problema encontrado na tela | Correção | Arquivos | Validação |
+|---|---|---|---|---|
+| U1 | Na largura padrão (1480), com um arquivo de seção aberto, a barra do documento cortava os botões de autoria e de dividir o editor (634 px disponíveis, 686 ocupados). O rótulo "Documento" nunca sumia: a regra mirava um nó de texto. No tamanho mínimo, o chip de erro sumia antes de botões secundários. | Limiares novos por *container query*; o veredito da compilação (erro, ??) é o último a sair; rótulos encolhem antes de qualquer botão. | `web/styles.css` | `test:ui`: nenhum controle cortado nos quatro tamanhos |
+| U2 | No tamanho mínimo, 6 dos 9 botões da barra do PDF ficavam fora da tela e "/ 1" quebrava em duas linhas. | A barra do PDF esconde por ordem de uso conforme estreita; página e zoom ficam. | `web/styles.css`, `web/src/main.js` | idem |
+| U3 | "Largura da página" aparecia ligada, mas o PDF não se reajustava ao redimensionar a janela ou arrastar um divisor (página cortada). | `ResizeObserver` no visualizador refaz o ajuste e mantém a posição de leitura. | `web/src/pdfview.js` | `test:ui`: largura da página = largura do painel nos quatro tamanhos |
+| U4 | Textos errados: "citaçãoões", "1 páginas", "1 avisos", "1 alterações", "1 palavras". Em inglês, o primeiro caía em português (o padrão de tradução esperava o texto certo), e a contagem de palavras acima de 999 também. | Plurais corrigidos; padrões de tradução aceitam singular e milhar. | `web/src/bottom.js`, `web/src/main.js`, `web/src/i18n.js` | `test:ui` e conferência na tela |
+| U5 | Regressão de D6: todo erro de compilação deixava um aviso fixo sobre o painel Problemas, que já mostra o mesmo erro, e o aviso continuava lá depois de corrigir e recompilar. | O aviso de compilação some sozinho e é retirado quando a compilação seguinte começa. Os demais erros (salvar, Git) seguem fixos. | `web/src/dom.js`, `web/src/main.js` | conferido no app; `test:ui` cobre o erro fixo de D6 |
+| U6 | ⌘K não achava arquivos, embora o campo do topo diga "Buscar arquivo ou comando ⌘K"; clicar nele abria outra coisa que o atalho. "body" casava com "Biblioteca de papers" (letras soltas) e Enter abria a biblioteca. | Uma busca só: comandos e arquivos na mesma lista, em grupos; `>` restringe a comandos. Correspondência por letras soltas só vale se forem próximas ou iniciais. O campo do topo mostra ⌘P, que é o que o clique faz. | `web/src/palette.js`, `web/src/fuzzy.js` (novo), `web/src/main.js` | `test/fuzzy.test.js` (4 testes), `test:ui` |
+| U7 | Estrutura vazia no arquivo principal de um paper dividido em seções ("Nenhuma seção"), que é o caso do próprio modelo do app. | A Estrutura mostra o documento inteiro (raiz e `\input`), e cada item abre o arquivo certo. | `web/src/sidebar.js` | `test:ui` |
+| U8 | Histórico do Git: o hash se sobrepunha à mensagem. O texto de ajuda do campo de commit era cortado. | Coluna do hash com largura própria; ajuda curta no campo e completa na dica. | `web/styles.css`, `web/src/sidebar.js` | medido no app (sem sobreposição) |
+| U9 | Aba Revisão abria com um botão preenchido em cada linha (8 chamadas principais empilhadas). | Botão preenchido só onde há algo esperando (notas abertas, commits novos, pendências). | `web/src/revisao.js` | conferido no app: 1 preenchido, 16 comuns |
+| U10 | Tela inicial: os recentes eram os do momento em que o app abriu (o projeto da sessão não aparecia); o aviso de TeX ausente ficava abaixo dos 14 modelos, fora da tela; nenhum acesso a Preferências nem a idioma. | Recentes lidos na hora; aviso de TeX no topo quando falta algo; *Preferências* e a troca *Português · English*, cada nome na sua língua. | `web/src/welcome.js`, `web/styles.css`, `web/src/dom.js` | `test:ui` |
+| U11 | Primeira abertura sempre em português, qualquer que fosse o idioma do sistema. | Perfil novo (sem idioma, sem recentes) segue o idioma do sistema; perfis existentes não mudam. | `web/src/main.js`, `server/index.js` | conferido com perfil novo num sistema em pt-BR; o ramo em inglês não foi exercitado nesta máquina |
+| U12 | Fechar um diálogo aberto pela paleta deixava o foco na página, onde nenhuma tecla faz nada. | O foco volta ao editor quando quem abriu o diálogo não existe mais. | `web/src/dom.js`, `web/src/main.js` | `test:ui` |
+| U13 | Contraste medido abaixo de 4,5:1: "2 ??" e "zero ??" na barra de status (3,5), "não citada" (3,5), letras de estado do Git (3,5), "??" do aviso (3,4), contadores (4,2 no claro; 2,5 a 3,0 no escuro), filtro desligado de Problemas (4,0), "1 vício" (4,0). | Textos coloridos passam a usar os tons de texto; contadores com fundo e cor próprios por tema; filtro desligado sem esmaecer. | `web/styles.css`, `web/src/main.js`, `web/src/bottom.js` | medição refeita: sobram só o "ugo" da marca e o ✻ decorativo |
+| U14 | Abas de PDF eram botões dentro de uma lista de abas, sem setas; fechar aba de PDF e o campo de página não tinham nome; F6 caía no botão "Novo arquivo" em vez da lista. | `role="tab"`, setas, Home/End e Delete nas abas de PDF; nomes acessíveis; F6 vai à lista ou ao campo de busca. | `web/src/main.js` | `test:ui`: nenhum controle visível sem nome |
+| U15 | Em inglês: rótulos dos seletores nativos ("Abrir", "Comparar"…), "Atalhos (⌘?)", um modelo e um comando em português (parte de I9). | Traduzidos. | `electron/main.js`, `web/src/i18n.js` | varredura do texto visível em inglês em 8 telas: nada em português |
+| U16 | Exemplo do campo de título ("Darker Evenings") não era neutro. | "Título do trabalho". | `web/src/welcome.js`, `web/src/i18n.js` | leitura |
+
+**Revalidação dos itens da primeira passada**, agora por teste automático (`npm run test:ui`, 36 checagens no Electron real): B1 (fechar e ⌘Q com *Cancelar*: a janela fica, o servidor responde e salvar funciona), B2 (recente com aba suja pergunta; *Cancelar* mantém), B3 (conflito com *Ver diferenças* e *Ficar com a do disco*; foco fora do botão destrutivo; commit salva antes), I14 (renomear pasta: a aba acompanha e salva no caminho novo; antes só conferido por leitura), D1 (F6, nomes acessíveis, foco devolvido) e D6 (erro fica até fechar). Não coberto por teste: B1 com *Salvar tudo e fechar* e *Descartar* (validados à mão na primeira passada), Sincronizar e Pull contra remoto.
+
+**Limitações desta passada.** VoiceOver não foi ligado (exige mudar ajustes do sistema): a leitura por leitor de tela foi inferida da árvore de acessibilidade do Chromium. O anel de foco não pôde ser fotografado porque a janela de teste roda sem o foco do sistema; a regra CSS foi conferida por leitura. Windows e Linux não foram vistos. Painéis que dependem de conta ou de dados externos (conversa com o Claude, parecer, Zotero, corretor) foram vistos só no estado vazio.
+
+**O que ainda pede trabalho de design** (não corrigido aqui):
+
+- Barra do PDF e barra de atividades só com ícones; a explicação vem da dica ao passar o mouse, que no teclado não aparece.
+- O botão "Ir ao trecho no código" da barra do PDF só mostra um aviso; deveria agir ou sair.
+- Paleta com cerca de 60 comandos numa lista só quando nada foi digitado; agrupar por área.
+- Preferências numa coluna longa (930 px de conteúdo em 600 visíveis); pedir abas ou busca.
+- Aba Revisão com 12 linhas sem recolher seções.
+- `Commit de tudo` inclui os PDFs e o `.bbl` gerados; decidir se o `.gitignore` criado pelo app deve cobri-los.
+- Os modelos de artigo trazem uma frase e duas referências sobre horário de verão; trocar por texto neutro (mexe nos testes dos modelos).
+- Fontes de 11 a 12 px em listas e rótulos (pendência de D1).
+- "Mostrar no Finder", "Abrir no Preview", "Lixo do macOS" e "Instale o MacTeX" em outros sistemas (I9, I17).
+
 ## Como ler
 
 Cada achado traz uma classificação, a gravidade, a evidência, o impacto para quem usa, a correção recomendada, o esforço e um critério de aceite.
@@ -29,7 +68,7 @@ Li por inteiro `electron/`, `server/index.js`, `util.js`, `platform.js`, `termin
 
 Rodei, sempre em pasta temporária e com perfil próprio:
 
-- `npm test`: 94 testes, todos passam, 57 s. Com `--experimental-test-coverage` para medir cobertura.
+- `npm test`: 94 testes na auditoria original (98 depois da segunda passada de UX), todos passam, cerca de 55 s. Com `--experimental-test-coverage` para medir cobertura.
 - O servidor local contra um projeto de teste: token, guarda de caminhos, escrita em link simbólico, `close()`.
 - O app Electron de verdade (`electron/main.js` importado por um roteiro) com uma aba suja: fechar a janela, sair com ⌘Q, trocar de projeto.
 - `git.js` contra um remoto local com dois clones.
@@ -584,7 +623,7 @@ Arquivos sem nenhum teste (0% das linhas carregadas):
 
 Testes a criar, na ordem de retorno:
 
-1. **Fumaça no Electron** (Apêndice A): abrir, compilar, sujar, fechar, sair, trocar de projeto. Pega B1, B2 e B4.
+1. **Fumaça no Electron** (Apêndice A): abrir, compilar, sujar, fechar, sair, trocar de projeto. Pega B1, B2 e B4. *Existe desde a segunda passada de UX: `test/ui/smoke.mjs`, `npm run test:ui`. Falta o caso de B4 e rodar na CI nos três sistemas.*
 2. **`test/api.test.js`**: sobe `createServer` com `TEXUGO_DATA_DIR` temporário. Token, anfitrião, 403 fora do projeto, conflito por `mtime`, link simbólico, modo do arquivo, cabeçalhos.
 3. **`test/git.test.js`**: remoto local e dois clones. Sincronizar limpo, com mudança fora do commit, com remoto inacessível, com conflito real.
 4. **`test/i18n.test.js`**: a varredura como teste.

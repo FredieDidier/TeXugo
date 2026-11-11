@@ -35,7 +35,10 @@ const ago = (ms) => {
   return new Date(ms).toLocaleDateString('pt-BR');
 };
 
-// One tool: a title, a line saying where it stands, and its actions.
+// One tool: a title, a line saying where it stands, and its actions. A
+// filled button means "something here waits for you" (open notes, new
+// commits, pending items); a tool not used yet gets a plain one, so the
+// panel does not open as a wall of calls to action.
 function row(ic, title, status, actions, { cls = '' } = {}) {
   return h(
     'div',
@@ -72,14 +75,14 @@ export async function renderRevisao(app, S, el) {
       'edit',
       'Anotações do PDF',
       an && an.items ? (an.items.length ? `${anOpen} de ${an.items.length} em aberto · ${an.label}` : `Nenhuma anotação em ${an.label}`) : 'Destaques e notas do Preview ou do Acrobat, seus ou de um coautor, ligados às linhas.',
-      [an && an.items && an.items.length ? btn('Ver', () => app.bottom.show('anotacoes'), true) : null, btn(an ? 'Ler outro PDF…' : 'Ler anotações…', () => annotationsDialog(app, S), !an)].filter(Boolean),
+      [an && an.items && an.items.length ? btn('Ver', () => app.bottom.show('anotacoes'), !!anOpen) : null, btn(an ? 'Ler outro PDF…' : 'Ler anotações…', () => annotationsDialog(app, S))].filter(Boolean),
       { cls: anOpen ? 'open' : '' },
     ),
     row(
       'columns',
       'Comparar com outra versão',
       diffPdf ? `Último PDF com mudanças: ${ago(diffPdf)}` : 'PDF com as mudanças marcadas: versão do coautor, ZIP do Overleaf ou commit.',
-      [btn('Comparar…', () => compareDialog(app, S), !diffPdf), diffPdf ? btn('Abrir o último', () => app.openPdf(`${docDir}.texugo/diff/${basename(stem)}-mudancas.pdf`, { activate: true })) : null].filter(Boolean),
+      [btn('Comparar…', () => compareDialog(app, S)), diffPdf ? btn('Abrir o último', () => app.openPdf(`${docDir}.texugo/diff/${basename(stem)}-mudancas.pdf`, { activate: true })) : null].filter(Boolean),
     ),
   ];
   {
@@ -99,7 +102,7 @@ export async function renderRevisao(app, S, el) {
               ? `Última: enviada a ${marks[0].to} em ${dm(marks[0].date)}`
               : `Última: enviada em ${dm(marks[0].date)}`
             : 'Marque a versão quando mandar o paper: o retorno é lido contra ela, mesmo que o texto já tenha mudado.',
-        [open ? btn('Ver sugestões', () => app.bottom.show('sugestoes'), true) : null, btn('Marcar o envio…', () => markDialog(app, S), !open && !marks.length), btn('Recebi o retorno…', () => feedbackDialog(app, S, { markId: marks[0] && marks[0].id }), !open && !!marks.length)].filter(Boolean),
+        [open ? btn('Ver sugestões', () => app.bottom.show('sugestoes'), true) : null, btn('Marcar o envio…', () => markDialog(app, S)), btn('Recebi o retorno…', () => feedbackDialog(app, S, { markId: marks[0] && marks[0].id }))].filter(Boolean),
         { cls: open ? 'open' : '' },
       ),
     );
@@ -117,7 +120,7 @@ export async function renderRevisao(app, S, el) {
           : cm.items.length
             ? 'Todos resolvidos.'
             : 'Selecione um trecho e comente (⌥⌘M): os coautores respondem e resolvem, e tudo vai junto no commit.',
-        [cm.items.length ? btn('Ver', () => app.bottom.show('comentarios'), !!open.length) : null, btn('Comentar trecho', () => cm.add(app.view, t), !cm.items.length)].filter(Boolean),
+        [cm.items.length ? btn('Ver', () => app.bottom.show('comentarios'), !!open.length) : null, btn('Comentar trecho', () => cm.add(app.view, t))].filter(Boolean),
         { cls: open.length ? 'open' : '' },
       ),
     );
@@ -148,7 +151,7 @@ export async function renderRevisao(app, S, el) {
             ? h('span', { class: 'rev-shares' }, sh.slice(0, 4).map((x) => h('span', { class: 'rev-share' }, h('i', { style: { background: authorColor(x.c) } }), `${x.name} ${x.pct}%`)))
             : 'Lendo a autoria…'
           : 'Iniciais na margem de quem mudou cada linha por último, pelo Git; clique para ver o commit.',
-        [btn(app.blame.on ? 'Esconder' : 'Mostrar na margem', () => app.blame.toggle(), !app.blame.on)],
+        [btn(app.blame.on ? 'Esconder' : 'Mostrar na margem', () => app.blame.toggle())],
       ),
     );
   }
@@ -170,14 +173,14 @@ export async function renderRevisao(app, S, el) {
       'review',
       'Parecer do Claude',
       reviewStatus,
-      [rv && (rv.report || rv.status === 'running') ? btn('Ver', () => app.bottom.show('parecer'), true) : null, rv && rv.status === 'running' ? null : btn(rv && rv.report ? 'Novo parecer…' : 'Revisar como parecerista…', () => reviewDialog(app, S), !(rv && rv.report))].filter(Boolean),
+      [rv && (rv.report || rv.status === 'running') ? btn('Ver', () => app.bottom.show('parecer'), !!reviewOpen || rv.status === 'running') : null, rv && rv.status === 'running' ? null : btn(rv && rv.report ? 'Novo parecer…' : 'Revisar como parecerista…', () => reviewDialog(app, S))].filter(Boolean),
       { cls: reviewOpen ? 'open' : '' },
     ),
     row(
       'letter',
       'Resposta aos pareceristas',
       response ? `response.tex ${ago(response)}` : 'Cole os pareceres: o Claude escreve o response.tex, cada comentário ligado ao que mudou.',
-      [response ? btn('Abrir response.tex', () => app.openFile(`${docDir}response.tex`), true) : null, btn(response ? 'Nova resposta…' : 'Escrever a resposta…', () => responseDialog(app, S), !response)].filter(Boolean),
+      [response ? btn('Abrir response.tex', () => app.openFile(`${docDir}response.tex`)) : null, btn(response ? 'Nova resposta…' : 'Escrever a resposta…', () => responseDialog(app, S))].filter(Boolean),
     ),
   ];
 

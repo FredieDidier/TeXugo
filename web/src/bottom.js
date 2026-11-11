@@ -132,10 +132,10 @@ export class BottomPanel {
           ? h(
               'div',
               { class: 'meta' },
-              r.pages ? h('span', { class: 'chip' }, `${r.pages} páginas`) : null,
+              r.pages ? h('span', { class: 'chip' }, `${r.pages} página${r.pages > 1 ? 's' : ''}`) : null,
               h('span', { class: 'chip' }, r.engine),
               r.externals.length ? h('span', { class: 'chip', title: r.externals.join('\n') }, 'importa ' + r.externals.map(basename).join(', ')) : null,
-              r.warnings.length ? h('span', { class: 'chip warn', style: { cursor: 'pointer' }, onclick: () => this.show('problems') }, `${r.warnings.length} avisos`) : null,
+              r.warnings.length ? h('span', { class: 'chip warn', style: { cursor: 'pointer' }, onclick: () => this.show('problems') }, `${r.warnings.length} aviso${r.warnings.length > 1 ? 's' : ''}`) : null,
               h('button', { class: 'btn sm ghost', onclick: () => ((this.logDoc = doc), this.show('log')) }, 'ver log'),
               r.pdf ? h('button', { class: 'btn sm ghost', onclick: () => this.app.openPdf(r.pdf, { doc, activate: true }) }, icon('pdf'), 'PDF') : null,
             )
@@ -184,7 +184,7 @@ export class BottomPanel {
     const chip = (k, label, cls) =>
       h(
         'button',
-        { class: 'btn sm' + (this.filter[k] ? '' : ' ghost'), style: { opacity: this.filter[k] ? 1 : 0.6 }, onclick: () => ((this.filter[k] = !this.filter[k]), this.renderProblems(true)) },
+        { class: 'btn sm' + (this.filter[k] ? '' : ' ghost'), 'aria-pressed': this.filter[k] ? 'true' : 'false', title: this.filter[k] ? 'Clique para esconder' : 'Clique para mostrar', onclick: () => ((this.filter[k] = !this.filter[k]), this.renderProblems(true)) },
         h('span', { class: 'status-dot ' + cls }),
         `${label} ${counts[k]}`,
       );
@@ -204,7 +204,7 @@ export class BottomPanel {
             'div',
             { class: 'qq-banner' },
             h('span', { class: 'qq' }, '??'),
-            h('div', {}, h('b', {}, `${counts.undefined} referência${counts.undefined > 1 ? 's' : ''} ou citação${counts.undefined > 1 ? 'ões' : ''} sem destino.`), ' No PDF elas aparecem como ??. Abaixo, cada uma diz o motivo provável.'),
+            h('div', {}, h('b', {}, `${counts.undefined} referência${counts.undefined > 1 ? 's' : ''} ou citaç${counts.undefined > 1 ? 'ões' : 'ão'} sem destino.`), ' No PDF elas aparecem como ??. Abaixo, cada uma diz o motivo provável.'),
           )
         : anyResult && !counts.error
           ? h('div', { class: 'pad', style: { color: 'var(--ok)', fontWeight: 600 } }, icon('checkCircle'), ' Zero ?? e nenhum erro na última compilação.')

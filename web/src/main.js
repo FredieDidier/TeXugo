@@ -1,6 +1,6 @@
 // TeXugo UI entry point: layout, tabs, compile flow, PDF panes, problems.
 import { call, connect, on, fileUrl, native } from './api.js';
-import { h, clear, icon, wordmark, fileIcon, fileKind, basename, relPath, debounce, toast, menu, modal, prompt, confirmBox, gutter, isUnder, relParts, dirname, REVEAL } from './dom.js';
+import { h, clear, icon, wordmark, fileIcon, fileKind, basename, relPath, debounce, toast, menu, modal, prompt, confirmBox, gutter, isUnder, relParts, dirname, REVEAL, setFocusHome } from './dom.js';
 import { wordDiff } from './diff.js';
 import { createState, createView, jumpTo, showDiagnostics, symbols, EditorView, wrapCompartment } from './editor.js';
 import { PdfTab } from './pdfview.js';
@@ -139,6 +139,7 @@ function buildLayout() {
   app.blame = setupBlame(app, S);
   app.comments = setupComments(app, S);
   setupIde(app, S);
+  setFocusHome(() => (activeTab() && !activeTab().binary && !document.querySelector('.welcome') ? app.view.focus() : null));
   applyLayoutSizes();
 }
 
@@ -174,7 +175,7 @@ function renderTopbar() {
     h('div', { class: 'brand', title: 'Tela inicial: modelos, abrir pasta e recentes', onclick: () => showWelcome(app, S) }, h('img', { src: './logo.svg', alt: '' }), wordmark()),
     p ? h('span', { class: 'project-name' }, '·  ' + p.name) : null,
     h('div', { class: 'spacer' }),
-    p ? h('div', { class: 'quick', onclick: () => openPalette(app, S, 'files') }, icon('search'), h('span', {}, 'Buscar arquivo ou comando'), h('kbd', {}, '⌘K')) : null,
+    p ? h('div', { class: 'quick', onclick: () => openPalette(app, S, 'files') }, icon('search'), h('span', {}, 'Buscar arquivo ou comando'), h('kbd', {}, '⌘P')) : null,
     h('div', { class: 'spacer' }),
     anyBuilding ? h('div', { class: 'build-indicator' }, h('span', { class: 'status-dot building' }), 'Compilando ', h('b', {}, basename(currentBuildDoc() || '')), S.queued ? ' · +fila' : '') : null,
     p
@@ -942,6 +943,7 @@ app.compileAll = compileAll;
 app.compileDocs = compileDocs;
 
 let wantPdf = null; // the PDF to bring to front when its build ends
+let buildToast = null; // the "build failed" notice of the last build
 
 // Several windows share one server: ignore builds of other projects.
 const mine = (e) => {
@@ -961,6 +963,8 @@ function wireBuildEvents() {
     if (!mine(e)) return;
     S.building = { id: e.id, order: e.order, requested: e.requested };
     S.queued = false;
+    // The verdict of the build before this one is stale now.
+    if (buildToast) (buildToast.remove(), (buildToast = null));
     // What is compiled now becomes the reference for the change marks.
     for (const t of S.tabs) {
       if (t.binary || t.dirty || !(e.order.includes(t.root) || e.order.includes(t.path))) continue;
@@ -1032,7 +1036,7 @@ function wireBuildEvents() {
     if (e.cancelled) toast('Compilação interrompida.', 'warn');
     else if (bad.length) {
       app.bottom.show('problems', { auto: true });
-      toast(`${bad.map((d) => d.name).join(', ')}: erro na compilação.`, 'error');
+      buildToast = toast(`${bad.map((d) => d.name).join(', ')}: erro na compilação.`, 'error', 5000, { sticky: false });
     } else if (qq) {
       app.bottom.show('problems', { auto: true });
       toast(`Compilou, mas ainda há ${qq} ?? no PDF. Veja Problemas.`, 'warn', 6000);
@@ -1156,14 +1160,33 @@ function renderPdfTabs() {
     S.pdfTabs.map((p) =>
       h(
         'div',
-        { class: 'tab' + (p.path === S.activePdf ? ' active' : ''), title: relPath(S.project.root, p.path), onclick: () => activatePdf(p.path) },
+        { class: 'tab' + (p.path === S.activePdf ? ' active' : ''), role: 'tab', 'aria-selected': p.path === S.activePdf ? 'true' : 'false', tabindex: p.path === S.activePdf ? '0' : '-1', title: relPath(S.project.root, p.path), onclick: () => activatePdf(p.path), onkeydown: (e) => pdfTabKey(e, p) },
         h('span', { class: 'status-dot ' + (p.doc ? docStatus(p.doc) || '' : '') }),
         icon('pdf'),
         h('span', { class: 'label' }, basename(p.path)),
-        h('span', { class: 'close', onclick: (e) => (e.stopPropagation(), closePdf(p.path)) }, icon('x')),
+        h('span', { class: 'close', 'aria-label': 'Fechar', onclick: (e) => (e.stopPropagation(), closePdf(p.path)) }, icon('x')),
       ),
     ),
   );
+}
+
+// On a focused PDF tab: arrows walk the tabs, Delete closes.
+function pdfTabKey(e, p) {
+  if (e.target !== e.currentTarget || e.metaKey || e.ctrlKey || e.altKey) return;
+  const i = S.pdfTabs.indexOf(p);
+  const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: S.pdfTabs.length - 1 }[e.key];
+  if (to !== undefined) {
+    e.preventDefault();
+    activatePdf(S.pdfTabs[Math.max(0, Math.min(S.pdfTabs.length - 1, to))].path);
+    app.pdfTabsEl.querySelector('.tab.active')?.focus();
+  } else if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    activatePdf(p.path);
+  } else if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault();
+    closePdf(p.path);
+    app.pdfTabsEl.querySelector('.tab.active')?.focus();
+  }
 }
 
 function renderPdfStack() {
@@ -1195,6 +1218,7 @@ function renderPdfTools() {
   }
   const v = p.viewer;
   const pageInput = h('input', {
+    'aria-label': 'Página',
     value: v.page,
     onkeydown: (e) => {
       if (e.key === 'Enter') v.page = Number(e.target.value) || 1;
@@ -1202,22 +1226,22 @@ function renderPdfTools() {
   });
   clear(
     app.pdfTools,
-    h('button', { class: 'icon-btn', title: 'Página anterior', onclick: () => (v.page = v.page - 1) }, icon('chevUp')),
-    h('button', { class: 'icon-btn', title: 'Próxima página', onclick: () => (v.page = v.page + 1) }, icon('chevDown')),
+    h('button', { class: 'icon-btn', title: 'Página anterior', 'data-k': 'prev', onclick: () => (v.page = v.page - 1) }, icon('chevUp')),
+    h('button', { class: 'icon-btn', title: 'Próxima página', 'data-k': 'next', onclick: () => (v.page = v.page + 1) }, icon('chevDown')),
     h('span', { class: 'pageinfo' }, pageInput, `/ ${v.pages || '–'}`),
     h('span', { class: 'sep' }),
     h('button', { class: 'icon-btn', title: 'Diminuir', onclick: () => v.zoom(1 / 1.15) }, icon('zoomOut')),
     h('span', { class: 'zoom' }, Math.round((v.viewer.currentScale || 1) * 100) + '%'),
     h('button', { class: 'icon-btn', title: 'Aumentar', onclick: () => v.zoom(1.15) }, icon('zoomIn')),
     h('button', { class: 'icon-btn' + (v.scale === 'page-width' ? ' on' : ''), title: 'Largura da página', onclick: () => v.setScale('page-width') }, icon('fitWidth')),
-    h('button', { class: 'icon-btn' + (v.scale === 'page-fit' ? ' on' : ''), title: 'Página inteira', onclick: () => v.setScale('page-fit') }, icon('fitPage')),
+    h('button', { class: 'icon-btn' + (v.scale === 'page-fit' ? ' on' : ''), title: 'Página inteira', 'data-k': 'fit-page', onclick: () => v.setScale('page-fit') }, icon('fitPage')),
     h('span', { style: { flex: 1 } }),
     isSlides(p) ? h('button', { class: 'btn sm', title: 'Tela cheia, um slide por vez (setas, espaço, clique; Esc sai)', onclick: () => v.present() }, icon('slides'), 'Apresentar') : null,
-    h('button', { class: 'icon-btn' + (S.settings.followCursor ? ' on' : ''), title: 'O PDF acompanha o cursor do editor', onclick: () => ((S.settings.followCursor = !S.settings.followCursor), saveSettingsSoon(), renderPdfTools()) }, icon('target')),
-    h('button', { class: 'icon-btn' + (S.settings.invertPdf ? ' on' : ''), title: 'PDF escuro (só na tela)', onclick: toggleInvert }, icon('invert')),
-    p.doc ? h('button', { class: 'icon-btn', title: 'Ir ao trecho no código (ou dê 2 cliques no PDF)', onclick: () => toast('Dê dois cliques num trecho do PDF para ir à linha do código.', 'info') }, icon('sync')) : null,
-    h('button', { class: 'icon-btn', title: 'Abrir este PDF numa janela separada (outro monitor)', onclick: () => detachPdf(p) }, icon('columns')),
-    h('button', { class: 'icon-btn', title: 'Abrir no Preview', onclick: () => call('openExternal', { path: p.path }) }, icon('external')),
+    h('button', { class: 'icon-btn' + (S.settings.followCursor ? ' on' : ''), title: 'O PDF acompanha o cursor do editor', 'data-k': 'follow', onclick: () => ((S.settings.followCursor = !S.settings.followCursor), saveSettingsSoon(), renderPdfTools()) }, icon('target')),
+    h('button', { class: 'icon-btn' + (S.settings.invertPdf ? ' on' : ''), title: 'PDF escuro (só na tela)', 'data-k': 'invert', onclick: toggleInvert }, icon('invert')),
+    p.doc ? h('button', { class: 'icon-btn', title: 'Ir ao trecho no código (ou dê 2 cliques no PDF)', 'data-k': 'hint', onclick: () => toast('Dê dois cliques num trecho do PDF para ir à linha do código.', 'info') }, icon('sync')) : null,
+    h('button', { class: 'icon-btn', title: 'Abrir este PDF numa janela separada (outro monitor)', 'data-k': 'detach', onclick: () => detachPdf(p) }, icon('columns')),
+    h('button', { class: 'icon-btn', title: 'Abrir no Preview', 'data-k': 'external', onclick: () => call('openExternal', { path: p.path }) }, icon('external')),
   );
 }
 
@@ -1397,21 +1421,21 @@ function renderStatus() {
       ? h('span', { class: 'item click ide-on', onclick: () => (app.bottom.show('terminal'), app.terminals.focus()), title: 'O Claude Code está ligado ao TeXugo: vê a seleção e os erros de compilação.' }, '✻ Claude ligado')
       : null,
     S.project && S.git && S.git.repo
-      ? h('span', { class: 'item click', onclick: () => app.sidebar.show('git'), title: 'Git' }, icon('git'), S.git.branch || '—', S.git.files.length ? ` · ${S.git.files.length} alterações` : '', S.git.ahead ? ` ↑${S.git.ahead}` : '', S.git.behind ? ` ↓${S.git.behind}` : '')
+      ? h('span', { class: 'item click', onclick: () => app.sidebar.show('git'), title: 'Git' }, icon('git'), S.git.branch || '—', S.git.files.length ? ` · ${S.git.files.length} alteraç${S.git.files.length > 1 ? 'ões' : 'ão'}` : '', S.git.ahead ? ` ↑${S.git.ahead}` : '', S.git.behind ? ` ↓${S.git.behind}` : '')
       : null,
     anyResult
       ? h(
           'span',
           { class: 'item click', onclick: () => app.bottom.show('problems'), title: 'Problemas da última compilação' },
           icon('error'), String(errs), icon('warn'), String(warns),
-          h('span', { class: 'zero-qq', style: { color: qq ? 'var(--warn)' : 'var(--ok)' } }, qq ? `${qq} ??` : 'zero ??'),
+          h('span', { class: 'zero-qq', style: { color: qq ? 'var(--warn-text)' : 'var(--ok-text)' } }, qq ? `${qq} ??` : 'zero ??'),
         )
       : null,
     S.building ? h('span', { class: 'item' }, h('span', { class: 'status-dot building' }), 'compilando') : null,
     h('span', { class: 'grow' }),
     t && !t.binary && viciosConfig.enabled && /\.(tex|ltx|md|markdown|qmd|rmd|txt)$/i.test(t.path) ? viciosItem() : null,
     t && !t.binary && /\.(tex|ltx|md|markdown|qmd|rmd|txt)$/i.test(t.path) ? grammarItem(app, S) : null,
-    t && !t.binary ? h('span', { class: 'item' }, `${S.cursor.words.toLocaleString(getLang() === 'en' ? 'en-US' : 'pt-BR')} palavras`) : null,
+    t && !t.binary ? h('span', { class: 'item' }, `${S.cursor.words.toLocaleString(getLang() === 'en' ? 'en-US' : 'pt-BR')} palavra${S.cursor.words === 1 ? '' : 's'}`) : null,
     t && !t.binary ? h('span', { class: 'item click', title: 'Ir para a linha… (⌃G)', onclick: () => openPalette(app, S, 'line') }, `Ln ${S.cursor.line}, Col ${S.cursor.col}`) : null,
     t ? h('span', { class: 'item' }, t.path.endsWith('.bib') ? 'BibTeX' : t.path.endsWith('.tex') ? 'LaTeX' : /\.md$/.test(t.path) ? 'Markdown' : 'Texto') : null,
     h('span', { class: 'item click', onclick: () => toggleBottom(), title: 'Mostrar ou esconder o painel inferior (⌘⇧Y)', 'aria-label': 'Painel inferior' }, icon('panel')),
@@ -1727,7 +1751,7 @@ function reloadPdfSoon(p) {
 // ---------------------------------------------------------------- keys
 function cycleRegion(step) {
   const regions = [
-    [app.sidebarEl, () => (app.sidebarEl.querySelector('.sidebar-body, input, textarea, button') || app.sidebarEl).focus()],
+    [app.sidebarEl, () => (app.sidebarEl.querySelector('input:not([type=checkbox]), textarea') || app.sidebarEl.querySelector('.sidebar-body') || app.sidebarEl.querySelector('button') || app.sidebarEl).focus()],
     [app.editorGroup, () => (activeTab() && !activeTab().binary ? app.view.focus() : app.tabsEl.querySelector('.tab.active')?.focus())],
     [app.pdfGroup, () => app.pdfTools.querySelector('button, input')?.focus()],
     [app.bottomEl, () => app.bottomEl.querySelector('.bottom-tab.active, button')?.focus()],
@@ -1875,6 +1899,14 @@ async function boot() {
   // Nothing to show before the first build: start with the bottom panel
   // closed; it opens when a build starts.
   S.settings.bottomOpen = false;
+  // First run (nothing chosen, nothing opened yet): follow the system's
+  // language instead of assuming Portuguese. Preferences and the start
+  // screen change it; an existing profile keeps what it had.
+  if (!S.settings.lang && !(S.hello.recents || []).length && S.hello.firstRun) {
+    S.settings.lang = /^pt\b/i.test(navigator.language || 'pt') ? 'pt' : 'en';
+    call('saveSettings', { settings: { lang: S.settings.lang } }).catch(() => {});
+    if (native && native.setLang) native.setLang(S.settings.lang);
+  }
   setLang(S.settings.lang);
   applyTheme(S.settings.theme);
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {

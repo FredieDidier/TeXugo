@@ -894,3 +894,71 @@ button.chip:hover { filter: brightness(0.96); }
   .status-dot.building, .live-toggle.live-running .live-dot, .activitybar .badge.live { animation: none !important; opacity: 1; }
   .sync-mark { animation: fadeout 2.4s forwards !important; }
 }
+
+/* ---------------------------------------------------------------------
+   Second interface pass: nothing is cut off at any window size. */
+
+/* Document bar. The compile button and the verdict of the last build
+   (error, ??) are the last to go; the file name, the engine and the
+   switches yield first. */
+.doc-bar .crumbs { min-width: 0; }
+@container (max-width: 700px) { .doc-bar:has(.root-pick) .crumbs { flex: 0 1 0; } .doc-bar:has(.root-pick) .root-pick { margin-right: auto; } }
+.doc-bar > .chip.error, .doc-bar > .chip.undefined { order: 0; }
+/* "Documento" is a bare text node: it is hidden through the font size. */
+@container (max-width: 760px) { .doc-bar > .chip:not(.ok):not(.error):not(.undefined) { display: none; } .doc-bar .root-pick { font-size: 0; gap: 0; } .doc-bar .root-pick select { font-size: 12px; } }
+@container (max-width: 600px) { .doc-bar > .toggle { font-size: 0; gap: 0; } .doc-bar > .toggle .live-dot { margin-left: 4px; } }
+@container (max-width: 520px) { .doc-bar > .toggle { display: none; } .doc-bar .root-pick select { max-width: 96px; } }
+@container (max-width: 430px) { .doc-bar > .chip.ok { display: none; } .doc-bar > .chip.error, .doc-bar > .chip.undefined { display: inline-flex; } .doc-bar .crumbs { display: none; } }
+@container (max-width: 360px) { .doc-bar .root-pick { display: none; } }
+
+/* PDF toolbar: the page number and the zoom stay; the rest leaves in
+   order of use as the pane narrows. */
+.pdf-tools { container-type: inline-size; }
+.pdf-tools .pageinfo { white-space: nowrap; flex: none; }
+.pdf-tools > * { flex: none; }
+.pdf-tools > span[style] { flex: 1 1 0; min-width: 0; }
+@container (max-width: 470px) { .pdf-tools .zoom, .pdf-tools .sep, .pdf-tools [data-k='fit-page'] { display: none; } }
+@container (max-width: 400px) { .pdf-tools [data-k='invert'], .pdf-tools [data-k='hint'], .pdf-tools [data-k='external'] { display: none; } }
+@container (max-width: 300px) { .pdf-tools [data-k='follow'], .pdf-tools [data-k='detach'], .pdf-tools [data-k='next'], .pdf-tools [data-k='prev'] { display: none; } }
+
+/* Git history: the hash is as wide as it is. */
+.list-row .k.hash { width: auto; font-size: 11px; }
+.list-row.other .t { color: var(--muted); }
+
+/* Welcome: links under "Abrir", the language by its own name. */
+.welcome-links { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; margin-bottom: 14px; }
+.lang-switch { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); margin-left: 4px; }
+.lang-switch .btn.on { background: var(--sunken); font-weight: 600; }
+.welcome .tools-missing { margin: 0 0 22px; }
+
+/* Empty editor: keys beside what they do. */
+.empty-editor .keys { justify-content: center; }
+
+/* Settings: labels of a row sit on one line. */
+.modal .field { justify-content: flex-end; }
+
+/* Contrast measured in the running app: coloured text uses the text
+   tokens (4.5:1 on its surface); the plain tones stay for marks and fills. */
+.refs-uses.none { color: var(--warn-text); }
+.git-file .st.M { color: var(--warn-text); } .git-file .st.A, .git-file .st.U { color: var(--ok-text); } .git-file .st.D { color: var(--err-text); }
+.qq-banner .qq { color: var(--warn-text); }
+.news .add, .sug-diff .add, .chip.sug-aplica { color: var(--ok-text); }
+.news .del, .sug-diff .del, .chip.sug-sumiu, .menu .mi.danger, .agent-error, .agent-tool.failed, .refs-note.err, .cite-tip-missing, .math-tip.error { color: var(--err-text); }
+.chip.sug-conflito, .ann-changed { color: var(--warn-text); }
+.review-pt .kind.err { color: var(--err-text); } .review-pt .kind.warn { color: var(--accent-text); }
+.tl-doc .step.now, .news-fname:hover, .news-commit:hover .t, .sug-where:hover, .cm-where .click:hover, .lib-title:hover { color: var(--accent-text) !important; }
+.activitybar .badge { background: var(--err-text); }
+.activitybar .badge.warn { background: var(--warn-text); }
+.activitybar .badge.live { background: #d97757; }
+.bottom-tab .count.err { background: var(--err-text); } .bottom-tab .count.warn { background: var(--warn-text); }
+.activitybar .badge, .bottom-tab .count.err, .bottom-tab .count.warn { color: var(--badge-on, #fff); }
+:root[data-theme='dark'] { --badge-on: #1e2127; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --badge-on: #1e2127; } }
+
+/* Toasts keep clear of the bottom panel's own controls. */
+.toasts { pointer-events: none; }
+.toast { pointer-events: auto; }
+:root { --vicio-text: #6f42b3; }
+:root[data-theme='dark'] { --vicio-text: var(--vicio); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme='light']) { --vicio-text: var(--vicio); } }
+.statusbar .vicio-count, .vicio-tip-title { color: var(--vicio-text); }

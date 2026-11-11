@@ -6,6 +6,7 @@ import { h, clear, icon, fileIcon, relPath, basename, REVEAL } from './dom.js';
 import { openSettings } from './settings.js';
 import { newProjectDialog, showWelcome, cloneDialog } from './welcome.js';
 import { markDialog, feedbackDialog } from './sent.js';
+import { fuzzyScore, bestScore } from './fuzzy.js';
 
 function commands(app, S) {
   const t = app.activeTab();
@@ -91,7 +92,7 @@ export async function openPalette(app, S, mode = 'commands') {
   const opener = document.activeElement;
   let files = [];
   const input = h('input', {
-    placeholder: 'Arquivo…   > comando   : linha',
+    placeholder: 'Arquivo ou comando…   > só comandos   : linha',
     value: mode === 'commands' ? '> ' : mode === 'line' ? ':' : '',
     role: 'combobox',
     'aria-expanded': 'true',
@@ -121,22 +122,6 @@ export async function openPalette(app, S, mode = 'commands') {
   input.focus();
   input.setSelectionRange(input.value.length, input.value.length);
 
-  const score = (text, q) => {
-    // Subsequence match with a bonus for contiguous runs and word starts.
-    text = text.toLowerCase();
-    let ti = 0;
-    let s = 0;
-    let run = 0;
-    for (const ch of q) {
-      const i = text.indexOf(ch, ti);
-      if (i < 0) return -1;
-      run = i === ti ? run + 1 : 0;
-      s += 1 + run * 2 + (i === 0 || /[\/._ -]/.test(text[i - 1]) ? 3 : 0);
-      ti = i + 1;
-    }
-    return s - text.length * 0.01;
-  };
-
   const hint = (keys, what) => h('span', {}, h('kbd', {}, keys), what);
   const update = () => {
     const v = input.value;
@@ -144,7 +129,6 @@ export async function openPalette(app, S, mode = 'commands') {
     const isLine = v.startsWith(':');
     const q = (isCmd || isLine ? v.slice(1) : v).trim().toLowerCase();
     let empty = 'Nada encontrado.';
-    let recentCount = 0;
     if (isLine) {
       const t = app.activeTab();
       const total = t && !t.binary ? app.view.state.doc.lines : 0;
@@ -157,28 +141,37 @@ export async function openPalette(app, S, mode = 'commands') {
         const line = Math.min(n, total);
         items = [{ t: `Ir para a linha ${line}`, d: n > total ? `${t.name} tem ${total} linhas` : t.name, i: 'target', run: () => app.openFile(t.path, { line }) }];
       }
-    } else if (isCmd) {
-      const all = commands(app, S).map((c) => ({ ...c, cmd: true }));
-      if (!q) {
-        const rec = recentCommands().map((t) => all.find((c) => c.t === t)).filter(Boolean);
-        recentCount = rec.length;
-        items = [...rec, ...all.filter((c) => !rec.includes(c))];
-      } else
-        items = all
-          .map((c) => ({ ...c, s: Math.max(score(c.t + ' ' + (c.d || '') + ' ' + (c.kw || ''), q), score(tr(c.t) + ' ' + (c.d || '') + ' ' + (c.kw || ''), q)) }))
+    } else {
+      // One search for both: what was asked for first (commands after ">",
+      // files otherwise), then the matches of the other kind.
+      const open = new Set(S.tabs.map((t) => t.path));
+      const fileItems = () =>
+        files
+          .map((f) => {
+            const rel = relPath(S.project.root, f);
+            const base = q ? fuzzyScore(rel, q) : 0;
+            return { t: basename(rel), d: rel, path: f, s: base < 0 ? -1 : base + (open.has(f) ? 2 : 0), run: () => app.openFile(f) };
+          })
           .filter((c) => c.s >= 0)
           .sort((a, b) => b.s - a.s);
-    } else {
-      const open = new Set(S.tabs.map((t) => t.path));
-      items = files
-        .map((f) => {
-          const rel = relPath(S.project.root, f);
-          return { t: basename(rel), d: rel, path: f, s: q ? score(rel, q) + (open.has(f) ? 2 : 0) : open.has(f) ? 1 : 0, run: () => app.openFile(f) };
-        })
-        .filter((c) => c.s >= 0)
-        .sort((a, b) => b.s - a.s)
-        .slice(0, 60);
-      if (!files.length) empty = 'Lendo os arquivos do projeto…';
+      const all = commands(app, S).map((c) => ({ ...c, cmd: true }));
+      const cmdItems = () =>
+        all
+          .map((c) => ({ ...c, s: bestScore([c.t + ' ' + (c.d || ''), tr(c.t), c.kw], q) }))
+          .filter((c) => c.s >= 0)
+          .sort((a, b) => b.s - a.s);
+      if (isCmd && !q) {
+        const rec = recentCommands().map((t) => all.find((c) => c.t === t)).filter(Boolean);
+        items = [...rec.map((c) => ({ ...c, g: 'Usados por último' })), ...all.filter((c) => !rec.includes(c)).map((c) => ({ ...c, g: rec.length ? 'Todos os comandos' : null }))];
+      } else if (isCmd) {
+        const fs = fileItems().slice(0, 8);
+        items = [...cmdItems().map((c) => ({ ...c, g: fs.length ? 'Comandos' : null })), ...fs.map((c) => ({ ...c, g: 'Arquivos' }))];
+      } else {
+        const fs = fileItems().slice(0, 60);
+        const cs = q.length >= 2 ? cmdItems().slice(0, 6) : [];
+        items = [...fs.map((c) => ({ ...c, g: cs.length ? 'Arquivos' : null })), ...cs.map((c) => ({ ...c, g: 'Comandos' }))];
+        if (!files.length && !items.length) empty = 'Lendo os arquivos do projeto…';
+      }
     }
     sel = Math.min(sel, Math.max(0, items.length - 1));
     const row = (it, i) =>
@@ -193,12 +186,12 @@ export async function openPalette(app, S, mode = 'commands') {
     clear(
       list,
       items.length
-        ? [recentCount ? h('div', { class: 'group', role: 'presentation' }, 'Usados por último') : null, items.slice(0, recentCount).map(row), recentCount ? h('div', { class: 'group', role: 'presentation' }, 'Todos os comandos') : null, items.slice(recentCount).map((it, i) => row(it, i + recentCount))]
+        ? items.map((it, i) => [it.g && (i === 0 || items[i - 1].g !== it.g) ? h('div', { class: 'group', role: 'presentation' }, it.g) : null, row(it, i)])
         : h('div', { class: 'pad muted', role: 'status' }, empty),
     );
     if (items.length) input.setAttribute('aria-activedescendant', 'palette-opt-' + sel);
     else input.removeAttribute('aria-activedescendant');
-    clear(hints, hint('↑↓', 'escolher'), hint('↵', isLine ? 'ir' : isCmd ? 'executar' : 'abrir'), isCmd || isLine ? null : hint('>', 'comandos'), isLine ? null : hint(':', 'ir para a linha'), hint('esc', 'fechar'));
+    clear(hints, hint('↑↓', 'escolher'), hint('↵', isLine ? 'ir' : isCmd ? 'executar' : 'abrir'), isCmd || isLine ? null : hint('>', 'só comandos'), isLine ? null : hint(':', 'ir para a linha'), hint('esc', 'fechar'));
     list.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
   };
   input.addEventListener('input', () => ((sel = 0), update()));
