@@ -105,7 +105,9 @@ npm test
 | ⌥⌘B | Biblioteca de papers (ler e buscar no texto) |
 | ⌥⇧F | Formata o documento (latexindent) |
 | ⌘P | Abre um arquivo |
-| ⌘K | Paleta de comandos |
+| ⌘K | Paleta de comandos (os usados por último vêm primeiro) |
+| ⌃G | Vai para a linha (ou `:42` na paleta) |
+| F6 | Anda entre arquivos, editor, PDF e painel inferior |
 | ⌘⇧F | Busca no projeto |
 | ⌘\\ | Mostra ou esconde a barra lateral |
 | ⌘⌥\\ | Divide o editor ou fecha a divisão |

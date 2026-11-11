@@ -11,6 +11,7 @@ contextBridge.exposeInMainWorld('texugo', {
   pickPdfs: () => ipcRenderer.invoke('pick-pdfs'),
   newWindow: () => ipcRenderer.invoke('new-window'),
   focus: () => ipcRenderer.invoke('focus-self'),
+  closeSaved: () => ipcRenderer.invoke('close-saved'),
   setLang: (l) => ipcRenderer.invoke('set-lang', l),
   onMenu: (fn) => ipcRenderer.on('menu', (_e, action) => fn(action)),
 });

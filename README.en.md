@@ -107,7 +107,9 @@ npm test
 | ⌥⌘B | Paper library (read and search the text) |
 | ⌥⇧F | Format the document (latexindent) |
 | ⌘P | Open a file |
-| ⌘K | Command palette |
+| ⌘K | Command palette (recently used first) |
+| ⌃G | Go to line (or `:42` in the palette) |
+| F6 | Moves between files, editor, PDF and bottom panel |
 | ⌘⇧F | Search the project |
 | ⌘\\ | Show or hide the sidebar |
 | ⌘⌥\\ | Split the editor or close the split |

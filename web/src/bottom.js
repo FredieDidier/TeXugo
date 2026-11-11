@@ -15,8 +15,8 @@ export class BottomPanel {
     this.logDoc = null;
     this.noteText = null;
     this.filter = { error: true, undefined: true, warning: true, badbox: false, lint: false };
-    this.tabsEl = h('div', { class: 'bottom-tabs' });
-    this.body = h('div', { class: 'bottom-body' });
+    this.tabsEl = h('div', { class: 'bottom-tabs', role: 'tablist', 'aria-label': 'Painel inferior' });
+    this.body = h('div', { class: 'bottom-body', tabindex: '0' });
     app.bottomEl.append(this.tabsEl, this.body);
     this.render();
   }
@@ -41,7 +41,7 @@ export class BottomPanel {
     const qq = probs.filter((p) => p.severity === 'undefined').length;
     const warns = probs.filter((p) => p.severity === 'warning').length;
     const tab = (id, label, count, cls) =>
-      h('button', { class: 'bottom-tab' + (this.view === id ? ' active' : ''), onclick: () => ((this.view = id), this.render()) }, label, count ? h('span', { class: 'count ' + (cls || '') }, String(count)) : null);
+      h('button', { class: 'bottom-tab' + (this.view === id ? ' active' : ''), role: 'tab', 'aria-selected': this.view === id ? 'true' : 'false', onclick: () => ((this.view = id), this.render()) }, label, count ? h('span', { class: 'count ' + (cls || '') }, String(count)) : null);
     clear(
       this.tabsEl,
       tab('build', 'Compilação'),

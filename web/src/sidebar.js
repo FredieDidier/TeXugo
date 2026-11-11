@@ -1,6 +1,6 @@
 // Sidebar views: files, outline, project search, git.
 import { call } from './api.js';
-import { h, clear, icon, fileIcon, fileKind, basename, relPath, debounce, toast, menu, prompt, confirmBox, modal, dirname, joinPath } from './dom.js';
+import { h, clear, icon, fileIcon, fileKind, basename, relPath, debounce, toast, menu, prompt, confirmBox, modal, dirname, joinPath, isUnder, REVEAL } from './dom.js';
 import { renderRefs } from './references.js';
 import { renderRevisao } from './revisao.js';
 
@@ -162,7 +162,7 @@ export class Sidebar {
               menu(e.clientX, e.clientY + 10, [
                 { label: S.settings.showArtifacts ? 'Esconder auxiliares (.aux, .log…)' : 'Mostrar auxiliares (.aux, .log…)', icon: 'eye', action: () => ((S.settings.showArtifacts = !S.settings.showArtifacts), this.app.saveSettingsSoon(), this.loadTree()) },
                 { label: 'Recolher pastas', icon: 'chevUp', action: () => ((this.expanded = new Set()), this.renderFiles()) },
-                { label: 'Mostrar no Finder', icon: 'folder', action: () => call('reveal', { path: S.project.root }) },
+                { label: REVEAL, icon: 'folder', action: () => call('reveal', { path: S.project.root }) },
                 'sep',
                 { label: 'Abrir outra pasta…', icon: 'folderOpen', action: () => this.app.pickAndOpen() },
               ]),
@@ -189,7 +189,7 @@ export class Sidebar {
       { label: 'Renomear', icon: 'edit', action: () => this.rename(n) },
       { label: 'Copiar caminho', action: () => navigator.clipboard.writeText(n.path) },
       { label: 'Copiar caminho relativo', action: () => navigator.clipboard.writeText(relPath(S.project.root, n.path)) },
-      { label: 'Mostrar no Finder', icon: 'folder', action: () => call('reveal', { path: n.path }) },
+      { label: REVEAL, icon: 'folder', action: () => call('reveal', { path: n.path }) },
       'sep',
       { label: 'Mover para o Lixo', icon: 'trash', danger: true, action: () => this.trash(n) },
     ]);
@@ -214,14 +214,34 @@ export class Sidebar {
     const to = joinPath(dirname(n.path), name);
     try {
       await call('rename', { from: n.path, to });
-      const t = this.S.tabs.find((x) => x.path === n.path);
-      if (t) {
-        t.path = to;
-        t.name = name;
-        if (this.S.active === n.path) this.S.active = to;
+      // Everything that pointed at the old path follows: the file itself, or
+      // (for a folder) every tab, document root and PDF inside it.
+      const S = this.S;
+      const moved = (p) => (p === n.path ? to : isUnder(n.path, p) ? to + p.slice(n.path.length) : p);
+      for (const t of S.tabs) {
+        const was = t.path;
+        t.path = moved(t.path);
+        if (t.path !== was) t.name = basename(t.path);
+        if (t.root) t.root = moved(t.root);
+        for (const r of t.roots || []) r.path = moved(r.path);
       }
+      for (const p of S.pdfTabs) {
+        p.path = moved(p.path);
+        if (p.doc) p.doc = moved(p.doc);
+        p.name = basename(p.path);
+      }
+      if (S.active) S.active = moved(S.active);
+      if (S.activePdf) S.activePdf = moved(S.activePdf);
+      if (S.savedRoots) S.savedRoots = Object.fromEntries(Object.entries(S.savedRoots).map(([k, v]) => [moved(k), moved(v)]));
+      for (const d of [...this.expanded]) if (moved(d) !== d) (this.expanded.delete(d), this.expanded.add(moved(d)));
+      const docState = [...S.docState];
+      S.docState.clear();
+      for (const [k, v] of docState) S.docState.set(moved(k), v);
       await this.loadTree();
       this.app.renderTabs();
+      this.app.renderDocBar();
+      this.app.renderTopbar();
+      this.app.saveUiSoon();
     } catch (err) {
       toast(err.message, 'error');
     }
@@ -375,7 +395,12 @@ export class Sidebar {
     if (S.commitDraft) (msg.value = S.commitDraft), (S.commitDraft = null);
     const staged = g.files.filter((f) => f.staged);
     const unstaged = g.files.filter((f) => !f.staged || f.work !== ' ');
+    // Git only sees the disk: what is on screen is saved first, so a commit
+    // or a sync never leaves the latest edits out, and a pull never lands
+    // under unsaved text.
+    const saved = async () => (await this.app.saveAll()) || (toast('Nada foi enviado ao Git: salve ou resolva os arquivos abertos primeiro.', 'warn', 7000), false);
     const doCommit = async () => {
+      if (!(await saved())) return;
       const m = msg.value.trim();
       const r = await call('gitCommit', { root: S.project.root, message: m, all: staged.length === 0 });
       if (r.code === 0) toast(`Commit feito: “${r.message}”.`, 'ok');
@@ -385,7 +410,7 @@ export class Sidebar {
     const fileRow = (f, isStaged) =>
       h(
         'div',
-        { class: 'git-file', title: f.rel, onclick: () => this.showDiff(f, isStaged) },
+        { class: 'git-file', title: `${f.rel}\nClique para ver as diferenças`, onclick: () => this.showDiff(f, isStaged) },
         h('span', { class: 'st ' + (f.untracked ? 'U' : isStaged ? f.index : f.work) }, f.untracked ? 'U' : isStaged ? f.index : f.work),
         h('span', { class: 'nm' }, basename(f.rel), h('span', { class: 'faint' }, '  ' + f.rel.slice(0, -basename(f.rel).length))),
         h(
@@ -398,6 +423,7 @@ export class Sidebar {
         ),
       );
     const remoteAction = async (name, label) => {
+      if (!(await saved())) return;
       toast(label + '…', 'info', 1500);
       const r = await call(name, { root: S.project.root });
       if (r.code === 0) toast(label + ': ok.', 'ok');
@@ -425,7 +451,10 @@ export class Sidebar {
                   {
                     class: 'btn sm',
                     title: 'Commit do que mudou (se houver), pull e push, num clique',
-                    onclick: async () => {
+                    onclick: async (e) => {
+                      if (!(await saved())) return;
+                      const btn = e.currentTarget;
+                      btn.disabled = true;
                       toast('Sincronizando…', 'info', 1500);
                       const r = await call('gitSync', { root: S.project.root, message: msg.value.trim() });
                       if (r.code === 0) toast(r.steps.length ? `Sincronizado: ${r.steps.join(', ')}.` : 'Já estava tudo sincronizado.', 'ok', 6000);
@@ -452,7 +481,7 @@ export class Sidebar {
     );
     try {
       const log = await call('gitLog', { root: S.project.root });
-      clear(this.historyEl, log.slice(0, 25).map((c) => h('div', { class: 'list-row', title: `${c.hash} · ${c.author} · ${new Date(c.date).toLocaleString('pt-BR')}` }, h('span', { class: 'k' }, c.hash.slice(0, 7)), h('span', { class: 't' }, c.subject))));
+      clear(this.historyEl, log.slice(0, 25).map((c) => h('div', { class: 'list-row', title: `${c.hash} · ${c.author} · ${new Date(c.date).toLocaleString(document.documentElement.lang || 'pt-BR')}` }, h('span', { class: 'k' }, c.hash.slice(0, 7)), h('span', { class: 't' }, c.subject))));
     } catch {}
   }
 
@@ -466,6 +495,6 @@ export class Sidebar {
         return h('span', { class: cls }, l || ' ');
       }),
     );
-    modal({ title: `Diferenças: ${f.rel}`, body, wide: true, footer: [h('button', { class: 'btn', onclick: () => (document.querySelector('.overlay')?.remove(), this.app.openFile(f.path)) }, 'Abrir arquivo')] });
+    const m = modal({ title: `Diferenças: ${f.rel}`, body, wide: true, footer: [h('button', { class: 'btn', onclick: () => (m.close(), this.app.openFile(f.path)) }, 'Abrir arquivo')] });
   }
 }

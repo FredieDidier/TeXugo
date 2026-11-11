@@ -13,6 +13,24 @@ export function getLang() {
 }
 
 const EN = {
+  // interface pass: keyboard, dialogs, palette, save conflict
+  'Digite “:42” na paleta; clique em “Ln, Col” na barra de status; ⌥⌘G dentro do editor': 'Type “:42” in the palette; click “Ln, Col” in the status bar; ⌥⌘G inside the editor',
+  'Andar entre as áreas (arquivos, editor, PDF, painel inferior) só com o teclado': 'Move between the areas (files, editor, PDF, bottom panel) with the keyboard alone', 'Tab percorre os botões; as setas andam nas listas, nas abas e nos menus; Esc fecha': 'Tab walks the buttons; the arrows move through lists, tabs and menus; Esc closes',
+  'Redimensionar (setas do teclado)': 'Resize (arrow keys)', 'Painéis': 'Panels', 'Arquivos abertos': 'Open files', 'PDFs abertos': 'Open PDFs', 'Editor': 'Editor', 'Barra de status': 'Status bar',
+  'Fechar (alterações não salvas)': 'Close (unsaved changes)', 'Mostrar na pasta': 'Show in folder', 'Mostrar projeto na pasta': 'Show project in folder',
+  'Nenhum documento do projeto faz \\input deste arquivo, então não há o que compilar. Clique para dizer a qual documento ele pertence.': 'No document of the project \\inputs this file, so there is nothing to compile. Click to say which document it belongs to.',
+  'Escreve "% !TEX root = …" na primeira linha do arquivo': 'Writes "% !TEX root = …" on the first line of the file', 'O projeto ainda não tem um documento com \\documentclass': 'The project has no document with \\documentclass yet',
+  'A linha foi escrita, mas o documento não foi reconhecido. Confira o caminho na primeira linha.': 'The line was written, but the document was not recognised. Check the path on the first line.',
+  'Ver os erros no painel Problemas': 'See the errors in the Problems panel', 'Ver as referências e citações indefinidas no painel Problemas': 'See the undefined references and citations in the Problems panel',
+  'Nenhum arquivo aberto': 'No file open', 'Nenhum projeto aberto': 'No project open', 'Abrir arquivo…': 'Open file…', 'Ver os arquivos': 'See the files',
+  'Sobrescrever apaga do arquivo o que chegou de fora. Ficar com a do disco descarta o que você digitou nesta aba.': 'Overwriting erases from the file what came from outside. Keeping the disk version discards what you typed in this tab.',
+  'Ver diferenças': 'See differences', 'Sobrescrever com a minha': 'Overwrite with mine', 'Ficar com a do disco': 'Keep the disk version',
+  'só no disco (some se você sobrescrever)': 'only on disk (gone if you overwrite)', 'só na sua versão': 'only in your version',
+  'Ir para a linha… (⌃G)': 'Go to line… (⌃G)', 'Ir para a linha…': 'Go to line…', 'Mostrar ou esconder o painel inferior (⌘⇧Y)': 'Show or hide the bottom panel (⌘⇧Y)',
+  'Salvar tudo': 'Save all', 'Nada foi enviado ao Git: salve ou resolva os arquivos abertos primeiro.': 'Nothing was sent to Git: save or resolve the open files first.',
+  'Arquivo…   > comando   : linha': 'File…   > command   : line', 'Paleta de comandos': 'Command palette',
+  'Usados por último': 'Recently used', 'Todos os comandos': 'All commands', 'Abra um arquivo de texto para ir a uma linha.': 'Open a text file to go to a line.', 'Digite só o número da linha.': 'Type just the line number.',
+  'Lendo os arquivos do projeto…': 'Reading the project files…', 'escolher': 'choose', 'ir': 'go', 'executar': 'run', 'abrir': 'open', 'ir para a linha': 'go to line', 'fechar': 'close',
   'No Windows e no Linux, instale o Java e o LanguageTool (https://languagetool.org/download/) com o languagetool-server no PATH, ou escolha o servidor online em Preferências.': 'On Windows and Linux, install Java and LanguageTool (https://languagetool.org/download/) with languagetool-server on the PATH, or pick the online server in Preferences.',
   'Sair': 'Exit',
   // paper library
@@ -427,6 +445,18 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  // interface pass
+  [/^Pertence a (.+)$/, 'Belongs to $1'],
+  [/^(.+) mudou no disco e foi recarregado\.$/, '$1 changed on disk and was reloaded.'],
+  [/^(.+) agora entra em (.+)\. (\S+) compila\.$/, '$1 is now part of $2. $3 compiles.'],
+  [/^(.+) foi alterado fora do TeXugo \(pull do Git, outro editor ou um agente\) depois que você o abriu, e a aba tem alterações suas que ainda não foram salvas\.$/, '$1 was changed outside TeXugo (a Git pull, another editor or an agent) after you opened it, and the tab has edits of yours that are not saved yet.'],
+  [/^a partir da linha (\d+)$/, 'from line $1'],
+  [/^(.+) mudou no disco e você tem alterações não salvas\. Ao salvar, o TeXugo mostra as diferenças e pergunta qual versão fica\.$/, '$1 changed on disk and you have unsaved changes. When you save, TeXugo shows the differences and asks which version stays.'],
+  [/^(\d+) arquivos têm alterações que ainda não foram salvas:$/, '$1 files have changes that are not saved yet:'],
+  [/^([^\n]+)\nClique para ver as diferenças$/, '$1\nClick to see the differences'],
+  [/^Digite o número da linha \(1 a (\d+)\)\.$/, 'Type the line number (1 to $1).'],
+  [/^Ir para a linha (\d+)$/, 'Go to line $1'],
+  [/^(.+) tem (\d+) linhas$/, '$1 has $2 lines'],
   // paper library
   [/^(\d+) papers?$/, (m, n) => `${n} paper${n === '1' ? '' : 's'}`],
   [/^(\d+) de (\d+)$/, '$1 of $2'],

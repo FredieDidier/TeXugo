@@ -5,6 +5,10 @@ Auditor: Claude Fable 5.2. Leitor previsto: Fredie e o Opus 5.5, que vai impleme
 
 Nenhum arquivo do repositório foi alterado. Este relatório é o único arquivo novo.
 
+## Itens já corrigidos
+
+Marcados com ✅ e **CORRIGIDO** no título. Feitos em 11/11/2026, na passada de design, UX e acessibilidade (Claude Fable 5.2): **B1, B2, B3, I14, D1 e D6**. Cada um traz uma linha "Estado" com o que foi feito, como foi verificado e o que sobrou. O resto do relatório segue pendente.
+
 ## Como ler
 
 Cada achado traz uma classificação, a gravidade, a evidência, o impacto para quem usa, a correção recomendada, o esforço e um critério de aceite.
@@ -42,22 +46,24 @@ O TeXugo está funcionalmente rico e o núcleo é cuidadoso: token por sessão, 
 
 O que impede o lançamento hoje são sete pontos. Quatro deles fazem o usuário perder trabalho ou acreditar num resultado falso, e têm correção pequena:
 
-1. Com alteração não salva, a janela se recusa a fechar sem dizer por quê; depois de ⌘Q, **não dá mais para salvar** (B1).
-2. Abrir outro projeto **descarta** as alterações não salvas sem perguntar (B2).
-3. Commit, Sincronizar e Pull ignoram o que não foi salvo, e o salvamento seguinte pode desfazer o que veio do coautor (B3).
+1. ✅ **CORRIGIDO.** Com alteração não salva, a janela se recusa a fechar sem dizer por quê; depois de ⌘Q, **não dá mais para salvar** (B1).
+2. ✅ **CORRIGIDO.** Abrir outro projeto **descarta** as alterações não salvas sem perguntar (B2).
+3. ✅ **CORRIGIDO.** Commit, Sincronizar e Pull ignoram o que não foi salvo, e o salvamento seguinte pode desfazer o que veio do coautor (B3).
 4. Projeto com `latexmkrc` gera DVI no lugar de PDF, ou diz "ok, zero ??" sem ter lido o log (B4).
 
 Os outros três são de distribuição: assinatura e notarização no Mac (B5), Electron sete versões atrás com avisos de segurança altos (B6) e ausência de licença e de avisos de terceiros (B7).
 
 A maior lacuna de QA é estrutural: `server/index.js` (toda a API), `git.js`, `terminal.js`, o Electron e cerca de 40 dos 50 módulos da interface não têm nenhum teste. Os quatro defeitos acima moram exatamente aí.
 
-Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis.
+Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 11/11/2026: 3 bloqueadores (B1, B2, B3), 1 importante (I14), 2 desejáveis (D1, D6).
 
 ---
 
 # Parte 1. Bloqueadores de lançamento
 
-## B1. Fechar ou sair com alterações não salvas: a janela trava e o salvamento morre
+## ✅ B1. Fechar ou sair com alterações não salvas: a janela trava e o salvamento morre — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 11/11/2026.** `electron/main.js` trata `will-prevent-unload` com o diálogo de três botões (*Salvar tudo e fechar*, *Descartar*, *Cancelar*), traduzido por `L()`; `server.close()` saiu de `before-quit` e foi para `will-quit`; a página salva tudo e pede o fechamento pela ponte nova `closeSaved`. Verificado no app Electron real com aba suja, com o roteiro do Apêndice A e o diálogo respondido por código: fechar + Cancelar mantém a janela; ⌘Q + Cancelar mantém a janela e `/api/hello` responde 200; ⌘Q + Salvar grava o arquivo e o processo termina. **Falta:** transformar esse roteiro em teste automático (item 2, fumaça).
 
 - **Classificação:** confirmado (execução). **Gravidade:** crítica. **Esforço:** P.
 - **Evidência:**
@@ -79,7 +85,9 @@ Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis.
   3. Os rótulos do diálogo precisam passar por `L()` (inglês e português).
 - **Critério de aceite:** teste de ponta a ponta no Electron (ver Apêndice A) em que, com aba suja, `app.quit()` seguido de *Cancelar* deixa `fetch('/api/hello')` respondendo 200; com *Salvar*, o arquivo no disco contém o texto novo e o processo termina.
 
-## B2. Abrir outro projeto descarta alterações não salvas
+## ✅ B2. Abrir outro projeto descarta alterações não salvas — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 11/11/2026.** `confirmLeave()` em `web/src/main.js` pergunta (*Salvar*, *Descartar*, *Cancelar*, com a lista dos arquivos) no começo de `openProject` e, antes de o servidor criar a pasta, em criar projeto e clonar (`web/src/welcome.js`). Verificado no navegador: com aba suja, clicar num recente mostra o diálogo e *Cancelar* mantém o projeto e a aba suja.
 
 - **Classificação:** confirmado (execução). **Gravidade:** crítica. **Esforço:** P.
 - **Evidência:** [web/src/main.js:1359](web/src/main.js:1359): `openProject` zera `S.tabs` sem olhar `dirty`. Nenhum dos chamadores verifica: [welcome.js:57](web/src/welcome.js:57) (recentes), [welcome.js:135](web/src/welcome.js:135) (modelo novo), [welcome.js:212](web/src/welcome.js:212) (clonar), [main.js:1654](web/src/main.js:1654) (Abrir pasta). No app real:
@@ -92,7 +100,9 @@ Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis.
 - **Correção recomendada:** no início de `openProject`, se houver aba suja, mostrar o mesmo diálogo de três opções de `closeTab` (*Salvar tudo*, *Descartar*, *Cancelar*) e só seguir depois da resposta. Como criar projeto e clonar chamam `openProject` no fim, a pergunta deve vir antes de o servidor criar a pasta: extrair um `confirmLeaveProject()` e chamá-lo no começo dos três fluxos.
 - **Critério de aceite:** o roteiro acima passa a mostrar o diálogo; *Cancelar* mantém o projeto A com a aba suja; *Salvar tudo* grava e troca.
 
-## B3. Commit, Sincronizar e Pull ignoram o que não foi salvo, e o "Sobrescrever" desfaz o trabalho do coautor
+## ✅ B3. Commit, Sincronizar e Pull ignoram o que não foi salvo, e o "Sobrescrever" desfaz o trabalho do coautor — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 11/11/2026, as duas partes.** (1) Commit, Sincronizar, Pull, Push e *Baixar* das Novidades chamam `saveAll()` antes do Git e não seguem se o salvamento falhar ou for cancelado. (2) O conflito de salvamento virou um diálogo com *Ver diferenças* (disco contra a aba, por palavras), *Ficar com a do disco*, *Sobrescrever com a minha* e *Cancelar*; o foco inicial nunca cai no botão destrutivo; aba limpa só recarrega. Verificado no navegador com um arquivo alterado por fora. **Falta:** a quarta saída opcional, *Juntar* (`git merge-file`), e o teste de `git.js` com remoto local.
 
 - **Classificação:** confirmado (leitura; a sequência decorre do código, não a exercitei na interface). **Gravidade:** alta. **Esforço:** P para a parte 1, M para a parte 2.
 - **Evidência:**
@@ -276,7 +286,9 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Evidência:** [electron/main.js:108](electron/main.js:108) cria a janela sem caminho; [web/src/main.js:1699](web/src/main.js:1699) abre o projeto mais recente, que é o da janela de onde se veio. Ficam duas janelas com cópias separadas dos mesmos arquivos. Não há `app.requestSingleInstanceLock()`; no Windows e no Linux, abrir o app de novo sobe um segundo servidor que escreve no mesmo `state.json`. [main.js:202](electron/main.js:202): um `open-file` que chega antes de o servidor subir é descartado. [main.js:194](electron/main.js:194): o filtro `!/electron/i` ignora qualquer pasta com "electron" no caminho.
 - **Correção:** janela nova abre a tela inicial (parâmetro `?welcome=1`); trava de instância única com `second-instance` abrindo janela; guardar o caminho pendente do `open-file`; trocar o filtro do argv por "é um diretório".
 
-## I14. Renomear uma pasta deixa as abas abertas com o caminho antigo
+## ✅ I14. Renomear uma pasta deixa as abas abertas com o caminho antigo — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 11/11/2026.** `rename` em `web/src/sidebar.js` troca o prefixo em todas as abas, raízes (`t.root`, `t.roots`), PDFs, `savedRoots`, pastas expandidas e estado de compilação. Conferido por leitura; não exercitei o fluxo na interface.
 
 - **Classificação:** confirmado (leitura). **Gravidade:** baixa a média. **Esforço:** P.
 - **Evidência:** [web/src/sidebar.js:211](web/src/sidebar.js:211) atualiza só a aba cujo caminho é o do item renomeado. Abas de arquivos dentro da pasta renomeada, a raiz do documento (`t.root`), `S.savedRoots` e as abas de PDF ficam com o caminho velho; salvar falha com "Não salvou" (a pasta não existe mais).
@@ -323,12 +335,12 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 
 | # | Achado | Evidência | Classificação | Esforço |
 |---|---|---|---|---|
-| D1 | **Acessibilidade.** Quase não há ARIA; abas, linhas da árvore e listas são `div` com clique, sem foco pelo teclado; botões não têm anel de foco; os diálogos não têm `role="dialog"`, não prendem o foco nem o devolvem; a interface usa fontes de 10 a 12,5 px; não há `prefers-reduced-motion`. O zoom do menu Visualizar atenua o tamanho. | 2 ocorrências de `aria-`/`role`/`tabindex` em toda a interface (em `dom.js`); `:focus` só para campos em [web/styles.css:61](web/styles.css:61); `modal` em [web/src/dom.js:217](web/src/dom.js:217) | Confirmado (leitura) | M |
+| ✅ D1 | **CORRIGIDO (11/11/2026), com ressalvas.** Feito: tudo o que tem clique é alcançável e acionável pelo teclado (`h()` em `dom.js`), setas nas listas, abas e menus, F6 entre as áreas, anel de foco único, diálogos com `role="dialog"`, foco preso e devolvido, Esc só no de cima, chaves liga/desliga focáveis, `prefers-reduced-motion`, cores de texto a 4,5:1, textos de 10 px subiram. Falta: teste com leitor de tela (VoiceOver) e as fontes de 11 a 12 px, que ficaram. Texto original: **Acessibilidade.** Quase não há ARIA; abas, linhas da árvore e listas são `div` com clique, sem foco pelo teclado; botões não têm anel de foco; os diálogos não têm `role="dialog"`, não prendem o foco nem o devolvem; a interface usa fontes de 10 a 12,5 px; não há `prefers-reduced-motion`. O zoom do menu Visualizar atenua o tamanho. | 2 ocorrências de `aria-`/`role`/`tabindex` em toda a interface (em `dom.js`); `:focus` só para campos em [web/styles.css:61](web/styles.css:61); `modal` em [web/src/dom.js:217](web/src/dom.js:217) | Confirmado (leitura) | M |
 | D2 | **`news()` dispara cerca de 3 processos `git` por commit, todos de uma vez.** 120 commits: 1,5 s e uns 360 processos. No Windows, onde criar processo é caro, vira segundos. Limitar a 6 ao mesmo tempo. | [server/coauthors.js:218](server/coauthors.js:218) | Confirmado (medição) | P |
 | D3 | **Uma ação de IA por vez no app inteiro.** A resposta aos pareceristas (até 30 min) bloqueia "Revisar o trecho" em todas as janelas com "Já há uma ação de IA em andamento". Trava por projeto, ou fila visível. | [server/ai.js:31](server/ai.js:31), [ai.js:86](server/ai.js:86), [rr.js:143](server/rr.js:143) | Confirmado (leitura) | P |
 | D4 | **Prévia ao vivo com pausa fixa de 700 ms.** Em paper cuja passada leva 10 s, o motor roda sem parar enquanto se digita. Pausa proporcional à última passada (por exemplo, o maior entre 700 ms e metade dela). | [web/src/live.js:7](web/src/live.js:7) | Sugestão | P |
 | D5 | **Sincronizar faz `git add -A`.** Uma pasta de dados fora do `.gitignore` entra no commit; arquivo acima de 100 MB faz o push falhar com o commit já feito. Avisar antes quando houver arquivo novo acima de uns 50 MB. | [server/git.js:74](server/git.js:74), [git.js:106](server/git.js:106) | Risco potencial | P |
-| D6 | **Erros importantes somem em 8 a 10 s.** Falha de sincronização, de commit e de salvamento aparecem só num aviso temporário. Manter até fechar, ou guardar numa lista. | [web/src/sidebar.js:432](web/src/sidebar.js:432), [main.js:730](web/src/main.js:730) | Confirmado (leitura) | P |
+| ✅ D6 | **CORRIGIDO (11/11/2026).** Todo aviso de erro fica na tela até ser fechado (botão ×, `role="alert"`); os demais pausam sob o mouse; mensagem repetida substitui a anterior. Texto original: **Erros importantes somem em 8 a 10 s.** Falha de sincronização, de commit e de salvamento aparecem só num aviso temporário. Manter até fechar, ou guardar numa lista. | [web/src/sidebar.js:432](web/src/sidebar.js:432), [main.js:730](web/src/main.js:730) | Confirmado (leitura) | P |
 | D7 | **Defesa em profundidade** (nada explorável sem o token): `createProject` aceita `name` com `../` (reproduzi a pasta criada fora do destino); `comments.list` lê `c.file` sem conferir se está no projeto ([comments.js:63](server/comments.js:63), reproduzido); a guarda de caminho não resolve links, então um link para fora do projeto é lido (reproduzido); `source.rev` de `compare.js:58` pode começar com `-`; `readBody` não interrompe a requisição acima de 50 MB; fusíveis do Electron no padrão (`RunAsNode` ligado). | [server/index.js:502](server/index.js:502), [util.js:110](server/util.js:110) | Confirmado, impacto baixo | P |
 | D8 | **O servidor roda no processo principal do Electron com E/S síncrona.** Num projeto de 6 mil arquivos: árvore 69 ms, documentos 89 ms, símbolos 277 ms, cada um travando menus e janelas. Aceitável hoje. Se crescer, mover para `utilityProcess`. Não recomendo mexer antes do lançamento. | medições do Apêndice A | Sugestão | G |
 | D9 | **Parada por 180 s sem saída.** Passos longos e silenciosos são raros, mas o limite só muda por variável de ambiente. Expor nas Preferências se alguém reclamar. | [server/build.js:271](server/build.js:271) | Risco potencial | P |
@@ -550,7 +562,7 @@ Esta auditoria cobre a primeira passada. O que fica de cada subitem:
 | Zotero (API local e cópia do SQLite) | Boa | Copia o banco a cada abertura do diálogo; pode demorar em biblioteca grande |
 | Overleaf | Só por ZIP | Item 3 |
 
-**8. Experiência de uso e acessibilidade.** Avaliei pelo código, sem ver a tela. Pontos fortes: explicações de erro em linguagem de gente, atalhos pesquisáveis, estado visível em cada aba. Pontos fracos: D1 (acessibilidade), D6 (erros que somem), o diálogo de conflito com uma saída só (B3), a janela que não fecha sem explicar (B1) e a quantidade de recursos na aba Revisão, que pede o assistente do item 5 para quem chega.
+**8. Experiência de uso e acessibilidade.** Avaliei pelo código, sem ver a tela. Pontos fortes: explicações de erro em linguagem de gente, atalhos pesquisáveis, estado visível em cada aba. Pontos fracos (✅ os quatro primeiros corrigidos em 11/11/2026): D1 (acessibilidade), D6 (erros que somem), o diálogo de conflito com uma saída só (B3), a janela que não fecha sem explicar (B1) e a quantidade de recursos na aba Revisão, que pede o assistente do item 5 para quem chega.
 
 **9. Recursos anunciados no README que estão incompletos ou sem teste.** "Nada vai para a nuvem" (I11). "Zero `??`" não vale com `$out_dir` (B4). "ZIP que compila sozinho" falha em pastas `tex*` (I5). "Fable 5.1" (I12). "A interface inteira, inclusive mensagens de erro, troca de idioma" (I9). "Sincronizar faz commit do que mudou" não inclui o que está na tela (B3). Sem teste automatizado: SyncTeX (23%), Médico do TeX (instalação), terminal, painel do agente (41%), parecer e resposta (52%: só a parte que lê o JSON), e toda a interface.
 
@@ -582,7 +594,7 @@ Testes a criar, na ordem de retorno:
 
 # Parte 7. Ordem sugerida
 
-1. **Não perder trabalho:** B1, B2, B3 (parte 1), I1. Um dia. Junto, o roteiro de fumaça, que passa a guardar essas correções.
+1. **Não perder trabalho:** ✅ B1, ✅ B2, ✅ B3 (partes 1 e 2), I1 (pendente). Um dia. Junto, o roteiro de fumaça, que passa a guardar essas correções.
 2. **Compilar certo:** B4, I5, I6.
 3. **Base de distribuição:** B6 (subir o Electron), B5 (electron-builder; depende da sua decisão sobre a conta da Apple), B7. Com isso o item 2 (CI) e o item 9 (instaladores) ficam prontos em boa parte.
 4. **Segurança e idioma:** I7, I8, I9, I11.

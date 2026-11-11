@@ -10,6 +10,7 @@ process.env.TEXUGO_DATA_DIR = app.getPath('userData');
 const { createServer } = await import('../server/index.js');
 
 let server;
+let quitting = false; // ⌘Q was asked and is waiting on the windows
 const windows = new Set();
 
 const IS_MAC = process.platform === 'darwin';
@@ -70,6 +71,22 @@ function createWindow(openPath) {
     }
   });
   win.webContents.session.setSpellCheckerLanguages(['pt-BR', 'en-US']);
+  // The page cancels the unload while a tab has unsaved edits. Electron shows
+  // nothing by itself in that case: ask here, or the window just stays open.
+  win.webContents.on('will-prevent-unload', (event) => {
+    const choice = dialog.showMessageBoxSync(win, {
+      type: 'warning',
+      message: L('Há alterações não salvas.'),
+      detail: L('Se você não salvar, o que foi digitado desde o último salvamento se perde.'),
+      buttons: [L('Salvar tudo e fechar'), L('Descartar'), L('Cancelar')],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true,
+    });
+    if (choice === 1) return event.preventDefault(); // in Electron this lets the window close
+    if (choice === 0) win.webContents.send('menu', 'saveAllThenClose');
+    else quitting = false;
+  });
   windows.add(win);
   win.on('closed', () => windows.delete(win));
   return win;
@@ -87,6 +104,8 @@ const MENU_EN = {
   'Novo projeto…': 'New project…', 'Abrir pasta…': 'Open folder…', 'Nova janela': 'New window', 'Tela inicial': 'Start screen', 'Abrir arquivo rápido': 'Quick open',
   'Salvar': 'Save', 'Salvar todos': 'Save all', 'Fechar aba': 'Close tab', 'Fechar janela': 'Close window', 'Sair': 'Exit', 'Editar': 'Edit', 'Compilar': 'Build',
   'Compilar documento da aba': 'Compile the tab’s document', 'Compilar tudo que está aberto': 'Compile everything open', 'Mostrar no PDF': 'Show in PDF',
+  'Há alterações não salvas.': 'There are unsaved changes.', 'Se você não salvar, o que foi digitado desde o último salvamento se perde.': 'If you do not save, what was typed since the last save is lost.',
+  'Salvar tudo e fechar': 'Save all and close', 'Descartar': 'Discard', 'Cancelar': 'Cancel',
   'Visualizar': 'View', 'Paleta de comandos': 'Command palette', 'Biblioteca de papers': 'Paper library', 'Painel inferior': 'Bottom panel', 'Ferramentas de desenvolvedor': 'Developer tools', 'Janela': 'Window',
 };
 let menuLang = 'pt';
@@ -171,6 +190,13 @@ ipcMain.handle('set-lang', (_e, l) => {
   buildMenu();
   return true;
 });
+// The page saved everything after "Salvar tudo e fechar": finish what was asked.
+ipcMain.handle('close-saved', (e) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  if (quitting) app.quit();
+  else if (win) win.close();
+  return true;
+});
 ipcMain.handle('new-window', () => {
   createWindow();
   return true;
@@ -207,4 +233,7 @@ app.on('open-file', (e, p) => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
-app.on('before-quit', () => server && server.close());
+// The server must outlive a cancelled quit: with unsaved edits the windows
+// may stay open, and saving needs it. will-quit fires only once they closed.
+app.on('before-quit', () => (quitting = true));
+app.on('will-quit', () => server && server.close());

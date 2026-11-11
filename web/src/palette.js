@@ -1,8 +1,8 @@
-// Command palette (⌘K) and quick open (⌘P).
+// Command palette (⌘K), quick open (⌘P) and go to line (⌃G, or ":42").
 import { AI_ACTIONS, runAiAction } from './ai.js';
 import { call } from './api.js';
 import { tr } from './i18n.js';
-import { h, clear, icon, fileIcon, relPath, basename } from './dom.js';
+import { h, clear, icon, fileIcon, relPath, basename, REVEAL } from './dom.js';
 import { openSettings } from './settings.js';
 import { newProjectDialog, showWelcome, cloneDialog } from './welcome.js';
 import { markDialog, feedbackDialog } from './sent.js';
@@ -16,6 +16,7 @@ function commands(app, S) {
     ...(S.project.docs || []).map((d) => ({ t: `Compilar ${relPath(S.project.root, d.path)}`, d: d.kind === 'slides' ? 'slides' : d.engine, i: 'play', run: () => app.compileDocs([d.path]) })),
     ...(t && t.root ? [{ t: t.livePreview ? 'Desligar a prévia ao vivo' : 'Ligar a prévia ao vivo (PDF enquanto digita)', kw: 'live preview ao vivo tempo real enquanto digita automático', i: 'play', run: () => app.live.setOn(t, !t.livePreview) }] : []),
     { t: 'Corretor gramatical: lista do arquivo', kw: 'gramática ortografia spelling grammar languagetool corretor erros', i: 'edit', run: () => app.grammarList() },
+    { t: 'Ir para a linha…', kw: 'goto go to line linha número pular', k: '⌃G', i: 'target', run: () => openPalette(app, S, 'line') },
     { t: 'Mostrar no PDF', kw: 'synctex', k: '⌘J', i: 'target', run: () => app.syncForward() },
     { t: 'Salvar', k: '⌘S', i: 'check', run: () => app.saveTab(app.activeTab()) },
     { t: 'Salvar todos', k: '⌥⌘S', i: 'check', run: () => app.saveAll() },
@@ -66,29 +67,59 @@ function commands(app, S) {
     { t: 'Revisar estilo', kw: 'chktex lint', i: 'check', run: () => app.tools.chktex(app, S) },
     { t: 'Contar palavras', kw: 'texcount', i: 'outline', run: () => app.tools.wordCount(app, S) },
     { t: 'Abrir Terminal na pasta do projeto', i: 'command', run: () => call('openTerminal', { path: S.project.root }) },
-    { t: 'Mostrar projeto no Finder', i: 'folder', run: () => call('reveal', { path: S.project.root }) },
+    { t: REVEAL === 'Mostrar no Finder' ? 'Mostrar projeto no Finder' : 'Mostrar projeto na pasta', i: 'folder', run: () => call('reveal', { path: S.project.root }) },
   ];
+}
+
+// The commands used last come first when nothing is typed.
+const RECENT_KEY = 'texugo-palette-recent';
+function recentCommands() {
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
+  } catch {
+    return [];
+  }
+}
+function rememberCommand(t) {
+  try {
+    localStorage.setItem(RECENT_KEY, JSON.stringify([t, ...recentCommands().filter((x) => x !== t)].slice(0, 6)));
+  } catch {}
 }
 
 export async function openPalette(app, S, mode = 'commands') {
   document.querySelector('.overlay.palette-ov')?.remove();
+  const opener = document.activeElement;
   let files = [];
-  const input = h('input', { placeholder: mode === 'files' ? 'Nome do arquivo… (digite > para comandos)' : '> Comando…', value: mode === 'commands' ? '> ' : '' });
-  const list = h('div', { class: 'items' });
-  const box = h('div', { class: 'modal palette' }, input, list);
+  const input = h('input', {
+    placeholder: 'Arquivo…   > comando   : linha',
+    value: mode === 'commands' ? '> ' : mode === 'line' ? ':' : '',
+    role: 'combobox',
+    'aria-expanded': 'true',
+    'aria-controls': 'palette-list',
+    'aria-autocomplete': 'list',
+    'aria-label': 'Buscar arquivo ou comando',
+    spellcheck: 'false',
+  });
+  const list = h('div', { class: 'items', id: 'palette-list', role: 'listbox' });
+  const hints = h('div', { class: 'hints' });
+  const box = h('div', { class: 'modal palette', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Paleta de comandos' }, input, list, hints);
   const ov = h('div', { class: 'overlay palette-ov' }, box);
   let sel = 0;
   let items = [];
-  const close = () => ov.remove();
+  const close = (back = true) => {
+    ov.remove();
+    if (back && opener && opener.isConnected) opener.focus({ preventScroll: true });
+  };
+  const run = (it) => {
+    close(!it);
+    if (!it) return;
+    if (it.cmd) rememberCommand(it.t);
+    it.run();
+  };
   ov.addEventListener('mousedown', (e) => e.target === ov && close());
   document.body.append(ov);
   input.focus();
-  try {
-    const tree = await call('tree', { root: S.project.root });
-    (function walk(nodes) {
-      for (const n of nodes) n.dir ? walk(n.children) : files.push(n.path);
-    })(tree.children);
-  } catch {}
+  input.setSelectionRange(input.value.length, input.value.length);
 
   const score = (text, q) => {
     // Subsequence match with a bonus for contiguous runs and word starts.
@@ -106,15 +137,37 @@ export async function openPalette(app, S, mode = 'commands') {
     return s - text.length * 0.01;
   };
 
+  const hint = (keys, what) => h('span', {}, h('kbd', {}, keys), what);
   const update = () => {
     const v = input.value;
     const isCmd = v.startsWith('>');
-    const q = (isCmd ? v.slice(1) : v).trim().toLowerCase();
-    if (isCmd) {
-      items = commands(app, S)
-        .map((c) => ({ ...c, s: q ? Math.max(score(c.t + ' ' + (c.d || '') + ' ' + (c.kw || ''), q), score(tr(c.t) + ' ' + (c.d || '') + ' ' + (c.kw || ''), q)) : 0 }))
-        .filter((c) => c.s >= 0)
-        .sort((a, b) => b.s - a.s);
+    const isLine = v.startsWith(':');
+    const q = (isCmd || isLine ? v.slice(1) : v).trim().toLowerCase();
+    let empty = 'Nada encontrado.';
+    let recentCount = 0;
+    if (isLine) {
+      const t = app.activeTab();
+      const total = t && !t.binary ? app.view.state.doc.lines : 0;
+      const n = Number(q);
+      items = [];
+      if (!total) empty = 'Abra um arquivo de texto para ir a uma linha.';
+      else if (!q) empty = `Digite o número da linha (1 a ${total}).`;
+      else if (!Number.isInteger(n) || n < 1) empty = 'Digite só o número da linha.';
+      else {
+        const line = Math.min(n, total);
+        items = [{ t: `Ir para a linha ${line}`, d: n > total ? `${t.name} tem ${total} linhas` : t.name, i: 'target', run: () => app.openFile(t.path, { line }) }];
+      }
+    } else if (isCmd) {
+      const all = commands(app, S).map((c) => ({ ...c, cmd: true }));
+      if (!q) {
+        const rec = recentCommands().map((t) => all.find((c) => c.t === t)).filter(Boolean);
+        recentCount = rec.length;
+        items = [...rec, ...all.filter((c) => !rec.includes(c))];
+      } else
+        items = all
+          .map((c) => ({ ...c, s: Math.max(score(c.t + ' ' + (c.d || '') + ' ' + (c.kw || ''), q), score(tr(c.t) + ' ' + (c.d || '') + ' ' + (c.kw || ''), q)) }))
+          .filter((c) => c.s >= 0)
+          .sort((a, b) => b.s - a.s);
     } else {
       const open = new Set(S.tabs.map((t) => t.path));
       items = files
@@ -125,35 +178,48 @@ export async function openPalette(app, S, mode = 'commands') {
         .filter((c) => c.s >= 0)
         .sort((a, b) => b.s - a.s)
         .slice(0, 60);
+      if (!files.length) empty = 'Lendo os arquivos do projeto…';
     }
     sel = Math.min(sel, Math.max(0, items.length - 1));
+    const row = (it, i) =>
+      h(
+        'div',
+        { class: 'item' + (i === sel ? ' sel' : ''), id: 'palette-opt-' + i, role: 'option', 'aria-selected': i === sel ? 'true' : 'false', onmousemove: () => i !== sel && ((sel = i), update()), onclick: () => run(it) },
+        it.path ? fileIcon(it.path) : icon(it.i || 'command'),
+        h('span', { class: 't' }, it.t),
+        it.d ? h('span', { class: 'd' }, it.d) : null,
+        it.k ? h('kbd', {}, it.k) : null,
+      );
     clear(
       list,
       items.length
-        ? items.map((it, i) =>
-            h(
-              'div',
-              { class: 'item' + (i === sel ? ' sel' : ''), onmousemove: () => i !== sel && ((sel = i), update()), onclick: () => (close(), it.run()) },
-              it.path ? fileIcon(it.path) : icon(it.i || 'command'),
-              h('span', { class: 't' }, it.t),
-              it.d ? h('span', { class: 'd' }, it.d) : null,
-              it.k ? h('kbd', {}, it.k) : null,
-            ),
-          )
-        : h('div', { class: 'pad faint' }, 'Nada encontrado.'),
+        ? [recentCount ? h('div', { class: 'group', role: 'presentation' }, 'Usados por último') : null, items.slice(0, recentCount).map(row), recentCount ? h('div', { class: 'group', role: 'presentation' }, 'Todos os comandos') : null, items.slice(recentCount).map((it, i) => row(it, i + recentCount))]
+        : h('div', { class: 'pad muted', role: 'status' }, empty),
     );
+    if (items.length) input.setAttribute('aria-activedescendant', 'palette-opt-' + sel);
+    else input.removeAttribute('aria-activedescendant');
+    clear(hints, hint('↑↓', 'escolher'), hint('↵', isLine ? 'ir' : isCmd ? 'executar' : 'abrir'), isCmd || isLine ? null : hint('>', 'comandos'), isLine ? null : hint(':', 'ir para a linha'), hint('esc', 'fechar'));
     list.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
   };
   input.addEventListener('input', () => ((sel = 0), update()));
   input.addEventListener('keydown', (e) => {
-    if (e.key === 'ArrowDown') (sel = Math.min(items.length - 1, sel + 1)), update(), e.preventDefault();
-    else if (e.key === 'ArrowUp') (sel = Math.max(0, sel - 1)), update(), e.preventDefault();
+    const move = (to) => ((sel = Math.max(0, Math.min(items.length - 1, to))), update(), e.preventDefault());
+    if (e.key === 'ArrowDown') move(sel === items.length - 1 ? 0 : sel + 1);
+    else if (e.key === 'ArrowUp') move(sel === 0 ? items.length - 1 : sel - 1);
+    else if (e.key === 'PageDown') move(sel + 8);
+    else if (e.key === 'PageUp') move(sel - 8);
     else if (e.key === 'Enter') {
       e.preventDefault();
-      const it = items[sel];
-      close();
-      if (it) it.run();
-    } else if (e.key === 'Escape') close();
+      run(items[sel]);
+    } else if (e.key === 'Escape') (e.stopPropagation(), close());
+    else if (e.key === 'Tab') e.preventDefault();
   });
   update();
+  try {
+    const tree = await call('tree', { root: S.project.root });
+    (function walk(nodes) {
+      for (const n of nodes) n.dir ? walk(n.children) : files.push(n.path);
+    })(tree.children);
+  } catch {}
+  if (ov.isConnected) update();
 }

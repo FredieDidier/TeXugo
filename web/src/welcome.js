@@ -128,6 +128,7 @@ export async function newProjectDialog(app, S, tpl) {
     S.settings.lastParent = parent.value;
     if (chosen.formats) S.settings.lastFormat = formatSel.value;
     app.saveSettingsSoon();
+    if (S.project && !(await app.confirmLeave())) return;
     try {
       const p = await call('createProject', { template: chosen.id, parent: parent.value, name, fields: { title: title.value, author: author.value, institution: inst.value, format: chosen.formats ? formatSel.value : undefined }, lang: S.settings.lang || 'pt' });
       m.close();
@@ -201,6 +202,7 @@ export function cloneDialog(app, S) {
   const btn = h('button', { class: 'btn primary' }, icon('down'), 'Clonar');
   btn.onclick = async () => {
     if (!url.value.trim()) return toast('Cole o endereço do repositório.', 'warn');
+    if (S.project && !(await app.confirmLeave())) return;
     btn.disabled = true;
     btn.textContent = 'Clonando…';
     S.settings.lastCloneParent = parent.value;

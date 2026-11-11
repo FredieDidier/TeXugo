@@ -1,6 +1,7 @@
 // TeXugo UI entry point: layout, tabs, compile flow, PDF panes, problems.
 import { call, connect, on, fileUrl, native } from './api.js';
-import { h, clear, icon, wordmark, fileIcon, fileKind, basename, relPath, debounce, toast, menu, modal, prompt, confirmBox, gutter, isUnder, relParts } from './dom.js';
+import { h, clear, icon, wordmark, fileIcon, fileKind, basename, relPath, debounce, toast, menu, modal, prompt, confirmBox, gutter, isUnder, relParts, dirname, REVEAL } from './dom.js';
+import { wordDiff } from './diff.js';
 import { createState, createView, jumpTo, showDiagnostics, symbols, EditorView, wrapCompartment } from './editor.js';
 import { PdfTab } from './pdfview.js';
 import { Sidebar } from './sidebar.js';
@@ -12,7 +13,7 @@ import * as tools from './tools.js';
 import { renderMarkdown } from './markdown.js';
 import { bootPdfWindow } from './pdfwin.js';
 import { TOKEN } from './api.js';
-import { setLang, tr } from './i18n.js';
+import { setLang, tr, getLang } from './i18n.js';
 import { SplitEditor } from './split.js';
 import { viciosConfig, viciosOf } from './vicios/cm.js';
 import { AI_ACTIONS, runAiAction, focusedTarget, replaceFlagged } from './ai.js';
@@ -61,19 +62,19 @@ export default app;
 function buildLayout() {
   const root = document.getElementById('app');
   app.topbar = h('div', { class: 'topbar' + (native ? (native.platform && native.platform !== 'darwin' ? ' os-other' : '') : ' browser') });
-  app.activity = h('div', { class: 'activitybar' });
+  app.activity = h('nav', { class: 'activitybar', 'aria-label': 'Painéis' });
   app.sidebarEl = h('div', { class: 'sidebar' });
-  app.tabsEl = h('div', { class: 'tabs' });
+  app.tabsEl = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'Arquivos abertos' });
   app.docBar = h('div', { class: 'doc-bar' });
   app.editorHost = h('div', { class: 'editor-host' });
   app.editorRow = h('div', { class: 'editor-row' }, app.editorHost);
-  app.editorGroup = h('div', { class: 'editor-group' }, app.tabsEl, app.docBar, app.editorRow);
-  app.pdfTabsEl = h('div', { class: 'tabs' });
+  app.editorGroup = h('main', { class: 'editor-group', 'aria-label': 'Editor' }, app.tabsEl, app.docBar, app.editorRow);
+  app.pdfTabsEl = h('div', { class: 'tabs', role: 'tablist', 'aria-label': 'PDFs abertos' });
   app.pdfTools = h('div', { class: 'pdf-tools' });
   app.pdfStack = h('div', { class: 'pdf-stack' });
   app.pdfGroup = h('div', { class: 'pdf-group' }, app.pdfTabsEl, app.pdfTools, app.pdfStack);
   app.bottomEl = h('div', { class: 'bottom' });
-  app.statusEl = h('div', { class: 'statusbar' });
+  app.statusEl = h('footer', { class: 'statusbar', 'aria-label': 'Barra de status' });
 
   const pdfGutter = gutter('v', {
     getSize: () => app.pdfGroup.getBoundingClientRect().width,
@@ -439,6 +440,10 @@ function renderTabs() {
         'div',
         {
           class: 'tab' + (t.path === S.active ? ' active' : '') + (t.dirty ? ' dirty' : ''),
+          role: 'tab',
+          'aria-selected': t.path === S.active ? 'true' : 'false',
+          tabindex: t.path === S.active ? '0' : '-1',
+          onkeydown: (e) => tabKey(e, t),
           title: relPath(S.project ? S.project.root : '', t.path) + (t.root ? `\nDocumento: ${basename(t.root)}` : ''),
           draggable: 'true',
           onclick: () => activate(t.path),
@@ -450,14 +455,14 @@ function renderTabs() {
               { label: 'Fechar', icon: 'x', kb: '⌘W', action: () => closeTab(t.path) },
               { label: 'Fechar as outras', action: async () => { for (const x of S.tabs.filter((x) => x !== t)) await closeTab(x.path); } },
               'sep',
-              { label: 'Mostrar no Finder', icon: 'folder', action: () => call('reveal', { path: t.path }) },
+              { label: REVEAL, icon: 'folder', action: () => call('reveal', { path: t.path }) },
               { label: 'Copiar caminho', action: () => navigator.clipboard.writeText(t.path) },
             ]);
           },
         },
         h('span', { class: 'status-dot ' + (st || ''), title: statusLabel(st) }),
         h('span', { class: 'label' }, t.name),
-        h('span', { class: 'close', onclick: (e) => (e.stopPropagation(), closeTab(t.path)) }, icon('x')),
+        h('span', { class: 'close', 'aria-label': t.dirty ? 'Fechar (alterações não salvas)' : 'Fechar', onclick: (e) => (e.stopPropagation(), closeTab(t.path)) }, icon('x')),
       );
       el.addEventListener('dragstart', (e) => e.dataTransfer.setData('text/texugo-tab', t.path));
       el.addEventListener('dragover', (e) => (e.preventDefault(), el.classList.add('dragover')));
@@ -482,6 +487,26 @@ function renderTabs() {
   if (act) act.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 app.renderTabs = renderTabs;
+
+// On a focused tab: arrows walk the tabs, Enter goes to the text, Delete closes.
+function tabKey(e, t) {
+  if (e.target !== e.currentTarget || e.metaKey || e.ctrlKey || e.altKey) return;
+  const i = S.tabs.indexOf(t);
+  const to = { ArrowRight: i + 1, ArrowLeft: i - 1, Home: 0, End: S.tabs.length - 1 }[e.key];
+  if (to !== undefined) {
+    e.preventDefault();
+    const n = S.tabs[Math.max(0, Math.min(S.tabs.length - 1, to))];
+    activate(n.path);
+    app.tabsEl.querySelector('.tab.active')?.focus();
+  } else if (e.key === 'Enter' || e.key === ' ') {
+    e.preventDefault();
+    activate(t.path);
+    if (!t.binary) app.view.focus();
+  } else if (e.key === 'Delete' || e.key === 'Backspace') {
+    e.preventDefault();
+    closeTab(t.path).then(() => app.tabsEl.querySelector('.tab.active')?.focus());
+  }
+}
 
 function statusLabel(st) {
   return { ok: 'Compilado: tudo certo', undefined: 'Compilado com ?? (referências indefinidas)', error: 'Erro na última compilação', building: 'Compilando…', warn: 'Compilado com avisos' }[st] || 'Ainda não compilado nesta sessão';
@@ -646,7 +671,29 @@ function renderDocBar() {
       h('button', { class: 'btn sm' + (mode === id ? ' primary' : ''), onclick: () => ((t.mdMode = id), applyMdMode(), renderDocBar(), id !== 'preview' && app.view.focus()) }, icon(ic), label);
     items.push(h('div', { class: 'split-btn seg' }, seg('preview', 'Visualizar', 'eye'), seg('split', 'Lado a lado', 'columns'), seg('edit', 'Código', 'edit')));
   } else if (/\.tex$/.test(t.path)) {
-    items.push(h('span', { class: 'chip', title: 'Nenhum documento do projeto faz \\input deste arquivo. Adicione "% !TEX root = ../paper.tex" no topo para dizer qual é.' }, icon('info'), 'fora de qualquer documento'));
+    items.push(
+      h(
+        'button',
+        {
+          class: 'chip warn',
+          title: 'Nenhum documento do projeto faz \\input deste arquivo, então não há o que compilar. Clique para dizer a qual documento ele pertence.',
+          onclick: (e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            const docs = (S.project.docs || []).filter((d) => d.path !== t.path);
+            menu(
+              r.left,
+              r.bottom + 4,
+              docs.length
+                ? docs.slice(0, 12).map((d) => ({ label: `Pertence a ${relPath(S.project.root, d.path)}`, title: 'Escreve "% !TEX root = …" na primeira linha do arquivo', icon: 'tex', action: () => setTexRoot(t, d.path) }))
+                : [{ label: 'O projeto ainda não tem um documento com \\documentclass', icon: 'info', action: () => {} }],
+            );
+          },
+        },
+        icon('info'),
+        'fora de qualquer documento',
+        icon('chevDown'),
+      ),
+    );
   }
   if (!t.binary && S.git && S.git.repo)
     items.push(
@@ -672,10 +719,32 @@ function renderDocBar() {
 }
 app.renderDocBar = renderDocBar;
 
+// Path of `to` as seen from the folder of `from`, with forward slashes.
+function relativeTo(from, to) {
+  const a = dirname(from).split(/[\\/]/);
+  const b = to.split(/[\\/]/);
+  let i = 0;
+  while (i < a.length && i < b.length - 1 && a[i] === b[i]) i++;
+  return [...a.slice(i).map(() => '..'), ...b.slice(i)].join('/');
+}
+
+// "% !TEX root = …" on the first line: this file belongs to that document.
+async function setTexRoot(t, doc) {
+  if (t.path !== S.active) activate(t.path);
+  const line = `% !TEX root = ${relativeTo(t.path, doc)}\n`;
+  const first = app.view.state.doc.line(1);
+  const had = /^%\s*!TEX\s+root\s*=/i.test(first.text);
+  app.view.dispatch({ changes: had ? { from: first.from, to: Math.min(first.to + 1, app.view.state.doc.length), insert: line } : { from: 0, insert: line } });
+  if (!(await saveTab(t, { quiet: true }))) return;
+  await refreshRoots(t);
+  if (t.root) toast(`${t.name} agora entra em ${basename(t.root)}. ⌘↵ compila.`, 'ok', 6000);
+  else toast('A linha foi escrita, mas o documento não foi reconhecido. Confira o caminho na primeira linha.', 'warn', 8000);
+}
+
 function resultChip(res) {
   const q = res.undefinedRefs.length + res.undefinedCites.length;
-  if (res.status === 'error') return h('span', { class: 'chip error', onclick: () => app.bottom.show('problems'), style: { cursor: 'pointer' } }, icon('error'), `${res.errors.length || 1} erro${res.errors.length > 1 ? 's' : ''}`);
-  if (q) return h('span', { class: 'chip undefined', onclick: () => app.bottom.show('problems'), style: { cursor: 'pointer' } }, `${q} ??`);
+  if (res.status === 'error') return h('button', { class: 'chip error', title: 'Ver os erros no painel Problemas', onclick: () => app.bottom.show('problems') }, icon('error'), `${res.errors.length || 1} erro${res.errors.length > 1 ? 's' : ''}`);
+  if (q) return h('button', { class: 'chip undefined', title: 'Ver as referências e citações indefinidas no painel Problemas', onclick: () => app.bottom.show('problems') }, `${q} ??`);
   return h('span', { class: 'chip ok', title: 'Nenhuma referência ou citação indefinida' }, icon('check'), 'zero ??', res.pages ? ` · ${res.pages} p.` : '');
 }
 
@@ -685,8 +754,16 @@ function renderEmpty() {
     h(
       'div',
       {},
-      h('img', { src: './logo.svg' }),
-      h('div', { style: { fontSize: '15px', color: 'var(--muted)' } }, 'Abra um arquivo na barra lateral'),
+      h('img', { src: './logo.svg', alt: '' }),
+      h('div', { style: { fontSize: '15px', color: 'var(--muted)' } }, S.project ? 'Nenhum arquivo aberto' : 'Nenhum projeto aberto'),
+      S.project
+        ? h(
+            'div',
+            { class: 'acts' },
+            h('button', { class: 'btn primary', onclick: () => openPalette(app, S, 'files') }, icon('search'), 'Abrir arquivo…'),
+            h('button', { class: 'btn', onclick: () => app.sidebar.show('files') }, icon('files'), 'Ver os arquivos'),
+          )
+        : h('div', { class: 'acts' }, h('button', { class: 'btn primary', onclick: () => showWelcome(app, S) }, icon('home'), 'Tela inicial')),
       h(
         'div',
         { class: 'keys' },
@@ -710,12 +787,11 @@ async function saveTab(t, { quiet = false } = {}) {
   try {
     const r = await call('write', { path: t.path, text, expectMtime: t.mtime });
     if (r.conflict) {
-      const overwrite = await confirmBox(
-        'O arquivo mudou no disco',
-        `${t.name} foi alterado fora do TeXugo (git, outro editor ou um agente) depois que você o abriu. Sobrescrever com a sua versão?`,
-        { ok: 'Sobrescrever', danger: true },
-      );
-      if (!overwrite) return false;
+      // Nothing of the user's to lose: just take what is on disk.
+      if (!t.dirty) return (await reloadFromDisk(t)) && (toast(`${t.name} mudou no disco e foi recarregado.`, 'info'), true);
+      const choice = await conflictDialog(t, text);
+      if (choice === 'disk') return (await reloadFromDisk(t)), false;
+      if (choice !== 'mine') return false;
       const r2 = await call('write', { path: t.path, text });
       t.mtime = r2.mtime;
     } else t.mtime = r.mtime;
@@ -738,6 +814,86 @@ async function saveAll() {
   return true;
 }
 app.saveAll = saveAll;
+
+// Replace a tab's text with what is on disk, keeping the cursor in place.
+async function reloadFromDisk(t, data) {
+  try {
+    data = data || (await call('read', { path: t.path }));
+  } catch (err) {
+    toast(err.message, 'error');
+    return false;
+  }
+  const est = t.path === S.active ? app.view.state : t.state;
+  const head = Math.min(est.selection.main.head, data.text.length);
+  const tr = est.update({ changes: { from: 0, to: est.doc.length, insert: data.text }, selection: { anchor: head } });
+  if (t.path === S.active) app.view.dispatch(tr);
+  else t.state = tr.state;
+  app.split.resync(t);
+  t.dirty = false;
+  t.mtime = data.mtime;
+  renderTabs();
+  app.sidebar.renderIfFiles();
+  // Replacing the whole text drops the comment marks: find the passages
+  // again in the new text.
+  if (app.comments.items.length) app.comments.load();
+  return true;
+}
+
+// The file changed on disk while the tab had unsaved edits. Three ways
+// out, and the differences on request, so nobody overwrites a coauthor blind.
+async function conflictDialog(t, mine) {
+  let disk = null;
+  try {
+    disk = (await call('read', { path: t.path })).text;
+  } catch {}
+  return new Promise((resolve) => {
+    let done = false;
+    const pick = (v) => {
+      if (done) return;
+      done = true;
+      m.close();
+      resolve(v);
+    };
+    const diffBox = h('div', { class: 'hidden' });
+    const showDiff = (e) => {
+      e.currentTarget.remove();
+      // Only the stretch that differs goes through the word diff.
+      const a = disk.split('\n');
+      const b = mine.split('\n');
+      let pre = 0;
+      while (pre < a.length && pre < b.length && a[pre] === b[pre]) pre++;
+      let suf = 0;
+      while (suf < a.length - pre && suf < b.length - pre && a[a.length - 1 - suf] === b[b.length - 1 - suf]) suf++;
+      const ctx = Math.min(pre, 2);
+      const parts = wordDiff(a.slice(pre - ctx, a.length - suf).join('\n'), b.slice(pre - ctx, b.length - suf).join('\n'));
+      clear(
+        diffBox,
+        h('div', { class: 'conflict-legend' }, h('span', {}, h('i', { style: { background: 'var(--err-soft)', border: '1px solid var(--err)' } }), 'só no disco (some se você sobrescrever)'), h('span', {}, h('i', { style: { background: 'var(--ok-soft)', border: '1px solid var(--ok)' } }), 'só na sua versão'), h('span', { class: 'faint' }, `a partir da linha ${pre - ctx + 1}`)),
+        h('div', { class: 'ai-diff ai-diff-text conflict-diff' }, parts.map((p) => (p.op === 'eq' ? p.s : h(p.op === 'del' ? 'del' : 'ins', {}, p.s)))),
+      );
+      diffBox.classList.remove('hidden');
+    };
+    const m = modal({
+      title: 'O arquivo mudou no disco',
+      wide: true,
+      body: h(
+        'div',
+        {},
+        h('p', { style: { marginTop: 0 } }, `${t.name} foi alterado fora do TeXugo (pull do Git, outro editor ou um agente) depois que você o abriu, e a aba tem alterações suas que ainda não foram salvas.`),
+        h('p', { class: 'muted' }, 'Sobrescrever apaga do arquivo o que chegou de fora. Ficar com a do disco descarta o que você digitou nesta aba.'),
+        disk != null ? h('button', { class: 'btn', onclick: showDiff }, icon('columns'), 'Ver diferenças') : null,
+        diffBox,
+      ),
+      footer: [
+        h('button', { class: 'btn danger', onclick: () => pick('mine') }, 'Sobrescrever com a minha'),
+        h('span', { style: { flex: 1 } }),
+        h('button', { class: 'btn', onclick: () => pick('cancel') }, 'Cancelar'),
+        h('button', { class: 'btn', onclick: () => pick('disk') }, 'Ficar com a do disco'),
+      ],
+      onClose: () => pick('cancel'),
+    });
+  });
+}
 
 // ---------------------------------------------------------------- compile
 function allOpenRoots() {
@@ -1255,10 +1411,10 @@ function renderStatus() {
     h('span', { class: 'grow' }),
     t && !t.binary && viciosConfig.enabled && /\.(tex|ltx|md|markdown|qmd|rmd|txt)$/i.test(t.path) ? viciosItem() : null,
     t && !t.binary && /\.(tex|ltx|md|markdown|qmd|rmd|txt)$/i.test(t.path) ? grammarItem(app, S) : null,
-    t && !t.binary ? h('span', { class: 'item' }, `${S.cursor.words.toLocaleString('pt-BR')} palavras`) : null,
-    t && !t.binary ? h('span', { class: 'item' }, `Ln ${S.cursor.line}, Col ${S.cursor.col}`) : null,
+    t && !t.binary ? h('span', { class: 'item' }, `${S.cursor.words.toLocaleString(getLang() === 'en' ? 'en-US' : 'pt-BR')} palavras`) : null,
+    t && !t.binary ? h('span', { class: 'item click', title: 'Ir para a linha… (⌃G)', onclick: () => openPalette(app, S, 'line') }, `Ln ${S.cursor.line}, Col ${S.cursor.col}`) : null,
     t ? h('span', { class: 'item' }, t.path.endsWith('.bib') ? 'BibTeX' : t.path.endsWith('.tex') ? 'LaTeX' : /\.md$/.test(t.path) ? 'Markdown' : 'Texto') : null,
-    h('span', { class: 'item click', onclick: () => toggleBottom(), title: 'Painel inferior' }, icon('panel')),
+    h('span', { class: 'item click', onclick: () => toggleBottom(), title: 'Mostrar ou esconder o painel inferior (⌘⇧Y)', 'aria-label': 'Painel inferior' }, icon('panel')),
   );
 }
 app.renderStatus = renderStatus;
@@ -1305,7 +1461,7 @@ function renderActivity() {
     views.map(([id, ic, title]) =>
       h(
         'button',
-        { class: 'icon-btn' + (S.sidebarView === id && !S.settings.sidebarHidden ? ' on' : ''), title, onclick: () => app.sidebar.toggle(id) },
+        { class: 'icon-btn' + (S.sidebarView === id && !S.settings.sidebarHidden ? ' on' : ''), title, 'aria-pressed': S.sidebarView === id && !S.settings.sidebarHidden ? 'true' : 'false', onclick: () => app.sidebar.toggle(id) },
         icon(ic),
         id === 'git' && S.git && S.git.files && S.git.files.length ? h('span', { class: 'badge warn' }, String(Math.min(99, S.git.files.length))) : null,
         id === 'revisao' && revisaoOpen() ? h('span', { class: 'badge warn' }, String(Math.min(99, revisaoOpen()))) : null,
@@ -1356,7 +1512,40 @@ app.toggleTerminal = toggleTerminal;
 app.mentionInClaude = () => mentionInClaude(app, S, focusedTarget(app));
 
 // ---------------------------------------------------------------- project
+// Unsaved edits before leaving the project (another project, a new one,
+// a clone): save all, discard, or stay. Resolves false to stay.
+async function confirmLeave() {
+  const dirty = S.tabs.filter((t) => t.dirty);
+  if (!dirty.length) return true;
+  const choice = await new Promise((resolve) => {
+    let done = false;
+    const pick = (v) => {
+      if (done) return;
+      done = true;
+      m.close();
+      resolve(v);
+    };
+    const m = modal({
+      title: 'Alterações não salvas',
+      body: h('div', {}, h('p', { style: { marginTop: 0 } }, dirty.length === 1 ? `${dirty[0].name} tem alterações que ainda não foram salvas.` : `${dirty.length} arquivos têm alterações que ainda não foram salvas:`), dirty.length > 1 ? h('ul', { style: { margin: '0', paddingLeft: '18px' } }, dirty.map((t) => h('li', {}, relPath(S.project.root, t.path)))) : null),
+      footer: [
+        h('button', { class: 'btn danger', onclick: () => pick('discard') }, 'Descartar'),
+        h('span', { style: { flex: 1 } }),
+        h('button', { class: 'btn', onclick: () => pick('cancel') }, 'Cancelar'),
+        h('button', { class: 'btn primary', onclick: () => pick('save') }, dirty.length > 1 ? 'Salvar tudo' : 'Salvar'),
+      ],
+      onClose: () => pick('cancel'),
+    });
+  });
+  if (choice === 'cancel') return false;
+  if (choice === 'save') return saveAll();
+  for (const t of dirty) t.dirty = false;
+  return true;
+}
+app.confirmLeave = confirmLeave;
+
 async function openProject(root) {
+  if (S.project && !(await confirmLeave())) return false;
   let p;
   try {
     p = await call('openProject', { root });
@@ -1503,21 +1692,10 @@ async function checkDisk() {
     if (!t.dirty) {
       // Changed on disk (git pull, an agent, another editor): reload in
       // place, keeping the cursor where it was.
-      const est = t.path === S.active ? app.view.state : t.state;
-      const head = Math.min(est.selection.main.head, data.text.length);
-      const tr = est.update({ changes: { from: 0, to: est.doc.length, insert: data.text }, selection: { anchor: head } });
-      if (t.path === S.active) app.view.dispatch(tr);
-      else t.state = tr.state;
-      app.split.resync(t);
-      t.dirty = false;
-      t.mtime = data.mtime;
-      renderTabs();
-      // Replacing the whole text drops the comment marks: find the passages
-      // again in the new text.
-      if (app.comments.items.length) app.comments.load();
+      await reloadFromDisk(t, data);
     } else if (!t.warnedMtime || t.warnedMtime !== data.mtime) {
       t.warnedMtime = data.mtime;
-      toast(`${t.name} mudou no disco e você tem alterações não salvas. Ao salvar, o TeXugo pergunta antes de sobrescrever.`, 'warn', 7000);
+      toast(`${t.name} mudou no disco e você tem alterações não salvas. Ao salvar, o TeXugo mostra as diferenças e pergunta qual versão fica.`, 'warn', 9000);
     }
   }
 }
@@ -1547,6 +1725,18 @@ function reloadPdfSoon(p) {
 }
 
 // ---------------------------------------------------------------- keys
+function cycleRegion(step) {
+  const regions = [
+    [app.sidebarEl, () => (app.sidebarEl.querySelector('.sidebar-body, input, textarea, button') || app.sidebarEl).focus()],
+    [app.editorGroup, () => (activeTab() && !activeTab().binary ? app.view.focus() : app.tabsEl.querySelector('.tab.active')?.focus())],
+    [app.pdfGroup, () => app.pdfTools.querySelector('button, input')?.focus()],
+    [app.bottomEl, () => app.bottomEl.querySelector('.bottom-tab.active, button')?.focus()],
+  ].filter(([el]) => el.offsetParent);
+  if (!regions.length) return;
+  const at = regions.findIndex(([el]) => el.contains(document.activeElement));
+  regions[(at + step + regions.length) % regions.length][1]();
+}
+
 function wireKeys() {
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && (e.key === '`' || e.code === 'Backquote')) {
@@ -1556,6 +1746,15 @@ function wireKeys() {
     // Inside a terminal, keys belong to the program running there (⌃C, ⌃K,
     // ⌃W in Claude Code or the shell); only ⌘K, ⌘P and ⌘, stay global.
     if (e.target && e.target.closest && e.target.closest('.term-panel') && !(e.metaKey && ['k', 'p', ','].includes(e.key.toLowerCase()))) return;
+    // F6 walks the regions: files, editor, PDF, bottom panel.
+    if (e.key === 'F6') {
+      e.preventDefault();
+      return cycleRegion(e.shiftKey ? -1 : 1);
+    }
+    if (e.ctrlKey && !e.metaKey && !e.altKey && e.key.toLowerCase() === 'g' && S.project && activeTab()) {
+      e.preventDefault();
+      return openPalette(app, S, 'line');
+    }
     const mod = e.metaKey || e.ctrlKey;
     if (!mod) return;
     const k = e.key.toLowerCase();
@@ -1641,6 +1840,8 @@ function wireKeys() {
         welcome: () => showWelcome(app, S),
         shortcuts: () => shortcutsDialog(),
         library: () => libraryDialog(app, S),
+        // Asked by the app's "unsaved changes" dialog on close or quit.
+        saveAllThenClose: async () => (await saveAll()) && (native.closeSaved ? native.closeSaved() : window.close()),
       };
       map[action] && map[action]();
     });

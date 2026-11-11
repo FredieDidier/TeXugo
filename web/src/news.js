@@ -181,6 +181,8 @@ export async function renderNewsPanel(app, S, el) {
           {
             class: 'btn sm primary',
             onclick: async () => {
+              // A pull under unsaved text ends in a save conflict: save first.
+              if (!(await app.saveAll())) return;
               const r = await call('gitPull', { root });
               if (r.code === 0) toast('Pull: ok.', 'ok');
               else toast((r.stderr || r.stdout || '').trim().split('\n').slice(-2).join(' '), 'error', 9000);

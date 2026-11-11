@@ -15,8 +15,54 @@ export function h(tag, attrs = {}, ...children) {
     else el.setAttribute(k, v === true ? '' : v);
   }
   append(el, children);
+  if (typeof attrs?.onclick === 'function' && !NATIVE.has(tag) && attrs.role == null && attrs.tabindex == null && !/\boverlay\b/.test(el.className)) clickable(el);
+  else if (tag === 'button' && !el.hasAttribute('type')) el.type = 'button';
+  // Scrolling lists take the focus, so the arrow keys can walk their rows.
+  if (/(^|\s)sidebar-body(\s|$)/.test(el.className) && attrs.tabindex == null) el.tabIndex = 0;
   return el;
 }
+
+// A div or span with a click handler is a button for the keyboard and for
+// screen readers too. Rows of long lists (tree, results, problems) stay out
+// of the Tab order: the arrow keys walk them (see the keydown handler below).
+const NATIVE = new Set(['button', 'a', 'input', 'select', 'textarea', 'label', 'summary', 'option', 'details']);
+const NAV = '.tree-row, .list-row, .search-hit, .git-file, .prob, .refs-item, .grammar-row, .review-pt, .vicio-row';
+const NAV_BOX = '.sidebar-body, .bottom-body, .modal .body';
+const ROW = /(^|\s)(tree-row|list-row|search-hit|git-file|prob|refs-item|grammar-row|review-pt|vicio-row|close|term-tab)(\s|$)/;
+function clickable(el) {
+  el.setAttribute('role', 'button');
+  el.tabIndex = ROW.test(el.className) ? -1 : 0;
+  el.addEventListener('keydown', (e) => {
+    if (e.target !== el || (e.key !== 'Enter' && e.key !== ' ') || e.metaKey || e.ctrlKey || e.altKey) return;
+    e.preventDefault();
+    // Views redraw themselves on a click: put the focus back on the row
+    // that sits where this one was.
+    const home = el.closest('.sidebar, .bottom, .modal');
+    const at = home && el.matches(NAV) ? [...home.querySelectorAll(NAV)].indexOf(el) : -1;
+    el.click();
+    if (at >= 0)
+      setTimeout(() => {
+        if (document.activeElement && document.activeElement !== document.body) return;
+        const rows = home.querySelectorAll(NAV);
+        rows[Math.min(at, rows.length - 1)]?.focus();
+      }, 0);
+  });
+}
+
+if (typeof document !== 'undefined')
+  document.addEventListener('keydown', (e) => {
+    const step = { ArrowDown: 1, ArrowUp: -1, Home: 'first', End: 'last' }[e.key];
+    const el = e.target;
+    if (step === undefined || e.metaKey || e.ctrlKey || e.altKey || !(el instanceof HTMLElement)) return;
+    const box = el.matches(NAV_BOX) ? el : el.matches(NAV) ? el.closest(NAV_BOX) : null;
+    if (!box) return;
+    const rows = [...box.querySelectorAll(NAV)].filter((r) => r.offsetParent);
+    if (!rows.length) return;
+    const i = rows.indexOf(el);
+    const next = step === 'first' ? rows[0] : step === 'last' ? rows[rows.length - 1] : i < 0 ? box.querySelector('.active') || rows[0] : rows[Math.max(0, Math.min(rows.length - 1, i + step))];
+    e.preventDefault();
+    next.focus();
+  });
 
 function append(el, children) {
   for (const c of children.flat(Infinity)) {
@@ -25,9 +71,20 @@ function append(el, children) {
   }
 }
 
+// Views redraw by replacing their children. When the focus was on one of
+// them (a keyboard user just pressed it), it goes to whatever sits in the
+// same place afterwards instead of falling back to the page.
+const HOLDS_FOCUS = 'button, [tabindex], input, select, textarea, a[href]';
 export function clear(el, ...children) {
+  const act = document.activeElement;
+  const at = act && act !== el && el.contains(act) ? [...el.querySelectorAll(HOLDS_FOCUS)].indexOf(act) : -1;
   el.replaceChildren();
   append(el, children);
+  if (at >= 0) {
+    const now = el.querySelectorAll(HOLDS_FOCUS);
+    const next = now[Math.min(at, now.length - 1)];
+    if (next && act.tagName === next.tagName) next.focus({ preventScroll: true });
+  }
   return el;
 }
 
@@ -108,6 +165,9 @@ export function icon(name, cls = '') {
   return span.firstChild;
 }
 
+// The system's file manager, by its name where it has one.
+export const REVEAL = typeof navigator === 'undefined' || /Mac/.test(navigator.platform || '') ? 'Mostrar no Finder' : 'Mostrar na pasta';
+
 export function wordmark() {
   return h('span', { class: 'wordmark' }, 'T', h('span', { class: 'e' }, 'e'), h('span', { class: 'x' }, 'X'), h('span', { class: 'ugo' }, 'ugo'));
 }
@@ -178,30 +238,63 @@ export function debounce(fn, ms) {
 }
 
 let toastBox;
+// Errors stay until dismissed: a failed save or sync must not vanish while
+// the user looks elsewhere. The rest leaves by itself, pausing under the mouse.
 export function toast(message, kind = 'info', ms = 4200) {
-  if (!toastBox) document.body.append((toastBox = h('div', { class: 'toasts' })));
+  if (!toastBox) document.body.append((toastBox = h('div', { class: 'toasts', 'aria-live': 'polite' })));
   const ico = { error: 'error', ok: 'checkCircle', warn: 'warn', info: 'info' }[kind] || 'info';
-  const el = h('div', { class: `toast ${kind}` }, icon(ico), h('div', {}, message));
+  const text = typeof message === 'string' ? tr(message) : null;
+  // The same message again replaces the one on screen instead of piling up.
+  if (text) for (const old of [...toastBox.children]) if (old.dataset.text === text) old.remove();
+  const sticky = kind === 'error';
+  const el = h('div', { class: `toast ${kind}`, role: sticky ? 'alert' : 'status' }, icon(ico), h('div', { class: 'toast-msg' }, message), h('button', { class: 'icon-btn toast-x', title: 'Fechar', onclick: () => el.remove() }, icon('x')));
+  if (text) el.dataset.text = text;
   toastBox.append(el);
-  setTimeout(() => el.remove(), ms);
+  while (toastBox.children.length > 4) toastBox.firstChild.remove();
+  if (sticky) return el;
+  let timer = setTimeout(() => el.remove(), kind === 'warn' ? Math.max(ms, 6000) : ms);
+  el.addEventListener('mouseenter', () => clearTimeout(timer));
+  el.addEventListener('mouseleave', () => (timer = setTimeout(() => el.remove(), 1500)));
+  return el;
 }
 
 // Context/dropdown menu at a point. items: [{label, icon, kb, action, danger}] or 'sep'.
+// Arrow keys, Home/End, Enter and Esc work; the focus goes back to where it was.
+let menuOpener = null;
 export function menu(x, y, items) {
   closeMenus();
+  menuOpener = document.activeElement;
   const m = h(
     'div',
-    { class: 'menu' },
+    { class: 'menu', role: 'menu', tabindex: '-1' },
     items.filter(Boolean).map((it) =>
       it === 'sep'
-        ? h('div', { class: 'sep' })
-        : h('div', { class: 'mi' + (it.danger ? ' danger' : ''), title: it.title, onclick: () => (closeMenus(), it.action()) }, it.icon ? icon(it.icon) : h('span', { style: { width: '16px' } }), it.label, it.kb ? h('span', { class: 'kb' }, it.kb) : null),
+        ? h('div', { class: 'sep', role: 'separator' })
+        : h('div', { class: 'mi' + (it.danger ? ' danger' : ''), role: 'menuitem', tabindex: '-1', title: it.title, onclick: () => (closeMenus(), it.action()) }, it.icon ? icon(it.icon) : h('span', { style: { width: '16px' } }), it.label, it.kb ? h('span', { class: 'kb' }, it.kb) : null),
     ),
   );
   document.body.append(m);
+  // Opened from the keyboard (a click with no mouse position): under the button.
+  if (!x && menuOpener && menuOpener.getBoundingClientRect) {
+    const o = menuOpener.getBoundingClientRect();
+    x = o.left;
+    y = o.bottom + 4;
+  }
   const r = m.getBoundingClientRect();
-  m.style.left = Math.min(x, innerWidth - r.width - 8) + 'px';
-  m.style.top = Math.min(y, innerHeight - r.height - 8) + 'px';
+  m.style.left = Math.max(8, Math.min(x, innerWidth - r.width - 8)) + 'px';
+  m.style.top = Math.max(8, Math.min(y, innerHeight - r.height - 8)) + 'px';
+  m.addEventListener('keydown', (e) => {
+    const its = [...m.querySelectorAll('.mi')];
+    const i = its.indexOf(document.activeElement);
+    const go = (n) => (e.preventDefault(), e.stopPropagation(), its[(n + its.length) % its.length]?.focus());
+    if (e.key === 'ArrowDown') go(i + 1);
+    else if (e.key === 'ArrowUp') go(i < 0 ? -1 : i - 1);
+    else if (e.key === 'Home') go(0);
+    else if (e.key === 'End') go(-1);
+    else if ((e.key === 'Enter' || e.key === ' ') && i >= 0) (e.preventDefault(), e.stopPropagation(), its[i].click());
+    else if (e.key === 'Escape' || e.key === 'Tab') (e.preventDefault(), e.stopPropagation(), closeMenus());
+  });
+  m.focus({ preventScroll: true });
   setTimeout(() => document.addEventListener('mousedown', onDocDown, true), 0);
   return m;
 }
@@ -209,29 +302,67 @@ function onDocDown(e) {
   if (!e.target.closest('.menu')) closeMenus();
 }
 export function closeMenus() {
-  document.querySelectorAll('.menu').forEach((m) => m.remove());
+  const open = document.querySelectorAll('.menu');
+  if (!open.length) return;
+  const had = [...open].some((m) => m.contains(document.activeElement));
+  open.forEach((m) => m.remove());
   document.removeEventListener('mousedown', onDocDown, true);
+  if (had && menuOpener && menuOpener.isConnected) menuOpener.focus({ preventScroll: true });
+  menuOpener = null;
 }
 
-// Modal dialog. Returns { el, close }.
+// Modal dialog. Returns { el, close }. The focus moves in, Tab stays inside,
+// Esc closes the dialog on top, and the focus returns to where it was.
+let modalSeq = 0;
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 export function modal({ title, body, footer, wide, onClose }) {
+  const opener = document.activeElement;
   const overlay = h('div', { class: 'overlay' });
+  let closed = false;
   const close = () => {
+    if (closed) return;
+    closed = true;
     overlay.remove();
     document.removeEventListener('keydown', onKey, true);
     onClose && onClose();
+    if (opener && opener.isConnected && !document.querySelector('.overlay')) opener.focus({ preventScroll: true });
+    else if (opener && opener.isConnected && document.querySelector('.overlay')?.contains(opener)) opener.focus({ preventScroll: true });
   };
   const onKey = (e) => {
+    const all = document.querySelectorAll('.overlay');
+    if (all[all.length - 1] !== overlay) return;
     if (e.key === 'Escape') {
+      if (document.querySelector('.menu')) return;
       e.stopPropagation();
       close();
+    } else if (e.key === 'Tab') {
+      const f = [...el.querySelectorAll(FOCUSABLE)].filter((x) => x.offsetParent);
+      if (!f.length) return e.preventDefault();
+      const first = f[0];
+      const last = f[f.length - 1];
+      if (!el.contains(document.activeElement)) (e.preventDefault(), first.focus());
+      else if (e.shiftKey && document.activeElement === first) (e.preventDefault(), last.focus());
+      else if (!e.shiftKey && document.activeElement === last) (e.preventDefault(), first.focus());
     }
   };
   document.addEventListener('keydown', onKey, true);
-  const el = h('div', { class: 'modal' + (wide ? ' wide' : '') }, title ? h('header', {}, title, h('span', { class: 'grow' }), h('button', { class: 'icon-btn', onclick: close }, icon('x'))) : null, h('div', { class: 'body' }, body), footer ? h('footer', {}, footer) : null);
+  const id = 'modal-title-' + ++modalSeq;
+  const el = h(
+    'div',
+    { class: 'modal' + (wide ? ' wide' : ''), role: 'dialog', 'aria-modal': 'true', 'aria-labelledby': title ? id : null, tabindex: '-1' },
+    title ? h('header', {}, h('span', { id, class: 'modal-title' }, title), h('span', { class: 'grow' }), h('button', { class: 'icon-btn', title: 'Fechar (Esc)', onclick: close }, icon('x'))) : null,
+    h('div', { class: 'body' }, body),
+    footer ? h('footer', {}, footer) : null,
+  );
   overlay.append(el);
   overlay.addEventListener('mousedown', (e) => e.target === overlay && close());
   document.body.append(overlay);
+  // Dialogs that focus a field of their own do it after this and win.
+  setTimeout(() => {
+    if (closed || el.contains(document.activeElement)) return;
+    const target = el.querySelector('.body input:not([type=checkbox]):not([type=hidden]), .body textarea') || el.querySelector('footer .btn.primary') || [...el.querySelectorAll('footer .btn:not(.danger)')].pop() || el;
+    target.focus({ preventScroll: true });
+  }, 0);
   return { el, close };
 }
 
@@ -280,7 +411,13 @@ export function confirmBox(title, text, { ok = 'Confirmar', danger = false } = {
 
 // Drag-to-resize gutter. getSize/setSize work in pixels.
 export function gutter(dir, { getSize, setSize, invert = false }) {
-  const g = h('div', { class: 'gutter' + (dir === 'h' ? ' h' : '') });
+  const g = h('div', { class: 'gutter' + (dir === 'h' ? ' h' : ''), role: 'separator', tabindex: '0', 'aria-orientation': dir === 'h' ? 'horizontal' : 'vertical', 'aria-label': 'Redimensionar (setas do teclado)' });
+  g.addEventListener('keydown', (e) => {
+    const d = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[e.key];
+    if (!d || (dir === 'h') !== (e.key === 'ArrowUp' || e.key === 'ArrowDown')) return;
+    e.preventDefault();
+    setSize(getSize() + (invert ? -d : d) * (e.shiftKey ? 64 : 16));
+  });
   g.addEventListener('mousedown', (e) => {
     e.preventDefault();
     const start = dir === 'h' ? e.clientY : e.clientX;
