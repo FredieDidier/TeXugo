@@ -1,0 +1,680 @@
+# Auditoria de pré-lançamento do TeXugo
+
+Data: 11/11/2026. Commit auditado: `49fb21f` (branch `main`, árvore limpa). Versão no `package.json`: 0.1.0.
+Auditor: Claude Fable 5.2. Leitor previsto: Fredie e o Opus 5.5, que vai implementar.
+
+Nenhum arquivo do repositório foi alterado. Este relatório é o único arquivo novo.
+
+## Como ler
+
+Cada achado traz uma classificação, a gravidade, a evidência, o impacto para quem usa, a correção recomendada, o esforço e um critério de aceite.
+
+| Classificação | Significado |
+|---|---|
+| **Confirmado (execução)** | Reproduzi o comportamento rodando o código do repositório numa pasta temporária. |
+| **Confirmado (leitura)** | O código faz isso sem ambiguidade, mas não exercitei o fluxo inteiro na interface. |
+| **Risco potencial** | Há um caminho plausível para o problema, não demonstrado. Inclui tudo de Windows e Linux, que não testei. |
+| **Sugestão** | Melhoria sem defeito associado. |
+
+Gravidade: crítica (perda de trabalho ou execução indevida de código), alta, média, baixa.
+Esforço: **P** (até meio dia), **M** (1 a 2 dias), **G** (3 dias ou mais). É a estimativa para uma sessão de implementação com revisão sua.
+
+## O que foi feito e o que não foi
+
+Li por inteiro `electron/`, `server/index.js`, `util.js`, `platform.js`, `terminal.js`, `project.js`, `build.js`, `live.js`, `git.js`, `agent.js`, `ai.js`, `ide.js`, `grammar.js`, `doctor.js`, `comments.js`, `coauthors.js`, `compare.js`, `submission.js`, `web/src/main.js`, `api.js`, `markdown.js`, `live.js`, `changes.js`, os scripts de empacotamento e o hook. Li por trechos os demais módulos do servidor e da interface, guiado por buscas (escritas em disco, comandos executados, chamadas de rede, HTML bruto).
+
+Rodei, sempre em pasta temporária e com perfil próprio:
+
+- `npm test`: 94 testes, todos passam, 57 s. Com `--experimental-test-coverage` para medir cobertura.
+- O servidor local contra um projeto de teste: token, guarda de caminhos, escrita em link simbólico, `close()`.
+- O app Electron de verdade (`electron/main.js` importado por um roteiro) com uma aba suja: fechar a janela, sair com ⌘Q, trocar de projeto.
+- `git.js` contra um remoto local com dois clones.
+- `BuildManager` em projetos com `latexmkrc`.
+- Medições de `lineChanges`, das varreduras de projeto e de `news()` num projeto sintético de 6 mil arquivos.
+- Uma varredura das strings em português sem tradução.
+- `npm audit` e as versões publicadas das dependências.
+
+Não testei: Windows e Linux; push e pull contra o GitHub real; Overleaf; uma conversa real com o Claude Code (não gastei a sua conta); instalação de pacotes pelo Médico do TeX; leitor de tela; a aparência da interface (não tirei capturas). O desempenho foi medido por função, não com o app aberto num paper grande.
+
+## Resumo
+
+O TeXugo está funcionalmente rico e o núcleo é cuidadoso: token por sessão, janela em sandbox, escrita atômica com checagem de conflito, ações de IA só de leitura, guardas contra compilação travada. Os testes existentes passam e cobrem bem a lógica pura.
+
+O que impede o lançamento hoje são sete pontos. Quatro deles fazem o usuário perder trabalho ou acreditar num resultado falso, e têm correção pequena:
+
+1. Com alteração não salva, a janela se recusa a fechar sem dizer por quê; depois de ⌘Q, **não dá mais para salvar** (B1).
+2. Abrir outro projeto **descarta** as alterações não salvas sem perguntar (B2).
+3. Commit, Sincronizar e Pull ignoram o que não foi salvo, e o salvamento seguinte pode desfazer o que veio do coautor (B3).
+4. Projeto com `latexmkrc` gera DVI no lugar de PDF, ou diz "ok, zero ??" sem ter lido o log (B4).
+
+Os outros três são de distribuição: assinatura e notarização no Mac (B5), Electron sete versões atrás com avisos de segurança altos (B6) e ausência de licença e de avisos de terceiros (B7).
+
+A maior lacuna de QA é estrutural: `server/index.js` (toda a API), `git.js`, `terminal.js`, o Electron e cerca de 40 dos 50 módulos da interface não têm nenhum teste. Os quatro defeitos acima moram exatamente aí.
+
+Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis.
+
+---
+
+# Parte 1. Bloqueadores de lançamento
+
+## B1. Fechar ou sair com alterações não salvas: a janela trava e o salvamento morre
+
+- **Classificação:** confirmado (execução). **Gravidade:** crítica. **Esforço:** P.
+- **Evidência:**
+  - [web/src/main.js:1620](web/src/main.js:1620): o `beforeunload` cancela o fechamento quando há aba suja.
+  - `electron/main.js` não trata `will-prevent-unload`. No Electron, cancelar o `beforeunload` não abre diálogo nenhum: a janela só não fecha.
+  - [electron/main.js:210](electron/main.js:210): `app.on('before-quit', () => server && server.close())`. O `before-quit` dispara antes de as janelas decidirem se fecham.
+  - [server/index.js:901](server/index.js:901): `close()` mata terminais, agentes, LanguageTool, observadores de arquivo e o servidor HTTP.
+  - Resultado do roteiro no app real, com uma aba suja:
+    ```
+    after win.close(): destroyed = false | will-prevent-unload fired = 1 | modal/dialog in page = false
+    after app.quit():  window still open = true | before-quit fired = 1 | will-quit fired = 0
+    save attempt from the page after the cancelled quit => FAILED: Failed to fetch
+    file on disk still has original text = true
+    ```
+- **Impacto:** quem aperta ⌘Q com trabalho não salvo fica com a janela aberta, sem aviso, e com um app que não salva mais, não compila e não tem terminal. A única saída é copiar o texto à mão ou forçar o encerramento e perder tudo. O botão vermelho sozinho só confunde (a janela não fecha e nada explica), mas o ⌘Q destrói o caminho de salvar. O futuro "Atualizar agora" (item 6) vai chamar `app.quit()` e cair no mesmo defeito.
+- **Correção recomendada:**
+  1. Em `createWindow`, tratar `win.webContents.on('will-prevent-unload', …)` com `dialog.showMessageBoxSync(win, …)` de três botões: *Salvar tudo e fechar*, *Descartar*, *Cancelar*. *Descartar* chama `event.preventDefault()` (no Electron isso libera o fechamento). *Salvar* manda um comando à página (`menu: 'saveAllThenClose'`), que roda `saveAll()` e, se deu certo, limpa `dirty` e chama `window.close()`. *Cancelar* não faz nada.
+  2. Mover `server.close()` de `before-quit` para `will-quit`, que só dispara quando todas as janelas já fecharam.
+  3. Os rótulos do diálogo precisam passar por `L()` (inglês e português).
+- **Critério de aceite:** teste de ponta a ponta no Electron (ver Apêndice A) em que, com aba suja, `app.quit()` seguido de *Cancelar* deixa `fetch('/api/hello')` respondendo 200; com *Salvar*, o arquivo no disco contém o texto novo e o processo termina.
+
+## B2. Abrir outro projeto descarta alterações não salvas
+
+- **Classificação:** confirmado (execução). **Gravidade:** crítica. **Esforço:** P.
+- **Evidência:** [web/src/main.js:1359](web/src/main.js:1359): `openProject` zera `S.tabs` sem olhar `dirty`. Nenhum dos chamadores verifica: [welcome.js:57](web/src/welcome.js:57) (recentes), [welcome.js:135](web/src/welcome.js:135) (modelo novo), [welcome.js:212](web/src/welcome.js:212) (clonar), [main.js:1654](web/src/main.js:1654) (Abrir pasta). No app real:
+  ```
+  project A open, dirty tab: true | editor has UNSAVED-WORK: true
+  clicked recent project B: true | confirmation dialog shown: false | title now: qproj2 — TeXugo | dirty tabs: 0
+  editor still has UNSAVED-WORK: false | on disk has it: false
+  ```
+- **Impacto:** um clique num projeto recente apaga o que não foi salvo, sem pergunta e sem volta.
+- **Correção recomendada:** no início de `openProject`, se houver aba suja, mostrar o mesmo diálogo de três opções de `closeTab` (*Salvar tudo*, *Descartar*, *Cancelar*) e só seguir depois da resposta. Como criar projeto e clonar chamam `openProject` no fim, a pergunta deve vir antes de o servidor criar a pasta: extrair um `confirmLeaveProject()` e chamá-lo no começo dos três fluxos.
+- **Critério de aceite:** o roteiro acima passa a mostrar o diálogo; *Cancelar* mantém o projeto A com a aba suja; *Salvar tudo* grava e troca.
+
+## B3. Commit, Sincronizar e Pull ignoram o que não foi salvo, e o "Sobrescrever" desfaz o trabalho do coautor
+
+- **Classificação:** confirmado (leitura; a sequência decorre do código, não a exercitei na interface). **Gravidade:** alta. **Esforço:** P para a parte 1, M para a parte 2.
+- **Evidência:**
+  - [web/src/sidebar.js:378](web/src/sidebar.js:378) (Commit), [sidebar.js:428](web/src/sidebar.js:428) (Sincronizar), [sidebar.js:440](web/src/sidebar.js:440) (Pull) e [news.js:184](web/src/news.js:184) (Baixar) chamam o Git sem `saveAll()`. Compilar salva antes ([main.js:754](web/src/main.js:754)); o Git, não.
+  - [server/git.js:102](server/git.js:102): `sync` faz commit do que está no disco, `pull --rebase` e push.
+  - [web/src/main.js:712](web/src/main.js:712): quando o arquivo mudou no disco, o salvamento só oferece *Sobrescrever* ou cancelar.
+- **Sequência que perde trabalho:** `paper.tex` aberto com edições não salvas → Sincronizar → o commit sai sem essas edições → o pull traz mudanças do coautor em `paper.tex` → o aviso "mudou no disco" aparece → ⌘S → *Sobrescrever* → o arquivo volta ao conteúdo de antes do pull mais as edições do usuário. O próximo Sincronizar publica a reversão. O texto do coautor continua no histórico, mas some do documento sem que ninguém perceba.
+- **Impacto:** a colaboração por Git é o recurso mais anunciado do app. Hoje ela tem um caminho curto para reverter o coautor, e o usuário acha que "sincronizou" algo que ficou só na tela.
+- **Correção recomendada:**
+  1. (P) `await app.saveAll()` antes de `gitCommit`, `gitSync` e `gitPull` nos quatro lugares; se o salvamento falhar ou for cancelado, não chamar o Git.
+  2. (M) Trocar o diálogo de conflito por três saídas: *Ver diferenças* (o diff entre o disco e a aba, que `web/src/diff.js` já sabe desenhar), *Ficar com a do disco* (recarrega e descarta as minhas) e *Sobrescrever*. Uma quarta, *Juntar*, pode usar `git merge-file` com três versões (a que a aba carregou, a do disco, a da aba); guarde a versão carregada em `t.loadedText` para isso.
+- **Critério de aceite:** teste de `git.js` com remoto local (ver Apêndice A) em que a edição não salva entra no commit do Sincronizar; teste de interface em que o conflito oferece recarregar.
+
+## B4. Projeto com `latexmkrc`: DVI no lugar de PDF e "ok, zero ??" sem ler o log
+
+- **Classificação:** confirmado (execução). **Gravidade:** alta. **Esforço:** P a M.
+- **Evidência:**
+  - [server/build.js:258](server/build.js:258): quando existe `latexmkrc` ou `.latexmkrc` e o motor é o padrão, o TeXugo não passa `-pdf`. Um rc que não define `$pdf_mode` faz o latexmk gerar DVI.
+  - [server/build.js:183](server/build.js:183): log, PDF e `.aux` são procurados ao lado do `.tex`. Não há nenhum tratamento de `$out_dir` ou `$aux_dir` (busca por `out_dir|aux_dir` em `server/` não retorna nada).
+  - Caso 1, `.latexmkrc` só com `$bibtex_use = 2;`: saiu `paper.dvi`, nenhum PDF, `pdf: null`.
+  - Caso 2, `latexmkrc` com `$out_dir = "build";` e um `\ref{missing}` no texto: `{"ok":true,"status":"ok","pdf":null,"undefinedRefs":0}`. O log estava em `build/` e não foi lido.
+- **Impacto:** quem chega com um `latexmkrc` (comum entre usuários experientes e em projetos vindos do Overleaf) não consegue um PDF e não recebe explicação. No caso 2 o app afirma "zero ??", que é a promessa central do produto, sem ter verificado.
+- **Correção recomendada:**
+  1. Ler o rc. Se ele não tiver `$pdf_mode`, passar a flag do motor como hoje se faz sem rc.
+  2. Descobrir a pasta de saída. O caminho mais robusto é perguntar ao próprio latexmk, por exemplo `latexmk -e 'print "TEXUGO_OUT=$out_dir\nTEXUGO_AUX=$aux_dir\n"; exit;'` (confirme na documentação da versão instalada que `-e` roda depois dos rc). O plano B é uma expressão regular para o caso literal simples. Guardar o resultado em `info.outDir` e usar em `stem(doc)` para log, PDF, `.aux`, `.fls` e SyncTeX. `auxFingerprint`, `sourceFiles` (submissão), `live.js` e `sync` leem os mesmos caminhos.
+  3. Nunca devolver `status: 'ok'` sem log: se o processo saiu com 0 e o log não foi achado, o estado é "não sei", com uma mensagem que diga onde procurei.
+- **Critério de aceite:** dois testes novos em `test/build.test.js` com os casos acima: PDF encontrado e `undefinedRefs.length === 1`.
+
+## B5. Distribuição no Mac: assinatura ad hoc, sem notarização, só Apple Silicon
+
+- **Classificação:** confirmado (leitura e inspeção do pacote). **Gravidade:** alta. **Esforço:** M, mais uma decisão sua.
+- **Evidência:** [scripts/package-mac.mjs:57](scripts/package-mac.mjs:57) assina com `codesign --sign -`. O script copia o `Electron.app` de `node_modules`, que tem a arquitetura da máquina que empacota: `out/TeXugo.app/Contents/MacOS/TeXugo` é `Mach-O 64-bit executable arm64`. Não há Developer ID, runtime endurecido, entitlements, notarização nem `.dmg`.
+- **Impacto:** um `.dmg` baixado do site é barrado pelo Gatekeeper. No macOS 15 em diante não há mais o atalho de clicar com Control e abrir: a pessoa precisa ir a Ajustes → Privacidade e Segurança, o que para o público do app equivale a "não abre". Macs Intel não rodam o binário. E o "Atualizar agora" do item 6 depende de assinatura válida (o atualizador do Electron no Mac recusa pacote não assinado).
+- **Decisão sua:** entrar no Apple Developer Program (US$ 99 por ano). Sem ele, o lançamento no Mac exige instruções de contorno na página de download e o botão de atualização vira "Baixar a versão nova".
+- **Correção recomendada:** trocar o script manual por `electron-builder`, que resolve de uma vez os itens 2, 6 e 9 do roteiro: `.dmg` universal (ou dois, arm64 e x64), runtime endurecido, notarização, `.exe` (NSIS), `.AppImage`, recompilação do `node-pty` e os arquivos `latest*.yml` que o `electron-updater` lê. É uma troca do empacotador (73 linhas), não do app. O hook `post-commit` pode continuar chamando `npm run package` com um alvo `--dir` para a instalação local. Ver o item 9 na Parte 4.
+- **Critério de aceite:** `spctl -a -vv TeXugo.app` responde "accepted, source=Notarized Developer ID"; o `.dmg` abre num Mac limpo, Intel e Apple Silicon, sem passar pelos Ajustes.
+
+## B6. Electron 38 está sete versões atrás e tem avisos de segurança altos
+
+- **Classificação:** confirmado (`npm view`, `npm audit`). **Gravidade:** alta. **Esforço:** P a M.
+- **Evidência:** instalado 38.8.6; a última publicada é 45.3.0. `npm audit` lista `electron` como *high* para `<=42.11.15` (três avisos, dois de uso de memória liberada). O Electron mantém as três versões maiores mais recentes, então a 38 não recebe correção.
+- **Impacto:** o app desenha PDFs e Markdown que chegam de coautores com um Chromium de mais de um ano. Os avisos listados tocam recursos que o TeXugo não usa (janela fora da tela, textura compartilhada, imagem da área de transferência), então a exploração direta é improvável. O risco real é lançar um app público sobre uma base sem correções e com `npm audit` vermelho logo de saída.
+- **Correção recomendada:** subir para a versão maior estável corrente antes de empacotar, rodar os testes e o roteiro de fumaça. Pontos a conferir na subida: `node:sqlite` (usado em `server/zotero.js`), `titleBarOverlay` no Windows, `fs.watch` recursivo no Linux, e o `node-pty` (N-API, deve seguir funcionando). Atualizar junto `katex` (0.16.11 tem dois avisos moderados; a 0.19.1 está publicada). `esbuild` e `extract-zip` aparecem no audit, mas são só de desenvolvimento.
+- **Critério de aceite:** `npm audit --omit=dev` sem *high*; 94 testes verdes; roteiro de fumaça verde.
+
+## B7. Licenças: o repositório não tem LICENSE e o pacote não leva os avisos de terceiros
+
+- **Classificação:** confirmado (inspeção). **Gravidade:** alta (jurídica). **Esforço:** P.
+- **Evidência:** o `package.json` declara MIT, mas não existe `LICENSE` na raiz. `node_modules/electron/dist/LICENSE` e `LICENSES.chromium.html` ficam ao lado do `Electron.app` e não entram em `out/TeXugo.app`. O `dist/app.js` embute CodeMirror, Lezer, marked, xterm e KaTeX (MIT) e o pdf.js (Apache 2.0) sem o texto das licenças. Os CMaps da Adobe e as fontes padrão do pdf.js vão com os seus arquivos de licença (o `cpSync` recursivo os leva), e os modelos não trazem `.bst` nem `.cls` de terceiros, o que é bom.
+- **Impacto:** MIT, BSD e Apache exigem que o aviso de copyright acompanhe a redistribuição. Publicar o instalador sem eles descumpre as licenças das dependências.
+- **Correção recomendada:** criar `LICENSE` (MIT, com o seu nome e o ano). Gerar `THIRD-PARTY-NOTICES.txt` por script a partir do `package-lock.json`, só com o que vai no pacote: `electron` (mais o `LICENSES.chromium.html` copiado para `Resources/`), `ws`, `node-pty`, os pacotes `@codemirror/*` e `@lezer/*`, `marked`, `@xterm/*`, `katex` e suas fontes, `pdfjs-dist` com CMaps e fontes. Mostrar o arquivo em Ajuda → Licenças. O LanguageTool e o TeX não são distribuídos pelo app, então não entram.
+- **Critério de aceite:** teste que falha se um pacote de `dependencies`, ou embutido pelo esbuild, não estiver no arquivo de avisos.
+
+---
+
+# Parte 2. Importantes
+
+Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
+
+## I1. Salvar um arquivo que é link simbólico quebra o link; a permissão do arquivo se perde
+
+- **Classificação:** confirmado (execução). **Gravidade:** média a alta. **Esforço:** P.
+- **Evidência:** [server/index.js:226](server/index.js:226) grava em `p + '.texugo-tmp'` e renomeia por cima de `p`. Teste: `refs.bib` como link para `shared/library.bib` → depois de um salvamento, `stillLink: false` e o arquivo compartilhado não recebeu a entrada nova. Um `run.sh` com modo 755 voltou com 644.
+- **Impacto:** manter um `.bib` central ligado por link em cada projeto é prática comum. Depois do primeiro ⌘S o projeto passa a ter uma cópia solta e o usuário não é avisado.
+- **Correção:** resolver `fs.realpathSync(p)` quando o arquivo existe e gravar o temporário ao lado do destino real; copiar o modo com `fs.chmodSync(tmp, st.mode)` antes de renomear.
+- **Aceite:** o teste acima passa a dar `stillLink: true`, `sharedHasB: true` e modo 755.
+
+## I2. Não há recuperação do que não foi salvo quando o app cai
+
+- **Classificação:** risco potencial (não observei queda). **Gravidade:** média a alta. **Esforço:** M.
+- **Evidência:** o texto não salvo vive só na memória da janela. Não há salvamento automático nem cópia de recuperação. A prévia ao vivo ([web/src/live.js](web/src/live.js)) atualiza o PDF sem salvar, o que convida a ficar muito tempo sem ⌘S.
+- **Impacto:** falta de luz, travamento da janela ou encerramento forçado levam o trabalho da sessão.
+- **Correção:** a cada 20 a 30 segundos, e ao perder o foco, gravar as abas sujas em `<dados do app>/recovery/<hash do projeto>/` (nunca dentro do projeto, para não sujar o Git). Ao abrir um projeto com cópias mais novas que o disco, oferecer *Recuperar* com o diff. Apagar a cópia ao salvar ou descartar. Não é salvamento automático no arquivo do usuário, e isso é de propósito: quem usa Git e compila ao salvar não quer gravações que não pediu.
+- **Aceite:** matar o processo com aba suja e reabrir mostra a oferta de recuperação com o texto certo.
+
+## I3. O servidor escreve em `.bib` por baixo do editor
+
+- **Classificação:** confirmado (leitura). **Gravidade:** média. **Esforço:** P.
+- **Evidência:** [server/refs.js:188](server/refs.js:188) (`addToBib`), [server/refcheck.js:209](server/refcheck.js:209) (`applyFixes`) e [server/zotero.js:188](server/zotero.js:188) (`importBib`) gravam direto no disco, sem temporário. Verificar e Zotero exigem o `.bib` salvo ([references.js:60](web/src/references.js:60), [zotero.js:53](web/src/zotero.js:53)); *Adicionar referência* ([web/src/refs.js:38](web/src/refs.js:38)) não confere.
+- **Impacto:** com o `.bib` aberto e sujo, a referência adicionada pela busca vai para o disco, o editor avisa o conflito e o *Sobrescrever* a apaga.
+- **Correção:** uma única função `writeProjectFile(p, text)` no servidor (temporário, renomear, `selfWrites`, a mesma do item I1) usada pelos três; e, na interface, salvar a aba do `.bib` antes ou aplicar a mudança no próprio editor quando ele está aberto.
+- **Aceite:** adicionar referência com o `.bib` sujo mantém as edições e a referência.
+
+## I4. O Sincronizar chama de "conflito" o que não é
+
+- **Classificação:** confirmado (execução). **Gravidade:** média. **Esforço:** P.
+- **Evidência:** [server/git.js:113](server/git.js:113): qualquer falha do `pull --rebase` vira "O pull achou mudanças que conflitam com as suas". Reproduzi dois casos sem conflito nenhum:
+  - Um arquivo no commit e outro modificado fora dele: `error: cannot pull with rebase: You have unstaged changes`.
+  - Remoto inacessível: `Please make sure you have the correct access rights and the repository exists`.
+- **Impacto:** o usuário é mandado para o terminal resolver um conflito que não existe; no primeiro caso o app fica nesse estado até alguém fazer commit do resto.
+- **Correção:** usar `pull --rebase --autostash`; só falar em conflito quando houver rebase em andamento (pasta `rebase-merge` ou `rebase-apply`, ou `git status` com caminhos `UU`); para rede e permissão, mostrar a causa real.
+- **Aceite:** os dois casos do Apêndice A deixam de devolver a mensagem de conflito.
+
+## I5. ZIP de submissão ignora arquivos quando alguma pasta do caminho começa com "tex"
+
+- **Classificação:** confirmado (execução da expressão). **Gravidade:** média a alta para quem é afetado. **Esforço:** P.
+- **Evidência:** [server/submission.js:13](server/submission.js:13): `SYSTEM_TEX = /\/(texmf|texlive|TeX)[^/]*\//i`. Por não diferenciar maiúsculas, casa com `/tex/`, `/textos/`, `/texts/` e `/TeXugo/`. Todos os quatro caminhos de teste deram `true`, entre eles `/Users/a/Dropbox/tex/paper/mystyle.sty`. O filtro age em [submission.js:34](server/submission.js:34) (o arquivo sai do ZIP) e em [submission.js:165](server/submission.js:165) (o vazamento de caminho absoluto deixa de ser apontado).
+- **Impacto:** num projeto dentro de `~/Documents/tex/`, o ZIP perde tudo o que só o `.fls` conhece (`.sty` e `.cls` locais, figuras por `\graphicspath`, `\input` montado por macro). A checagem final avisa que falta arquivo, então a falha não é silenciosa, mas o usuário não tem como consertar sem renomear a pasta. O teste atual passa porque roda em diretório temporário.
+- **Correção:** decidir o que é do sistema pela raiz do TeX, não pelo nome: `kpsewhich -var-value TEXMFROOT` (e `TEXMFDIST`, `TEXMFLOCAL`, `TEXMFHOME`), com cache; um arquivo é do sistema se estiver dentro de uma dessas raízes.
+- **Aceite:** o teste de `test/submission.test.js` repetido dentro de uma pasta chamada `tex/`.
+
+## I6. O limite de 3.000 arquivos `.tex` esconde documentos
+
+- **Classificação:** confirmado (execução). **Gravidade:** média. **Esforço:** P a M.
+- **Evidência:** [server/project.js:57](server/project.js:57): `listTexFiles` percorre em profundidade, em ordem alfabética, e para em 3.000. Projeto de teste com 3.100 tabelas em `analysis/output/` e o paper em `writing/`: `documents found: []`, `rootsFor(sections/intro.tex): []`, `labels found: 0`.
+- **Impacto:** em projeto empírico com muitas tabelas geradas, a aba de uma seção aparece como "fora de qualquer documento", sem botão de compilar, e o autocompletar de `\ref` e `\cite` fica vazio. O arquivo principal ainda compila porque é a própria raiz.
+- **Correção:** percorrer em largura, para as pastas rasas entrarem antes; ao procurar documentos, ler só o começo de cada arquivo (já é assim) e não contar no limite as pastas que só têm fragmentos; avisar na interface quando o limite cortou a varredura (`listTree` já devolve `truncated`, `listTexFiles` não).
+- **Aceite:** o projeto de teste acima encontra `writing/paper.tex` e o rótulo `sec:intro`.
+
+## I7. Markdown desenhado com HTML bruto; o CSP é a única barreira
+
+- **Classificação:** risco potencial. **Gravidade:** média. **Esforço:** P.
+- **Evidência:** [web/src/markdown.js:29](web/src/markdown.js:29): `el.innerHTML = front + marked.parse(text)` sem sanitizar (o painel do agente, em [web/src/agent.js:39](web/src/agent.js:39), descarta HTML; a prévia de Markdown não). O que impede um `<script>` ou um `onerror` de um `.md` clonado de rodar é o CSP em `<meta>` de [web/index.html:6](web/index.html:6) (`script-src 'self'`). Sem ele, um script na página tem o token e, com o token, o terminal. Lacunas medidas: o servidor não manda CSP nem `X-Content-Type-Options` por cabeçalho (`cspHeader: null`, `nosniff: null`); `/file` devolve um `.html` do projeto como `text/html` na mesma origem, sem CSP; o CSP não tem `base-uri`, `form-action`, `object-src` nem `frame-src`; `<style>` passa (`'unsafe-inline'`) e permite redesenhar a interface a partir de um `.md`.
+- **Impacto:** hoje não achei caminho que execute código. É uma defesa de camada única num ponto em que a falha vira execução de comandos.
+- **Correção:** sanitizar a saída do `marked` (DOMPurify, ou o mesmo `renderer: { html: () => '' }` do painel do agente mais uma lista de etiquetas permitidas); mandar o CSP também por cabeçalho HTTP, com `base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'`; em `/file`, responder com `Content-Security-Policy: sandbox` e `X-Content-Type-Options: nosniff`; conferir `Origin` no WebSocket (só a própria origem), o que também protege o modo `--dev`, cujo token é fixo (`dev`).
+- **Aceite:** um `.md` de teste com `<script>`, `<img onerror>`, `<base>`, `<style>` e `<form>` rende só o texto; teste de API confirma os cabeçalhos.
+
+## I8. Abrir e usar um projeto de terceiros executa código do projeto
+
+- **Classificação:** risco potencial (inerente às ferramentas; não testei exploração). **Gravidade:** média. **Esforço:** P a M.
+- **Evidência:**
+  - Compilar roda `latexmk`, que executa o Perl de um `latexmkrc` da pasta ([server/build.js:237](server/build.js:237)). É assim em qualquer editor que use latexmk. O TeXugo não passa `-shell-escape`, o que é correto.
+  - As ações de IA rodam `claude -p` na pasta do projeto ([server/ai.js:88](server/ai.js:88), [server/agent.js:50](server/agent.js:50)). No modo `-p` o Claude Code carrega as configurações do projeto sem o diálogo de confiança. Um `.claude/settings.json` clonado pode trazer hooks e regras de permissão. Não testei; a versão instalada (2.1.321) tem a opção `--setting-sources`.
+  - No painel, `Read`, `Grep`, `Glob` e `LS` rodam sem pedir ([agent.js:28](server/agent.js:28)) e não se limitam à pasta do projeto.
+  - O cartão de permissão corta em 400 caracteres os campos das ferramentas que não são Bash nem edição ([agent.js:196](server/agent.js:196)); o usuário aprova um `WebFetch` ou uma ferramenta MCP vendo só o começo.
+- **Impacto:** clonar um repositório desconhecido e clicar em Compilar ou em Revisar pode rodar comandos de quem fez o repositório. Para o uso típico (projetos próprios e de coautores) o risco é baixo, mas o app tem botão de clonar do GitHub.
+- **Correção:**
+  1. Testar o caso do hook: projeto com `.claude/settings.json` e um hook `SessionStart` que cria um arquivo; rodar uma ação de IA; ver se o arquivo aparece. Se aparecer, passar `--setting-sources user` nas execuções de uma tacada (`ai.js`) e confirmar que as skills do usuário continuam carregando.
+  2. Na primeira abertura de uma pasta que traz `latexmkrc`, `.latexmkrc` ou `.claude/` e que o TeXugo não criou, um aviso único: "Este projeto traz configurações que executam comandos ao compilar ou ao usar IA. Abra só se confia em quem o fez." Guardar a resposta por pasta em `state.json`.
+  3. No cartão de permissão, mostrar o valor inteiro (com rolagem) em vez de cortar.
+- **Aceite:** o teste do hook documentado com o resultado; o aviso aparece uma vez por pasta.
+
+## I9. Interface em inglês: sobram mensagens em português
+
+- **Classificação:** confirmado (varredura e amostra). **Gravidade:** média. **Esforço:** M.
+- **Evidência:** o desenho da tradução ([web/src/i18n.js](web/src/i18n.js)) é um dicionário de frase em português para frase em inglês, mais padrões. O que não está no dicionário aparece em português. A varredura achou 1.059 literais com cara de português; depois de tirar os falsos positivos (os módulos que usam `L(pt, en)`, as palavras-chave da paleta, o menu nativo), sobram cerca de 90 mensagens do servidor e algumas dezenas de frases montadas na interface. Conferidas por busca direta, sem tradução: "Commit inválido.", "Escolha um arquivo .bib.", "Esta pasta não é um repositório Git.", "Já há uma ação de IA em andamento.", "compilação parada: …". Fora do dicionário por construção:
+  - Rótulos dos diálogos nativos em [electron/main.js:137](electron/main.js:137) a 158 ("Abrir", "Comparar", "Ler anotações", "Adicionar", "Importar", "LaTeX, ZIP ou pasta").
+  - A nota das ações de IA, pedida sempre em português ([server/ai.js:69](server/ai.js:69)).
+  - A mensagem automática de commit, sempre "Atualiza …" ([server/git.js:82](server/git.js:82)), que vai para o histórico compartilhado.
+  - O pedido de senha do Médico do TeX ([server/doctor.js:113](server/doctor.js:113)).
+  - `LANG` padrão `pt_BR.UTF-8` nos terminais ([server/terminal.js:54](server/terminal.js:54)), que muda o idioma do Git e de outros programas e gera aviso de locale onde ele não existe.
+  - Datas e números com formato fixo do Brasil: [server/coauthors.js:261](server/coauthors.js:261), [web/src/main.js:534](web/src/main.js:534), [main.js:1258](web/src/main.js:1258), [sidebar.js:455](web/src/sidebar.js:455).
+  - "Mostrar no Finder" e "Abrir no Preview" no Windows e no Linux.
+- **Correção:** o servidor precisa saber o idioma: mandar `lang` no `hello` e guardar em memória, ou devolver códigos de erro e montar a frase na página. Para o que é frase fixa, basta completar o dicionário. O essencial é o teste: transformar a varredura do Apêndice A em `test/i18n.test.js`, que falha quando aparece literal em português sem tradução, com uma lista explícita de exceções (regras de vícios, prompts, palavras-chave da paleta).
+- **Aceite:** o teste novo verde; uma passada manual pela interface em inglês provocando erros (pasta inexistente, `.bib` errado, sem rede).
+
+## I10. Digitação lenta em arquivos de 1.000 a 2.000 linhas
+
+- **Classificação:** confirmado (medição por função). **Gravidade:** média. **Esforço:** P a M.
+- **Evidência:** [web/src/changes.js:65](web/src/changes.js:65): `changesField` recalcula, a cada tecla, o diff de linhas entre o texto e a linha de base (o estado na abertura ou na última compilação). `lineChanges` é uma LCS quadrática sobre o trecho entre a primeira e a última linha alteradas. Com uma edição perto do começo e outra perto do fim:
+
+  | Linhas do arquivo | Tempo por tecla |
+  |---|---|
+  | 1.000 | 21 ms |
+  | 1.900 | 41 ms |
+  | 2.000 | 46 ms |
+  | 5.000 | 0,9 ms (cai no atalho) |
+  | 20.000, uma edição | 3,5 ms |
+
+  O quadro de 60 Hz dura 16 ms. Acima de 2.000 por 2.000 linhas vale o atalho de [changes.js:25](web/src/changes.js:25), que é rápido mas marca todas as linhas do intervalo como alteradas, o que está errado. A opção de desligar as marcas só as esconde por CSS ([main.js:1670](web/src/main.js:1670)); a conta continua.
+- **Impacto:** num paper de arquivo único, depois de mexer na introdução e na conclusão sem compilar, cada tecla custa de um a três quadros.
+- **Correção:** tirar a conta do caminho da tecla. Opção simples: um `ViewPlugin` que recalcula com 150 ms de espera. Opção melhor: manter as marcas de forma incremental (mapear as existentes pela mudança e marcar as linhas tocadas) e refazer o diff completo só quando a linha de base muda. Não incluir o campo quando a opção está desligada.
+- **Aceite:** teste de tempo no estilo de "fast enough to run while typing" de `test/vicios.test.js`: menos de 4 ms por transação em 2.000 linhas.
+
+## I11. O README promete "nada vai para a nuvem", e não é isso que o código faz
+
+- **Classificação:** confirmado (leitura). **Gravidade:** média. **Esforço:** P.
+- **Evidência:** [README.md:7](README.md:7). O app fala com serviços externos em vários recursos; a lista completa está no Apêndice B.
+- **Impacto:** é uma afirmação pública de privacidade que não se sustenta. O trabalho de pessoas com papers inéditos e pareceres confidenciais passa pela Anthropic quando usam as ações de IA.
+- **Correção:** trocar a frase por algo exato ("os arquivos ficam no seu disco e a compilação é local; alguns recursos opcionais consultam serviços externos, listados na página de privacidade") e publicar a página (item 8). Aproveitar para tirar "para Mac" das descrições quando Windows e Linux saírem.
+
+## I12. Lista de modelos do Claude desatualizada e repetida em três lugares
+
+- **Classificação:** confirmado (leitura). **Gravidade:** baixa a média. **Esforço:** P.
+- **Evidência:** `claude-fable-5-1` em [server/agent.js:18](server/agent.js:18), [web/src/agent.js:15](web/src/agent.js:15) e [README.md:51](README.md:51). O modelo atual é o Fable 5.2 (`claude-fable-5-2`).
+- **Correção:** uma lista só, no servidor, entregue pelo `hello`. Entra no desenho do item 4 (cada agente declara os seus modelos).
+
+## I13. "Nova janela" reabre o mesmo projeto; não há instância única
+
+- **Classificação:** confirmado (leitura). **Gravidade:** baixa a média. **Esforço:** P.
+- **Evidência:** [electron/main.js:108](electron/main.js:108) cria a janela sem caminho; [web/src/main.js:1699](web/src/main.js:1699) abre o projeto mais recente, que é o da janela de onde se veio. Ficam duas janelas com cópias separadas dos mesmos arquivos. Não há `app.requestSingleInstanceLock()`; no Windows e no Linux, abrir o app de novo sobe um segundo servidor que escreve no mesmo `state.json`. [main.js:202](electron/main.js:202): um `open-file` que chega antes de o servidor subir é descartado. [main.js:194](electron/main.js:194): o filtro `!/electron/i` ignora qualquer pasta com "electron" no caminho.
+- **Correção:** janela nova abre a tela inicial (parâmetro `?welcome=1`); trava de instância única com `second-instance` abrindo janela; guardar o caminho pendente do `open-file`; trocar o filtro do argv por "é um diretório".
+
+## I14. Renomear uma pasta deixa as abas abertas com o caminho antigo
+
+- **Classificação:** confirmado (leitura). **Gravidade:** baixa a média. **Esforço:** P.
+- **Evidência:** [web/src/sidebar.js:211](web/src/sidebar.js:211) atualiza só a aba cujo caminho é o do item renomeado. Abas de arquivos dentro da pasta renomeada, a raiz do documento (`t.root`), `S.savedRoots` e as abas de PDF ficam com o caminho velho; salvar falha com "Não salvou" (a pasta não existe mais).
+- **Correção:** ao renomear, trocar o prefixo em todas as abas, raízes, PDFs e em `savedRoots`, e chamar `refreshRoots`.
+
+## I15. Depois de instalar o TeX, o app continua dizendo que falta
+
+- **Classificação:** confirmado (leitura). **Gravidade:** média para o item 5. **Esforço:** P.
+- **Evidência:** [server/util.js:101](server/util.js:101): `whichCache` nunca é limpo. [util.js:12](server/util.js:12): `EXTRA_PATHS` é calculado uma vez, na carga do módulo, e é ele que descobre a pasta do TeX Live pelo ano.
+- **Impacto:** o assistente de primeira abertura vai mandar instalar o MacTeX, a pessoa instala, clica em "verificar de novo" e nada muda até reiniciar.
+- **Correção:** `refreshTools()` que limpa o cache e recalcula os caminhos; o `hello` e o assistente chamam com `refresh: true`.
+
+## I16. Servidores do LanguageTool ficam órfãos
+
+- **Classificação:** confirmado (observado nesta máquina). **Gravidade:** média. **Esforço:** P.
+- **Evidência:** [server/grammar.js:212](server/grammar.js:212) sobe o servidor com `detached: true`; só `close()` o encerra. Durante a auditoria havia **15 processos Java do LanguageTool** com pai 1, ligados havia entre 17 horas e 1 dia e 8 horas, em portas aleatórias, com o TeXugo fechado. Nenhum veio dos meus testes (desliguei o corretor nos perfis de teste).
+- **Impacto:** cada sessão que termina sem a limpeza (travamento, encerramento forçado, o hook que troca o app, `npm run serve` interrompido) deixa uma JVM para trás. Com os n-gramas do item 1, cada uma mapeia gigabytes.
+- **Correção:** gravar o PID e a porta em `<dados do app>/languagetool.pid`; ao subir, encerrar o que estiver registrado e ainda vivo, ou reaproveitar se responder; não usar `detached` e encerrar o filho em `process.on('exit')`. Para limpar os que estão aí agora, se quiser:
+  ```bash
+  pkill -f 'languagetool.*--port'
+  ```
+
+## I17. Riscos de Windows e Linux já visíveis no código
+
+- **Classificação:** risco potencial (não testado nesses sistemas). **Gravidade:** média. **Esforço:** M.
+- **Evidência, por arquivo:**
+  - [server/build.js:276](server/build.js:276) e [server/live.js:178](server/live.js:178): `detached: true` sem `windowsHide: true` abre uma janela de console a cada compilação no Windows.
+  - [server/build.js:233](server/build.js:233): `new Promise(async …)`; um `fs.rmSync` que falhe (arquivo travado, comum no Windows) deixa a promessa sem resolver, e a fila de compilação para até reiniciar.
+  - [server/index.js:139](server/index.js:139): o filtro do observador usa `/`; no Windows os eventos de `.git\` não são filtrados. [web/src/main.js:1533](web/src/main.js:1533): `'/.texugo-comments/'`, mesmo problema.
+  - [server/compare.js:190](server/compare.js:190): `BIBINPUTS: docDir + ':'` (no Windows o separador é `;`).
+  - [server/refs.js:200](server/refs.js:200): `bibsOf` manipula caminhos como texto com `/`.
+  - [server/submission.js:58](server/submission.js:58): `isInDir` com `path.sep` contra caminhos do `.fls`, que usam `/`; e `/dev/` fixo.
+  - [server/git.js:59](server/git.js:59): `git diff --no-index -- /dev/null`.
+  - [server/index.js:171](server/index.js:171): `home: process.env.HOME`, indefinido no Windows.
+  - [server/ai.js:36](server/ai.js:36) e [agent.js:184](server/agent.js:184): `kill('SIGTERM')` no `cmd.exe` que embrulha o `claude.cmd` não encerra o processo filho.
+  - `node-pty` 1.1.0 traz binários prontos para macOS e Windows, não para Linux: o AppImage exige compilar na CI.
+  - `latexdiff` e `latexindent` dependem de Perl; no MiKTeX ele não vem.
+  - `spellcheck: true` em [electron/main.js:41](electron/main.js:41): no Windows e no Linux o Chromium baixa os dicionários de um servidor do Google (no Mac usa o do sistema). Entra na página de privacidade ou se desliga.
+- **Correção:** tratar na etapa 2 de Windows e Linux; o teste de fumaça do item 2 pega a maior parte.
+
+---
+
+# Parte 3. Melhorias desejáveis
+
+| # | Achado | Evidência | Classificação | Esforço |
+|---|---|---|---|---|
+| D1 | **Acessibilidade.** Quase não há ARIA; abas, linhas da árvore e listas são `div` com clique, sem foco pelo teclado; botões não têm anel de foco; os diálogos não têm `role="dialog"`, não prendem o foco nem o devolvem; a interface usa fontes de 10 a 12,5 px; não há `prefers-reduced-motion`. O zoom do menu Visualizar atenua o tamanho. | 2 ocorrências de `aria-`/`role`/`tabindex` em toda a interface (em `dom.js`); `:focus` só para campos em [web/styles.css:61](web/styles.css:61); `modal` em [web/src/dom.js:217](web/src/dom.js:217) | Confirmado (leitura) | M |
+| D2 | **`news()` dispara cerca de 3 processos `git` por commit, todos de uma vez.** 120 commits: 1,5 s e uns 360 processos. No Windows, onde criar processo é caro, vira segundos. Limitar a 6 ao mesmo tempo. | [server/coauthors.js:218](server/coauthors.js:218) | Confirmado (medição) | P |
+| D3 | **Uma ação de IA por vez no app inteiro.** A resposta aos pareceristas (até 30 min) bloqueia "Revisar o trecho" em todas as janelas com "Já há uma ação de IA em andamento". Trava por projeto, ou fila visível. | [server/ai.js:31](server/ai.js:31), [ai.js:86](server/ai.js:86), [rr.js:143](server/rr.js:143) | Confirmado (leitura) | P |
+| D4 | **Prévia ao vivo com pausa fixa de 700 ms.** Em paper cuja passada leva 10 s, o motor roda sem parar enquanto se digita. Pausa proporcional à última passada (por exemplo, o maior entre 700 ms e metade dela). | [web/src/live.js:7](web/src/live.js:7) | Sugestão | P |
+| D5 | **Sincronizar faz `git add -A`.** Uma pasta de dados fora do `.gitignore` entra no commit; arquivo acima de 100 MB faz o push falhar com o commit já feito. Avisar antes quando houver arquivo novo acima de uns 50 MB. | [server/git.js:74](server/git.js:74), [git.js:106](server/git.js:106) | Risco potencial | P |
+| D6 | **Erros importantes somem em 8 a 10 s.** Falha de sincronização, de commit e de salvamento aparecem só num aviso temporário. Manter até fechar, ou guardar numa lista. | [web/src/sidebar.js:432](web/src/sidebar.js:432), [main.js:730](web/src/main.js:730) | Confirmado (leitura) | P |
+| D7 | **Defesa em profundidade** (nada explorável sem o token): `createProject` aceita `name` com `../` (reproduzi a pasta criada fora do destino); `comments.list` lê `c.file` sem conferir se está no projeto ([comments.js:63](server/comments.js:63), reproduzido); a guarda de caminho não resolve links, então um link para fora do projeto é lido (reproduzido); `source.rev` de `compare.js:58` pode começar com `-`; `readBody` não interrompe a requisição acima de 50 MB; fusíveis do Electron no padrão (`RunAsNode` ligado). | [server/index.js:502](server/index.js:502), [util.js:110](server/util.js:110) | Confirmado, impacto baixo | P |
+| D8 | **O servidor roda no processo principal do Electron com E/S síncrona.** Num projeto de 6 mil arquivos: árvore 69 ms, documentos 89 ms, símbolos 277 ms, cada um travando menus e janelas. Aceitável hoje. Se crescer, mover para `utilityProcess`. Não recomendo mexer antes do lançamento. | medições do Apêndice A | Sugestão | G |
+| D9 | **Parada por 180 s sem saída.** Passos longos e silenciosos são raros, mas o limite só muda por variável de ambiente. Expor nas Preferências se alguém reclamar. | [server/build.js:271](server/build.js:271) | Risco potencial | P |
+| D10 | **`\todo{…}` e `\change{…}` da resposta aos pareceristas recebem o texto do modelo sem escape.** Um `%` vindo do Claude comenta o fecha-chave e quebra a compilação do `response.tex`. | [server/rr.js:127](server/rr.js:127) | Confirmado (leitura) | P |
+
+---
+
+# Parte 4. Os nove itens do roteiro, com direção para a implementação
+
+Esta parte é para o Opus 5.5. Ordem sugerida no fim.
+
+## Regras de trabalho para quem implementa
+
+1. Um achado por commit, com o teste que o reproduz escrito antes da correção. Você faz o commit; o Fredie faz o push.
+2. Sem reescrita ampla. As correções da Parte 1 cabem em menos de 150 linhas cada.
+3. Exemplos e testes nunca saem dos papers do Fredie, e a interface não usa siglas que só existem no Brasil.
+4. Toda frase nova da interface entra em português e em inglês no mesmo commit.
+5. Antes de usar a opção de linha de comando de uma ferramenta externa (latexmk, codex, gemini, opencode, electron-builder, LanguageTool), rode o `--help` da versão instalada ou leia a documentação atual. Várias dessas interfaces mudam rápido, e o que está aqui vem da minha leitura até meados de 2026.
+6. Corrija B1, B2 e B3 antes de qualquer item novo. Os itens 3, 4 e 6 pioram esses defeitos se vierem antes.
+
+## Item 1. Corretor avançado de inglês (n-gramas, 8 GB) como download opcional
+
+**O que a auditoria muda:** I16 primeiro (com n-gramas, cada servidor órfão custa caro). A chave do cache em [server/grammar.js:252](server/grammar.js:252) precisa incluir o estado dos n-gramas, senão os resultados antigos ficam.
+
+**Fatos a confirmar antes:** os dados de n-gramas do LanguageTool existem para inglês, alemão, francês, espanhol e holandês; não há para português. O nome "corretor avançado de inglês" está certo. Confirme o endereço e o tamanho atuais em `languagetool.org/download/ngram-data/` e o tamanho depois de descompactado, para pedir o espaço certo.
+
+**Desenho:**
+
+- `server/ngrams.js` com `status()`, `start()`, `cancel()`, `remove()`. Estados: `absent → downloading(pct) → unpacking → ready`, mais `error(motivo)`.
+- Download em fluxo para `<dados>/languagetool/ngrams/.partial`, com retomada por `Range` (8 GB não podem recomeçar do zero quando a rede cai). Antes de começar, `fs.statfsSync` para conferir o espaço: zip mais descompactado, com folga. Progresso por `broadcast({ type: 'ngrams:progress' })`, no máximo uma vez por segundo.
+- Descompactar com o que cada sistema tem (`unzip`, `ditto -x -k` ou `tar -xf`), para uma pasta temporária, e renomear no fim. O resultado tem de ser `<ngrams>/en/…`.
+- Ligar ao servidor: o LanguageTool aceita `--languageModel <pasta>` e `languageModel=` no arquivo de propriedades. Hoje o TeXugo passa o `server.properties` do Homebrew quando existe ([grammar.js:210](server/grammar.js:210)). Passe a escrever um arquivo próprio em `<dados>/languagetool/server.properties`, copiando o do Homebrew e acrescentando a linha. Reinicie o filho depois de instalar ou remover.
+- Caso especial: [grammar.js:201](server/grammar.js:201) reaproveita um LanguageTool que já escuta na porta 8081. Nele os n-gramas do TeXugo não valem. Com n-gramas instalados, suba o servidor próprio de qualquer forma.
+- O LanguageTool recomenda SSD para os n-gramas. Diga isso na tela.
+
+**Interface (Preferências → Corretor):** uma linha só. Estado, tamanho e um botão cujo rótulo muda: *Baixar (8 GB)*, *Pausar*, *Continuar*, *Remover*. Uma frase explica o ganho com um exemplo ("pega trocas como *their* por *there*") e avisa que é só para o inglês. O download não bloqueia o app e sobrevive a fechar e abrir.
+
+**Testes:** um zip minúsculo servido por HTTP local percorre a máquina de estados, com queda e retomada; `local()` passa `--languageModel` quando o estado é `ready`.
+
+**Aceite:** uma frase com *their* no lugar de *there* é marcada com n-gramas e não é sem eles.
+
+## Item 2. GitHub Actions: testes, instaladores e teste de fumaça
+
+**O que a auditoria muda:** o teste de fumaça é a peça que falta para pegar B1, B2 e B4. Vale mais que a matriz de instaladores.
+
+**Fluxos:**
+
+- `ci.yml` (push e pull request), matriz `macos-latest`, `windows-latest`, `ubuntu-latest`, Node 22: `npm ci`, `npm run build:web`, testes.
+  - Separe os testes que precisam de TeX (`templates`, `build`, `live`, `submission`, `compare`, `sent`) dos demais. Os demais rodam em segundos nos três sistemas. Os de TeX rodam num trabalho com TeX Live instalado por uma action com lista de pacotes e cache (procure a action de `setup-texlive` mantida hoje; no Windows a instalação sem cache passa de dez minutos). A lista de pacotes sai dos modelos; guarde em `.github/tl-packages.txt`.
+  - Acrescente os testes novos desta auditoria: `test/api.test.js` (token, guardas de caminho, conflito de escrita, link simbólico), `test/git.test.js` (remoto local), `test/i18n.test.js`.
+  - `npm audit --omit=dev` como aviso.
+- `smoke.yml` nos três sistemas: abre o app, abre um projeto de modelo, compila, confere o PDF e "zero ??"; depois suja uma aba e exercita fechar, sair e trocar de projeto. Use o suporte a Electron do Playwright (`_electron.launch`) ou o roteiro do Apêndice A. No Linux, `xvfb-run -a`.
+- `release.yml` (tag `v*`): `electron-builder` nos três sistemas, artefatos num rascunho de release. Segredos de assinatura só nesse fluxo.
+
+**Armadilhas que encontrei montando o roteiro:**
+
+- `electron/main.js` é módulo ES com `await` no topo. Um `await app.whenReady()` no topo do arquivo de entrada nunca resolve, porque o `ready` só dispara depois de o módulo terminar de carregar. Use `app.whenReady().then(…)`.
+- O filtro de [electron/main.js:194](electron/main.js:194) descarta caminhos com "electron": não ponha o projeto de teste numa pasta com esse nome (ou corrija o filtro, I13).
+- Perfil separado: `app.setPath('userData', …)` antes de importar `main.js`, ou `--user-data-dir`.
+- Desligue o corretor no perfil de teste (`settings.grammar: false`), senão cada execução deixa um LanguageTool rodando (I16).
+- `node-pty` não tem binário pronto para Linux: os runners do Ubuntu têm compilador, mas o `electron-builder` precisa recompilar e deixar o módulo fora do asar (`asarUnpack`).
+
+**Aceite:** os três sistemas verdes num pull request; a tag gera `.dmg`, `.exe` e `.AppImage` no rascunho de release.
+
+## Item 3. Sincronização com o Overleaf
+
+**O que a auditoria muda:** depende de B3 (salvar antes de sincronizar) e de I4 (mensagens de erro). Sem isso, o Overleaf vira mais uma fonte de reversão silenciosa.
+
+**Fatos a confirmar:** o caminho oficial é a integração Git do Overleaf, recurso de plano pago: `https://git.overleaf.com/<id do projeto>`, autenticada por token (usuário `git`, token como senha). Conta gratuita não tem Git nem API pública. Não use os caminhos não oficiais (cookie de sessão, raspagem): quebram e expõem a conta.
+
+**Desenho:**
+
+- Overleaf como um remoto Git chamado `overleaf`. O TeXugo já tem a maquinaria.
+- *Conectar ao Overleaf* no painel Git: a pessoa cola o endereço do projeto (`https://www.overleaf.com/project/<id>`), o app deriva o do Git e pede o token.
+- **O token nunca vai para `state.json`, para a URL do remoto nem para um log.** Guarde pelo ajudante de credenciais do Git (`git credential approve`), que usa as Chaves do macOS, o Gerenciador de Credenciais do Windows ou o libsecret.
+- Fluxo de sincronização: salvar tudo → commit → `pull` do Overleaf → `push`. Restrições do lado de lá a tratar com mensagem própria: um ramo só, sem push forçado, limites de tamanho, e push recusado enquanto houver mudança não baixada.
+- Projeto com GitHub e Overleaf ao mesmo tempo: para a primeira versão, use `merge` (não `rebase`) no pull do Overleaf, para os dois históricos continuarem compatíveis, e deixe claro qual remoto o botão Sincronizar usa.
+- Conta gratuita: diga com clareza que a sincronização pede plano pago e aponte para o que já existe (*Comparar com outra versão* e *Versões enviadas* leem o ZIP do Overleaf).
+
+**Testes:** um repositório local faz o papel do Overleaf; casos de push recusado, conflito e token errado.
+
+**Aceite:** dois clones (um como "Overleaf") trocam mudanças pelo botão, sem o token aparecer em nenhum arquivo do projeto ou do app (`grep` pelo token na pasta de dados e no `.git/config` não acha nada).
+
+## Item 4. Outros agentes de IA
+
+**O que a auditoria muda:** I8 (o que o agente pode fazer), I12 (lista de modelos) e D3 (trava global) entram no desenho. O mapa `TOOL_PT` de [web/src/agent.js:33](web/src/agent.js:33) e o prompt de sistema de [server/agent.js:30](server/agent.js:30) são específicos do Claude.
+
+**Direção de arquitetura:** não escreva quatro integrações sob medida. Defina uma interface e dois transportes.
+
+```js
+// server/agents/adapter.js
+// start(root, { model, effort, resume }) -> session
+// session.send(text)
+// session.on('text' | 'tool' | 'tool-result' | 'permission' | 'result' | 'error' | 'status', fn)
+// session.answer(reqId, allow, note)
+// session.interrupt(); session.close()
+// static detect() -> { installed, version, loggedIn?, models: [{ id, label }], efforts: [...] }
+// static oneShot(prompt, { root, readOnly: true, model, timeout }) -> text
+```
+
+- **Transporte 1, o que já existe:** Claude Code por `stream-json` ([server/agent.js](server/agent.js)). Vira `agents/claude.js` sem mudar de comportamento. Mantém as linhas dos mods (`ui_log`, `ui_status`).
+- **Transporte 2, ACP (Agent Client Protocol):** JSON-RPC por stdio, criado pelo Zed para ligar editores a agentes. Tem sessão, envio de prompt, atualizações em fluxo (texto, chamadas de ferramenta, plano) e, o que mais importa aqui, **pedido de permissão ao cliente** e leitura e escrita de arquivos **pelo cliente**. Isso encaixa nos cartões de aprovação que o painel já tem, e permite ao TeXugo servir o texto não salvo e aplicar a escrita como diff. Pela minha leitura, o Gemini CLI e o OpenCode falam ACP nativamente, e há adaptadores para Codex e Claude Code. Confirme o estado atual de cada um antes de se comprometer; se o ACP de algum não estiver maduro, o plano B é o modo não interativo com saída JSON de cada CLI.
+- **Ações de uma tacada** (reescrever o trecho, parecer, resposta aos pareceristas): cada adaptador implementa `oneShot` com o modo não interativo do seu CLI, sempre só de leitura. Para o Claude é o que [server/ai.js:88](server/ai.js:88) faz. Para os outros, use a opção de sandbox de leitura de cada um e **teste que ele não consegue escrever** (peça para criar um arquivo e confira que não foi criado). Esse teste é o critério de aceite de segurança de cada agente.
+
+**Ordem:** extrair a interface com o Claude dentro e os testes verdes; depois Codex, Gemini CLI, OpenCode; Cursor e Droid se sobrar tempo.
+
+**Interface:** o painel passa a se chamar "Agente". No topo, um seletor com os agentes instalados (os ausentes aparecem apagados, com "instalar"). Modelo e esforço vêm do `detect()` do agente escolhido; se o agente não tem "esforço", o controle some. A escolha vale para o painel, para o terminal e para as ações no texto, como hoje. O rótulo "Claude ligado" da barra de status e os textos "Trocar com o Claude" passam a usar o nome do agente.
+
+**Segurança, igual para todos:** leitura livre só dentro do projeto; escrita, comando e rede sempre por cartão; o cartão mostra o valor inteiro (I8); a trava de "uma ação por vez" passa a ser por projeto (D3).
+
+**Testes:** um agente falso (um script Node que fala o protocolo) para exercitar adaptador e permissões sem gastar conta. `test/agent-mods.test.js` já faz algo parecido para o Claude.
+
+## Item 5. Assistente de primeira abertura
+
+**O que a auditoria muda:** I15 é pré-requisito (sem limpar o cache, "verificar de novo" não funciona).
+
+**O que já existe e dá para reaproveitar:** `hello().tools` ([server/index.js:161](server/index.js:161)), `doctor.texInfo()`, `grammar.status()`, `texInstallHint()` por sistema ([server/platform.js:62](server/platform.js:62)) e o aviso de TeX ausente em [web/src/welcome.js:253](web/src/welcome.js:253).
+
+**Desenho:** uma tela só, calma, sem etapas de assistente. Quatro linhas, cada uma com um ponto de estado, uma frase e no máximo um botão.
+
+| Linha | Verifica | Se faltar |
+|---|---|---|
+| TeX | `latexmk` e um motor; ano do TeX Live | Link do instalador do sistema (MacTeX, MiKTeX ou TeX Live) e *Verificar de novo* |
+| Git | `git` no caminho; `user.name` e `user.email` definidos | Instruções; campos para nome e e-mail que rodam `git config --global` |
+| Agente de IA (opcional) | Algum dos agentes instalado | Como instalar; marcado como opcional |
+| Corretor (opcional) | LanguageTool instalado | *Instalar* no Mac com Homebrew; nos outros, instruções ou o servidor online com o aviso de que o texto sai do computador |
+
+Regras: nunca rodar `sudo` nem instalador sem clique; *Continuar mesmo assim* sempre visível; aparece na primeira abertura (`settings.onboarded`) e fica em Ajuda → Verificar instalação. A identidade do Git importa mais do que parece: sem ela, comentários e "quem escreveu" caem no nome de usuário do sistema ([server/comments.js:28](server/comments.js:28)).
+
+**Aceite:** num perfil novo sem TeX no caminho, a tela aparece; depois de corrigir o caminho, *Verificar de novo* fica verde sem reiniciar.
+
+## Item 6. Aviso de versão nova com "Atualizar agora"
+
+**O que a auditoria muda:** depende de B1 (o atualizador chama `app.quit()`) e de B5 (assinatura).
+
+**Desenho:**
+
+- `electron-updater` lendo o GitHub Releases, gerado pelo `electron-builder` do item 9. No Mac exige app assinado e notarizado. No Windows funciona sem assinatura, com o aviso do SmartScreen na primeira instalação. No Linux só atualiza quando o app roda como AppImage.
+- Checar na abertura e uma vez por dia. Aviso discreto na barra de status: "Versão 0.2.0 disponível", com *Novidades* (abre as notas) e *Atualizar agora*. Baixar em segundo plano com progresso.
+- Antes de instalar: o mesmo diálogo de alterações não salvas de B1; avisar se houver compilação, terminal ou agente rodando.
+- Sem conta de desenvolvedor da Apple: no Mac o botão vira *Baixar* e abre a página da release. Não tente trocar o pacote por conta própria sem verificar a origem: um atualizador que instala o que baixou sem checar assinatura é um vetor de ataque pior do que não ter atualizador.
+- Privacidade: a checagem manda o IP e a versão ao GitHub. Entra na página de privacidade, com uma opção para desligar.
+- A versão hoje é 0.1.0 e o `hello` relê o `package.json` a cada chamada: leia uma vez.
+
+**Aceite:** com duas releases de teste num repositório auxiliar, a 0.1.0 oferece a 0.1.1, instala, reabre e mostra 0.1.1; com aba suja, pergunta antes.
+
+## Item 7. E-mail nos comentários: recomendo tirar
+
+**Evidência:** [server/comments.js:88](server/comments.js:88), [comments.js:101](server/comments.js:101) e [comments.js:108](server/comments.js:108) gravam `email` (o `git config user.email`) em cada conversa, resposta e resolução. A interface usa o e-mail para duas coisas: saber se o comentário é meu ([web/src/comments.js:24](web/src/comments.js:24)) e escolher a cor do autor ([comments.js:25](web/src/comments.js:25)).
+
+**Por que tirar:**
+
+- Para quem tem acesso ao repositório, o e-mail já está nos commits; o arquivo não acrescenta nada.
+- Os arquivos de `.texugo-comments/` saem do repositório por caminhos em que ninguém espera encontrar e-mail: um ZIP da pasta mandado a um coautor, o pacote de replicação, um repositório que fica público depois da publicação.
+- As duas funções que usam o e-mail funcionam com o nome.
+
+**Como:** parar de gravar `email`; `isMine` compara o nome com `git config user.name` (o item 5 garante que ele existe); a cor sai do nome. Ler arquivos antigos que ainda tenham o campo, sem exibir. Oferecer na paleta "Remover e-mails dos comentários", que regrava os arquivos. O checklist de replicação deveria avisar quando `.texugo-comments/` está dentro do pacote (a discussão interna dos autores não é parte dele).
+
+**Se preferir manter:** guarde um hash curto do e-mail, que serve para identificar sem expor.
+
+## Item 8. Auditoria completa antes do lançamento
+
+Esta auditoria cobre a primeira passada. O que fica de cada subitem:
+
+| Subitem | Feito aqui | Falta |
+|---|---|---|
+| Segurança: servidor local | Token e guardas de caminho verificados; lacunas em I7 e D7 | Aplicar I7; `test/api.test.js` |
+| Segurança: acesso a arquivos | I1, D7 | Resolver links na guarda de caminho |
+| Segurança: comandos executados | Todos os `spawn` e `run` lidos: argumentos em lista, sem shell, com `--` no Git. O único shell é o do Médico do TeX, com pacotes validados por expressão regular | I8 (latexmkrc) |
+| Segurança: agentes | I8 | Teste do hook de projeto; cartão sem corte; item 4 |
+| Bugs | B1 a B4, I1 a I6, I14 | Corrigir |
+| Cada recurso de ponta a ponta num projeto novo | Não feito (só os fluxos de salvar, fechar, trocar, compilar e sincronizar) | A tabela da Parte 6 diz o que não tem teste; percorrer cada linha num projeto de modelo, em português e em inglês |
+| Interface em inglês | I9 | Teste de cobertura e passada manual |
+| Desempenho com papers grandes | I10, D2, D4, D8 e medições | Medir no app aberto: paper de 100 páginas com 40 arquivos, `.bib` de 1.500 entradas, 30 minutos de edição com prévia ao vivo, olhando memória e CPU |
+| Licenças | B7 | Gerar os avisos |
+| Página de privacidade | Apêndice B tem o conteúdo | Escrever e publicar; corrigir o README (I11) |
+
+## Item 9. Instaladores finais e site
+
+**Instaladores, com `electron-builder`** (resolve B5 e alimenta os itens 2 e 6):
+
+- `appId: br.fredie.texugo`; `files`: `electron/`, `server/`, `dist/` (sem o `.map`), `build/`, `package.json`; `asarUnpack` para `node-pty`.
+- Mac: `dmg` e `zip` (o atualizador usa o zip), `arm64` e `x64` ou universal, `hardenedRuntime`, entitlements mínimos do Electron, notarização. Confira que o `spawn-helper` do `node-pty` sai assinado e executável; [scripts/package-mac.mjs:38](scripts/package-mac.mjs:38) faz isso à mão hoje.
+- Windows: `nsis`, por usuário, sem pedir administrador. Sem assinatura o SmartScreen avisa; diga isso na página.
+- Linux: `AppImage`.
+- `extraResources` com `LICENSE`, `THIRD-PARTY-NOTICES.txt` e `LICENSES.chromium.html` (B7).
+- Inverta os fusíveis do Electron no pacote final (`RunAsNode` desligado, entre outros).
+- O hook `post-commit` continua servindo à instalação local: aponte para um alvo `--dir`.
+
+**Site:** estático, no GitHub Pages do próprio repositório, em português e inglês. Uma página: o que é, três capturas, os botões de download que detectam o sistema e apontam para a release mais recente, requisitos (TeX, Git) e as páginas de privacidade e de licenças. Windows e Linux com a marca "experimental" ao lado do botão, e não escondida num rodapé.
+
+**Canal de problemas:** GitHub Issues com formulário (sistema, versão do TeXugo, versão do TeX, passos; um aviso para não colar trecho de paper inédito). No app, Ajuda → Relatar um problema abre o formulário com a versão e o sistema já preenchidos na URL. Nada de telemetria automática: seria mais um item na página de privacidade e não é necessário agora.
+
+---
+
+# Parte 5. Avaliação por área
+
+**1. Arquitetura e organização.** A divisão é clara e pequena: `electron/` (210 linhas) só abre janela e menus; `server/` é um servidor HTTP local com uma função por recurso; `web/` é a interface, empacotada pelo esbuild. A ponte do preload expõe nove funções e nada de Node. Três dependências em produção (`ws`, `node-pty`, `katex`). Pontos fracos: `web/src/main.js` concentra 1.700 linhas de estado global, e `server/index.js` mistura roteamento, estado e regras de arquivo; o servidor roda no processo principal com E/S síncrona (D8). Nada disso pede reescrita: pede testes na camada de API.
+
+**2. Bugs e confiabilidade.** B1 a B4, I1, I3 a I6, I14, D10. O motor de compilação é a parte mais robusta: fila, cancelamento por árvore de processos, parada por 180 s sem saída e por log acima de 50 MB, recuperação de `.aux` apagado. Não há `uncaughtException` no processo principal; um erro não tratado abre o diálogo padrão do Electron.
+
+**3. Integridade dos documentos.** O que funciona: escrita atômica com checagem de `mtime` ([server/index.js:218](server/index.js:218)); recarga automática de aba limpa quando o arquivo muda fora, com aviso para aba suja ([web/src/main.js:1480](web/src/main.js:1480)); compilar salva antes; fechar aba pergunta; a IA nunca grava sem diff aceito; o Claude Code é recusado quando a aba está suja ([server/ide.js:294](server/ide.js:294)). O que falha: B1, B2, B3, I1, I2, I3. Não há salvamento automático, por decisão de desenho, e isso é defensável se I2 for feito.
+
+**4. Segurança e privacidade.** Verificado: API sem token responde 401; arquivo fora do projeto, 403; `../` não escapa; o WebSocket exige token; a janela tem `sandbox`, `contextIsolation` e sem `nodeIntegration`; links externos abrem no navegador do sistema; a ponte com o Claude Code grava o token em arquivo 0600 e compara em tempo constante; não há telemetria; não achei credencial em arquivo do app (o Git usa o ajudante do sistema). Lacunas: I7, I8, D7, B6. Privacidade: I11 e Apêndice B.
+
+**5. Desempenho.** I10 é o único problema que se sente ao digitar. As varreduras de projeto ficam entre 70 e 280 ms num projeto de 6 mil arquivos. Corretor (1,5 s de espera, cache por parágrafo) e vícios (600 ms) estão bem desenhados. Ver D2, D4, D8 e I16.
+
+**6. Testes.** 94 testes, 57 s, todos verdes. A cobertura medida é de 83% das linhas dos arquivos que os testes carregam, e aí está o problema: os arquivos mais críticos não são carregados. Ver a Parte 6.
+
+**7. Integrações.**
+
+| Integração | Estado | Observação |
+|---|---|---|
+| TeX (latexmk, motores, SyncTeX, latexindent, tlmgr, chktex, texcount, latexdiff) | Sólida | B4; no Windows, Perl para `latexdiff` e `latexindent` |
+| Git e GitHub | Boa | B3, I4, D5; `git.js` sem teste |
+| Claude Code (painel, terminal como IDE, ações) | Boa | I8, I12, D3 |
+| LanguageTool | Boa | I16; instalação automática só no Mac |
+| Crossref, OpenAlex, arXiv | Boa | Rede sem teste (44% a 55% de cobertura); limites tratados com espera |
+| Zotero (API local e cópia do SQLite) | Boa | Copia o banco a cada abertura do diálogo; pode demorar em biblioteca grande |
+| Overleaf | Só por ZIP | Item 3 |
+
+**8. Experiência de uso e acessibilidade.** Avaliei pelo código, sem ver a tela. Pontos fortes: explicações de erro em linguagem de gente, atalhos pesquisáveis, estado visível em cada aba. Pontos fracos: D1 (acessibilidade), D6 (erros que somem), o diálogo de conflito com uma saída só (B3), a janela que não fecha sem explicar (B1) e a quantidade de recursos na aba Revisão, que pede o assistente do item 5 para quem chega.
+
+**9. Recursos anunciados no README que estão incompletos ou sem teste.** "Nada vai para a nuvem" (I11). "Zero `??`" não vale com `$out_dir` (B4). "ZIP que compila sozinho" falha em pastas `tex*` (I5). "Fable 5.1" (I12). "A interface inteira, inclusive mensagens de erro, troca de idioma" (I9). "Sincronizar faz commit do que mudou" não inclui o que está na tela (B3). Sem teste automatizado: SyncTeX (23%), Médico do TeX (instalação), terminal, painel do agente (41%), parecer e resposta (52%: só a parte que lê o JSON), e toda a interface.
+
+**10. Riscos de distribuição.** B5, B6, B7, I17 e I11.
+
+---
+
+# Parte 6. Lacunas de QA
+
+Arquivos sem nenhum teste (0% das linhas carregadas):
+
+| Arquivo | O que tem dentro | Defeitos achados aí |
+|---|---|---|
+| `server/index.js` (981 linhas) | Toda a API, token, guardas, escrita, observador | I1, I7, D7 |
+| `server/git.js` | Commit, sincronizar, pull, push | B3, I4, D5 |
+| `electron/main.js` | Janelas, sair, menus | B1, I13 |
+| `web/src/main.js` e cerca de 40 módulos da interface | Salvar, abas, trocar de projeto, conflito | B1, B2, B3, I14 |
+| `server/terminal.js`, `server/textsync.js` | Terminais; SyncTeX por texto | nenhum |
+
+Testes a criar, na ordem de retorno:
+
+1. **Fumaça no Electron** (Apêndice A): abrir, compilar, sujar, fechar, sair, trocar de projeto. Pega B1, B2 e B4.
+2. **`test/api.test.js`**: sobe `createServer` com `TEXUGO_DATA_DIR` temporário. Token, anfitrião, 403 fora do projeto, conflito por `mtime`, link simbólico, modo do arquivo, cabeçalhos.
+3. **`test/git.test.js`**: remoto local e dois clones. Sincronizar limpo, com mudança fora do commit, com remoto inacessível, com conflito real.
+4. **`test/i18n.test.js`**: a varredura como teste.
+5. **Casos novos em testes existentes**: `latexmkrc` (B4), pasta `tex/` (I5), 3.100 tabelas (I6), tempo de `lineChanges` (I10).
+
+---
+
+# Parte 7. Ordem sugerida
+
+1. **Não perder trabalho:** B1, B2, B3 (parte 1), I1. Um dia. Junto, o roteiro de fumaça, que passa a guardar essas correções.
+2. **Compilar certo:** B4, I5, I6.
+3. **Base de distribuição:** B6 (subir o Electron), B5 (electron-builder; depende da sua decisão sobre a conta da Apple), B7. Com isso o item 2 (CI) e o item 9 (instaladores) ficam prontos em boa parte.
+4. **Segurança e idioma:** I7, I8, I9, I11.
+5. **Itens do roteiro**, nesta ordem: 7 (e-mail, pequeno) → 5 (assistente, com I15) → 6 (atualização) → 4 (agentes, com I12 e D3) → 1 (n-gramas, com I16) → 3 (Overleaf).
+6. **Antes de anunciar:** I2, I10, B3 (parte 2) e o que couber da Parte 3; a passada de ponta a ponta do item 8.
+
+O Overleaf fica por último de propósito: depende de plano pago do usuário, é o item com mais estados de erro e, sem B3 e I4, piora a integridade.
+
+---
+
+# Apêndice A. Como reproduzir
+
+Tudo rodou fora do repositório, com `TEXUGO_DATA_DIR` ou `userData` apontando para uma pasta temporária.
+
+**Servidor (I1, I7, D7, B1 pela metade).** Um script Node importa `server/index.js`, chama `createServer({})` e fala com a API por `fetch` com o cabeçalho `x-texugo-token`. Saída relevante:
+
+```
+"noToken": 401, "readBeforeOpen": 403, "readOutside": 403, "readTraversal": 403
+"symlink": { "wasLink": true, "stillLink": false, "sharedHasB": false }
+"modeAfterWrite": "644"
+"symlinkDirEscape": { "status": 200, "text": "SECRET\n" }
+"createProjectTraversal": { "status": 200, "existsOutsideParent": true }
+"wsNoToken": "error", "wsForeignOriginWithToken": "open"
+"cspHeader": null, "nosniff": null
+"fileHtml": { "status": 200, "type": "text/html; charset=utf-8", "csp": null }
+"afterClose": "FETCH FAILED: ECONNREFUSED"
+```
+
+**Electron (B1, B2).** Esqueleto do roteiro, reaproveitável no teste de fumaça do item 2:
+
+```js
+// main.mjs, numa pasta com package.json { "type": "module", "main": "main.mjs" }
+import { app, BrowserWindow } from 'electron';
+app.setPath('userData', PERFIL_TEMPORARIO);       // antes de importar o app
+// state.json do perfil: { settings: { grammar: false, reopenLast: false } }
+process.argv.push(PASTA_DO_PROJETO);              // sem "electron" no caminho
+await import('<repo>/electron/main.js');
+app.whenReady().then(async () => {                // nunca "await app.whenReady()" no topo
+  await new Promise((r) => setTimeout(r, 5000));
+  const win = BrowserWindow.getAllWindows()[0];
+  const js = (c) => win.webContents.executeJavaScript(c, true);
+  await js(`document.querySelector('.cm-content').focus()`);
+  win.webContents.focus();
+  await win.webContents.insertText('UNSAVED ');   // suja a aba
+  win.close();                                     // B1: a janela não fecha, sem diálogo
+  app.quit();                                      // B1: before-quit derruba o servidor
+  // B2: document.querySelector('.brand').click(), depois clicar num .recent
+  app.exit(0);
+});
+```
+
+**Git (I4).** Repositório `--bare` como remoto, clones A e B. B publica uma mudança; A põe `paper.tex` no commit, deixa `refs.bib` modificado fora dele e chama `sync(A, '')`. Segundo caso: `git remote set-url origin <caminho inexistente>`.
+
+**latexmkrc (B4).** Projeto mínimo com `\ref{missing}`; um caso com `.latexmkrc` contendo `$bibtex_use = 2;`, outro com `latexmkrc` contendo `$out_dir = "build";`. `new BuildManager().request(...)` e ler o evento `build:done`.
+
+**Desempenho.** Projeto sintético: um paper com 40 seções de 120 parágrafos, `.bib` de 1.500 entradas e 6.000 tabelas `.tex` em `output/`.
+
+| Operação | Tempo |
+|---|---|
+| `listTree` | 69 ms |
+| `listDocuments` | 89 ms |
+| `rootsFor` (por aba aberta) | 81 a 111 ms |
+| `projectSymbols` (a cada salvamento e compilação) | 277 ms |
+| `gitStatus` com 6.000 arquivos não rastreados | 91 ms |
+| `news()` com 120 commits de coautor | 1.479 ms, cerca de 360 processos |
+
+**Tradução (I9).** O script importa `tr` e `setLang('en')` de `web/src/i18n.js` (com `document` simulado), extrai os literais de `web/src`, `server` e `electron` que têm acento ou palavras comuns do português, troca as interpolações por valores de teste e conta os que `tr()` devolve sem mudar. Falsos positivos a pôr na lista de exceções: `web/src/replication.js` e `web/src/sent.js` (usam `L(pt, en)`), as palavras-chave de `web/src/palette.js`, os rótulos de menu de `electron/main.js` (traduzidos por `MENU_EN`), as regras de vícios e os prompts.
+
+**Dependências.** `npm view electron dist-tags.latest` devolveu 45.3.0; `npm audit`: 2 altos (`electron`, `extract-zip`) e 2 moderados (`esbuild`, `katex`).
+
+# Apêndice B. O que sai do computador (base para a página de privacidade)
+
+| Destino | Quando | O que vai | Como evitar |
+|---|---|---|---|
+| Anthropic, pelo Claude Code do usuário | Ações de IA no texto, painel do agente, parecer, resposta aos pareceristas | O trecho e o contexto; no parecer, o paper inteiro; na resposta, os pareceres colados; tudo o que o agente ler | Não usar os recursos de IA |
+| Crossref (`api.crossref.org`) | Adicionar referência, verificar referências | DOI, título e primeiro autor de cada entrada | Não usar esses dois recursos |
+| OpenAlex (`api.openalex.org`) | Os mesmos | Título | Idem |
+| arXiv (`export.arxiv.org`) | Adicionar referência por identificador do arXiv | O identificador | Idem |
+| LanguageTool online (`api.languagetool.org`) | Só se escolhido nas Preferências | Os parágrafos do texto | O padrão é o servidor local |
+| Remoto do Git (GitHub ou outro) | Ao abrir o projeto (`fetch`), e em pull, push, sincronizar e clonar | O que o Git manda normalmente | Projeto sem remoto |
+| Espelhos do TeX Live | Médico do TeX: achar e instalar pacote | Nomes de pacotes | Não usar |
+| Homebrew | Instalar o LanguageTool pelo botão | O que o `brew` manda | Instalar à mão |
+| Google (dicionários do Chromium) | Windows e Linux, na primeira vez que o verificador ortográfico do Chromium é usado | Pedido de download do dicionário | Desligar `spellcheck` no Electron |
+| Planejados: GitHub Releases (item 6), `languagetool.org` (item 1), Overleaf (item 3) | Checar atualização; baixar n-gramas; sincronizar | IP e versão; pedido de download; o projeto | Opções para desligar |
+
+O cabeçalho `User-Agent` das consultas a Crossref, OpenAlex e arXiv é `TeXugo (LaTeX editor; https://github.com/FredieDidier/TeXugo)`: identifica o app, não o usuário.
+
+O que fica no computador:
+
+- `state.json` na pasta de dados do app: projetos recentes, preferências, dicionário pessoal.
+- A biblioteca de papers (PDFs e o texto extraído) na pasta de dados do app.
+- `.texugo/` em cada projeto, fora do Git: prévia ao vivo, PDFs de diferenças, versões enviadas, pareceres gerados, estado das anotações e do checklist de replicação.
+- `.git/texugo-visit.json`: a marca da última visita.
+- `~/.claude/ide/<porta>.lock`, enquanto um Claude Code está ligado ao app.
+- `.texugo-comments/` em cada projeto. **Vai junto no commit**, hoje com nome e e-mail do autor (item 7).
