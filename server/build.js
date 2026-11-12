@@ -235,8 +235,10 @@ export class BuildManager extends EventEmitter {
     return { id: req.id, root: req.projectRoot, ok, passes, order, docs: docsOut };
   }
 
-  _latexmk(id, doc, info, { force, clean }) {
-    return new Promise(async (resolve) => {
+  // async, not new Promise(async …): a throw here (fs.rmSync on a file
+  // locked on Windows) must reject, so _start reports it and the queue moves on.
+  async _latexmk(id, doc, info, { force, clean }) {
+    {
       const dir = path.dirname(doc);
       const base = path.basename(doc);
       if (clean) await this._spawn(id, doc, 'latexmk', ['-C', base], dir);
@@ -268,7 +270,7 @@ export class BuildManager extends EventEmitter {
       if (force || (auxMissing && fs.existsSync(o.bbl))) {
         this.emit('event', { type: 'build:step', id, doc, rule: info.engine, run: 0 });
         await this._spawn(id, doc, info.engine, ['-interaction=nonstopmode', '-file-line-error', '-synctex=1', '-recorder', ...direct, base], dir, env);
-        if (this.running.cancelled) return resolve(-1);
+        if (this.running.cancelled) return -1;
       }
       const args = [
         info.engineSource === 'padrão' && rcPicksFormat ? null : ENGINE_FLAG[info.engine] || '-pdf',
@@ -278,9 +280,8 @@ export class BuildManager extends EventEmitter {
         '-recorder',
         base,
       ].filter(Boolean);
-      const code = await this._spawn(id, doc, 'latexmk', args, dir, env);
-      resolve(code);
-    });
+      return this._spawn(id, doc, 'latexmk', args, dir, env);
+    }
   }
 
   _spawn(id, doc, cmd, args, cwd, extraEnv = {}) {

@@ -394,7 +394,7 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Classificação:** risco potencial (não testado nesses sistemas). **Gravidade:** média. **Esforço:** M.
 - **Evidência, por arquivo:**
   - [server/build.js:276](server/build.js:276) e [server/live.js:178](server/live.js:178): `detached: true` sem `windowsHide: true` abre uma janela de console a cada compilação no Windows. ✅ **FEITO (12/11):** `windowsHide: true` em build.js, live.js e grammar.js.
-  - [server/build.js:233](server/build.js:233): `new Promise(async …)`; um `fs.rmSync` que falhe (arquivo travado, comum no Windows) deixa a promessa sem resolver, e a fila de compilação para até reiniciar.
+  - [server/build.js:233](server/build.js:233): `new Promise(async …)`; um `fs.rmSync` que falhe (arquivo travado, comum no Windows) deixa a promessa sem resolver, e a fila de compilação para até reiniciar. ✅ **FEITO (12/11):** `_latexmk` virou `async`; o erro chega ao `_start`, que encerra a compilação com falha e segue a fila.
   - [server/index.js:139](server/index.js:139): o filtro do observador usa `/`; no Windows os eventos de `.git\` não são filtrados. [web/src/main.js:1533](web/src/main.js:1533): `'/.texugo-comments/'`, mesmo problema. ✅ **FEITO (12/11):** o servidor troca `\` por `/` antes do filtro; o cliente aceita os dois separadores.
   - [server/compare.js:190](server/compare.js:190): `BIBINPUTS: docDir + ':'` (no Windows o separador é `;`). ✅ **FEITO (12/11):** `path.delimiter`, também em `BSTINPUTS`.
   - [server/refs.js:200](server/refs.js:200): `bibsOf` manipula caminhos como texto com `/`.
