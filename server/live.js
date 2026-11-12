@@ -19,6 +19,7 @@
 // A finished run is copied to .texugo/live/<id>/show/<stem>.pdf (and its
 // .synctex.gz) only when it is good enough to show, so a half-typed command
 // never replaces a good preview with a broken page.
+import { outputs } from './outdirs.js';
 import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
@@ -137,7 +138,7 @@ export class LiveManager extends EventEmitter {
     // A full build newer than the live copies wins: drop the stale ones so
     // TeX falls back to the real files next to the document.
     for (const ext of AUX_EXT) {
-      const real = path.join(docDir, stem + ext);
+      const real = path.join(outputs(doc).auxDir, stem + ext);
       const mine = path.join(dirs.out, stem + ext);
       try {
         if (fs.existsSync(mine) && fs.existsSync(real) && fs.statSync(real).mtimeMs > fs.statSync(mine).mtimeMs) fs.rmSync(mine);
@@ -150,7 +151,10 @@ export class LiveManager extends EventEmitter {
     fs.rmSync(outPdf, { force: true });
     const engine = ['pdflatex', 'xelatex', 'lualatex'].includes(info.engine) ? info.engine : 'pdflatex';
     const args = ['-interaction=nonstopmode', '-file-line-error', '-synctex=1', `-output-directory=${dirs.out}`, `-jobname=${stem}`, main];
-    const sep = path.delimiter + (process.env.TEXINPUTS || '');
+    // With a latexmkrc $aux_dir, the full build's .aux files (this
+    // document's and its external documents') sit there, not beside the .tex.
+    const auxDirs = [...new Set([doc, ...(info.externals || [])].map((d) => outputs(d)).filter((x) => x.moved).map((x) => x.auxDir))];
+    const sep = path.delimiter + auxDirs.map((d) => d + path.delimiter).join('') + (process.env.TEXINPUTS || '');
     const code = await this._spawn(job, engine, args, docDir, { TEXINPUTS: dirs.src + sep });
     const logText = readMaybe(path.join(dirs.out, stem + '.log'));
     const parsed = logText ? parseLog(logText, docDir) : { errors: [] };

@@ -11,6 +11,7 @@
 //   sumiu     the passage is gone.
 // When nothing was marked, the base is guessed: the sent version or recent
 // Git commit closest to what came back.
+import { outputs } from './outdirs.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -64,14 +65,14 @@ export async function mark(root, doc, { to = '', note = '' } = {}) {
   const outside = Object.fromEntries(Object.entries(files).filter(([r]) => r.startsWith('..')));
   if (Object.keys(outside).length) fs.writeFileSync(path.join(dir, 'outside.json'), JSON.stringify(outside));
   // The PDF as sent, and its SyncTeX, to read an annotated copy against.
-  const stem = doc.replace(/\.tex$/, '');
+  const built = outputs(doc);
   let pdf = null;
   let stale = false;
-  if (fs.existsSync(stem + '.pdf')) {
-    fs.copyFileSync(stem + '.pdf', path.join(dir, 'sent.pdf'));
+  if (fs.existsSync(built.pdf)) {
+    fs.copyFileSync(built.pdf, path.join(dir, 'sent.pdf'));
     pdf = 'sent.pdf';
-    if (fs.existsSync(stem + '.synctex.gz')) fs.copyFileSync(stem + '.synctex.gz', path.join(dir, 'sent.synctex.gz'));
-    const pdfTime = fs.statSync(stem + '.pdf').mtimeMs;
+    if (fs.existsSync(built.synctex)) fs.copyFileSync(built.synctex, path.join(dir, 'sent.synctex.gz'));
+    const pdfTime = fs.statSync(built.pdf).mtimeMs;
     stale = [...includeClosure(doc)].some((f) => {
       try {
         return fs.statSync(f).mtimeMs > pdfTime + 1000;

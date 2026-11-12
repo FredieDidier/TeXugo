@@ -157,7 +157,7 @@ Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/
 
 ## ✅ B4. Projeto com `latexmkrc`: DVI no lugar de PDF e "ok, zero ??" sem ler o log — **CORRIGIDO**
 
-- **Estado (12/11/2026):** `rcInfo` em server/build.js lê o rc. Sem `$pdf_mode`, o TeXugo passa a flag do motor. Com `$out_dir`/`$aux_dir` literais, log e PDF são lidos lá. Saída 0 sem log vira erro com o caminho procurado. Os dois testes do critério estão em test/build.test.js. Ficou de fora: `$out_dir` calculado em Perl, e SyncTeX, `.aux` de documentos externos, prévia ao vivo e ZIP de submissão continuam olhando ao lado do `.tex`.
+- **Estado (12/11/2026):** completo. `server/outdirs.js` lê o rc. Atribuições literais são lidas direto; expressões em Perl são perguntadas ao próprio latexmk (`latexmk -e`), com cache pela data do rc. Sem `$pdf_mode`, o TeXugo passa a flag do motor. Log, PDF, `.aux`, `.fls`, `.bbl` e SyncTeX são procurados em `$out_dir`/`$aux_dir` no build, nos `.aux` de documentos externos (que também entram no `TEXINPUTS`, para o `\externaldocument` achar), na prévia ao vivo, no ZIP de submissão (`.bbl` e `.aux` vão para o lado do `.tex`), no R&R e nas versões enviadas. O SyncTeX inverso resolve o arquivo a partir da pasta do `.tex`. Saída 0 sem log vira erro. Testes: três em test/build.test.js (sem `$pdf_mode`; `$out_dir` literal; Perl com `$aux_dir`, documento externo, ZIP e SyncTeX) e um em test/live.test.js.
 
 - **Classificação:** confirmado (execução). **Gravidade:** alta. **Esforço:** P a M.
 - **Evidência:**
@@ -304,7 +304,9 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Correção:** o servidor precisa saber o idioma: mandar `lang` no `hello` e guardar em memória, ou devolver códigos de erro e montar a frase na página. Para o que é frase fixa, basta completar o dicionário. O essencial é o teste: transformar a varredura do Apêndice A em `test/i18n.test.js`, que falha quando aparece literal em português sem tradução, com uma lista explícita de exceções (regras de vícios, prompts, palavras-chave da paleta).
 - **Aceite:** o teste novo verde; uma passada manual pela interface em inglês provocando erros (pasta inexistente, `.bib` errado, sem rede).
 
-## I10. Digitação lenta em arquivos de 1.000 a 2.000 linhas
+## ✅ I10. Digitação lenta em arquivos de 1.000 a 2.000 linhas — **CORRIGIDO**
+
+- **Estado (12/11/2026):** a LCS quadrática de `lineChanges` virou um diff de Myers, O((N+M)·D), sobre ids de linha. Duas edições em 2.000 linhas ficam bem abaixo de 4 ms por tecla (teste em test/changes.test.js), e o atalho que marcava o intervalo todo como alterado só entra depois de 2.000 edições separadas. Num teste com 20 mil pares aleatórios, o número de linhas marcadas é sempre igual ao do código antigo; em casos ambíguos, uma linha pode passar de "alterada" para "nova" ou o contrário, e as duas leituras são válidas.
 
 - **Classificação:** confirmado (medição por função). **Gravidade:** média. **Esforço:** P a M.
 - **Evidência:** [web/src/changes.js:65](web/src/changes.js:65): `changesField` recalcula, a cada tecla, o diff de linhas entre o texto e a linha de base (o estado na abertura ou na última compilação). `lineChanges` é uma LCS quadrática sobre o trecho entre a primeira e a última linha alteradas. Com uma edição perto do começo e outra perto do fim:

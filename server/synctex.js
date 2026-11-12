@@ -1,5 +1,6 @@
 // SyncTeX: source line -> PDF position (forward) and PDF click -> source
 // line (inverse), through the synctex command line tool of TeX Live.
+import fs from 'node:fs';
 import path from 'node:path';
 import { run } from './util.js';
 
@@ -35,5 +36,21 @@ export async function inverse({ pdf, page, x, y }) {
   if (r.code !== 0) return { ok: false, error: r.stderr || r.stdout };
   const b = fields(r.stdout).find((x) => x.Input);
   if (!b) return { ok: false };
-  return { ok: true, file: path.resolve(path.dirname(pdf), b.Input.trim()), line: Number(b.Line), column: Math.max(0, Number(b.Column)) };
+  return { ok: true, file: inputPath(pdf, b.Input.trim()), line: Number(b.Line), column: Math.max(0, Number(b.Column)) };
+}
+
+// SyncTeX records inputs relative to the folder TeX ran in, which is the
+// .tex's folder, not the PDF's when a latexmkrc sets $out_dir (build/):
+// try the PDF's folder, then its parents.
+export function inputPath(pdf, input) {
+  if (path.isAbsolute(input)) return path.normalize(input);
+  let dir = path.dirname(pdf);
+  for (let i = 0; i < 4; i++) {
+    const p = path.resolve(dir, input);
+    if (fs.existsSync(p)) return p;
+    const up = path.dirname(dir);
+    if (up === dir) break;
+    dir = up;
+  }
+  return path.resolve(path.dirname(pdf), input);
 }

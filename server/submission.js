@@ -1,5 +1,6 @@
 // Submission helpers: a ZIP that compiles on its own (arXiv, journals) and a
 // double-blind check that looks for author traces in sources and PDF.
+import { outputs } from './outdirs.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -49,7 +50,7 @@ const REWRITABLE = /\.(tex|ltx|sty|cls|cfg|def|tikz|pgf)$/i;
 export function sourceFiles(doc) {
   const dir = path.dirname(doc);
   const files = new Set();
-  const fls = readText(stem(doc) + '.fls');
+  const fls = readText(outputs(doc).fls);
   if (fls) {
     let pwd = dir;
     for (const line of fls.split('\n')) {
@@ -76,13 +77,26 @@ export function sourceFiles(doc) {
   files.add(doc);
   // The bibliography as compiled (.bbl) instead of the .bib: arXiv does not
   // run BibTeX, and the .bbl guarantees the references come out the same.
-  if (fs.existsSync(stem(doc) + '.bbl')) files.add(stem(doc) + '.bbl');
-  // Labels of external documents, so \externaldocument still resolves.
-  for (const ext of docInfo(doc).externals) if (fs.existsSync(stem(ext) + '.aux')) files.add(stem(ext) + '.aux');
+  for (const [src] of buildCopies(doc)) files.add(src);
   return [...files].filter((f) => fs.existsSync(f) && fs.statSync(f).isFile()).sort();
 }
 
 const isInDir = (dir, f) => f.startsWith(dir + path.sep);
+
+// Build files the ZIP carries: the compiled bibliography (.bbl; arXiv does
+// not run BibTeX) and the labels of external documents (.aux, so
+// \externaldocument resolves). A latexmkrc may keep them in $aux_dir; in the
+// ZIP they go next to their .tex, where TeX looks for them.
+export function buildCopies(doc) {
+  const out = [];
+  const o = outputs(doc);
+  if (fs.existsSync(o.bbl)) out.push([o.bbl, path.join(o.dir, path.basename(o.bbl))]);
+  for (const ext of docInfo(doc).externals) {
+    const e = outputs(ext);
+    if (fs.existsSync(e.aux)) out.push([e.aux, path.join(e.dir, path.basename(e.aux))]);
+  }
+  return out;
+}
 const stripUp = (rel) => {
   const parts = rel.split(/[\\/]/);
   while (parts[0] === '..') parts.shift();
@@ -104,6 +118,11 @@ export function zipLayout(doc, files) {
   if (clash) prefix = 'externos/';
   const map = new Map(inside.map((f) => [f, path.relative(dir, f)]));
   outside.forEach((f, k) => map.set(f, prefix + plain[k]));
+  // Build files kept in an $aux_dir go where TeX looks for them.
+  for (const [src, place] of buildCopies(doc)) {
+    if (!map.has(src) || src === place) continue;
+    map.set(src, isInDir(dir, place) || place.startsWith(dir + path.sep) ? path.relative(dir, place) : prefix + stripUp(path.relative(dir, place)));
+  }
   // Maps an absolute path (a moved file, one of its folders, or a file
   // given without extension) to its place in the ZIP, or null.
   const target = (abs) => {
@@ -156,7 +175,7 @@ export async function exportZip(doc, { check = true } = {}) {
     if (r.code !== 0) throw new Error('zip falhou: ' + (r.stderr || r.stdout));
     const moved = outside.map((f) => ({ from: f, to: map.get(f) }));
     const result = { zip: out, files: names, moved, rewritten, size: fs.statSync(out).size };
-    if (check) result.check = await checkZip(out, path.relative(dir, doc), docInfo(doc).engine, stem(doc) + '.log');
+    if (check) result.check = await checkZip(out, path.relative(dir, doc), docInfo(doc).engine, outputs(doc).log);
     return result;
   } finally {
     fs.rmSync(stage, { recursive: true, force: true });
@@ -245,7 +264,7 @@ export async function blindCheck(doc, { names = [] } = {}) {
       if (c) for (const { n, re } of nameRes) if (re.test(c[2])) add('comment', `Nome "${n}" num comentário (vai junto se mandar os .tex).`, f, i + 1);
     });
   }
-  const pdf = stem(doc) + '.pdf';
+  const pdf = outputs(doc).pdf;
   if (fs.existsSync(pdf)) {
     const r = await run('pdfinfo', [pdf], { timeout: 15000 });
     if (r.code === 0) {

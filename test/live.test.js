@@ -96,3 +96,25 @@ test('live pass compiles unsaved buffers without touching the disk', { timeout: 
   assert.equal(e.errors[0].file, body);
   assert.equal(e.errors[0].line, 3);
 });
+
+// B4: with a latexmkrc $aux_dir, a live pass reads the full build's .aux
+// files from there (its own and its external document's): no ?? appear.
+test('live pass finds .aux files kept in a latexmkrc $aux_dir', { timeout: 180000 }, async () => {
+  const { BuildManager } = await import('../server/build.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-live-rc-'));
+  fs.writeFileSync(path.join(dir, '.latexmkrc'), '$out_dir = "build";\n$aux_dir = "build/aux";\n');
+  fs.writeFileSync(path.join(dir, 'appendix.tex'), '\\documentclass{article}\n\\begin{document}\n\\section{Extra}\\label{app:x}\n\\end{document}\n');
+  const doc = path.join(dir, 'paper.tex');
+  const text = '\\documentclass{article}\n\\usepackage{xr}\n\\externaldocument{appendix}\n\\begin{document}\n\\section{Main}\\label{sec:main}\nSee \\ref{app:x} and \\ref{sec:main}.\n\\end{document}\n';
+  fs.writeFileSync(doc, text);
+  const b = new BuildManager();
+  await new Promise((resolve) => {
+    b.on('event', (e) => e.type === 'build:done' && resolve(e));
+    b.request(dir, [doc]);
+  });
+  const e = await liveOnce(new LiveManager(), dir, doc, [{ path: doc, text: text.replace('See', 'Live see') }]);
+  assert.equal(e.shown, true, JSON.stringify(e));
+  const txt = await pdfText(e.pdf);
+  assert.match(txt, /Live see/);
+  assert.doesNotMatch(txt, /\?\?/);
+});

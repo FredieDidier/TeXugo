@@ -5,6 +5,7 @@
 // response.tex in the format of its "Resposta aos pareceristas" template,
 // each change tied to the current source line and, when the PDF has
 // SyncTeX, to its page.
+import { outputs } from './outdirs.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText } from './util.js';
@@ -148,8 +149,9 @@ export async function respond({ root, doc, reports, source, lang, model, effort 
   const result = await runClaude(prompt, { root, model, effort, timeout: 30 * 60000 });
   const data = parseJson(result);
   // Tie each change to its line, section and, with SyncTeX, PDF page.
-  const pdf = doc.replace(/\.tex$/, '.pdf');
-  const hasSync = fs.existsSync(doc.replace(/\.tex$/, '.synctex.gz')) && fs.existsSync(pdf);
+  const built = outputs(doc);
+  const pdf = built.pdf;
+  const hasSync = fs.existsSync(built.synctex) && fs.existsSync(pdf);
   let n = 0;
   let todo = 0;
   for (const sec of data.sections) {

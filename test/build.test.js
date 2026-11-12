@@ -81,3 +81,34 @@ test('latexmkrc with $out_dir: log read, ?? counted', { timeout: 60000 }, async 
   assert.equal(d.undefinedRefs.length, 1);
   assert.notEqual(d.status, 'ok');
 });
+
+// B4, rest: $out_dir computed in Perl, a separate $aux_dir, an external
+// document whose .aux lives there, the ZIP, and SyncTeX back to the source.
+test('latexmkrc with Perl out_dir and aux_dir: externals, ZIP and SyncTeX', { timeout: 240000 }, async () => {
+  const { outputs } = await import('../server/outdirs.js');
+  const { exportZip } = await import('../server/submission.js');
+  const sync = await import('../server/synctex.js');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-rc2-'));
+  fs.writeFileSync(path.join(dir, 'latexmkrc'), '$out_dir = "bu" . "ild";\n$aux_dir = "$out_dir/aux";\n');
+  fs.writeFileSync(path.join(dir, 'appendix.tex'), '\\documentclass{article}\n\\usepackage{xr}\n\\externaldocument{paper}\n\\begin{document}\n\\section{Extra}\\label{app:x}\nSee \\ref{sec:main}.\n\\end{document}\n');
+  fs.writeFileSync(path.join(dir, 'paper.tex'), '\\documentclass{article}\n\\usepackage{xr}\n\\externaldocument{appendix}\n\\begin{document}\n\\section{Main}\\label{sec:main}\nSee \\ref{app:x}.\n\\end{document}\n');
+  const paper = path.join(dir, 'paper.tex');
+  const o = outputs(paper);
+  assert.equal(o.outDir, path.join(dir, 'build'));
+  assert.equal(o.auxDir, path.join(dir, 'build', 'aux'));
+  const res = await buildOnce(new BuildManager(), dir, [paper]);
+  for (const d of res.docs) {
+    assert.equal(d.undefinedRefs.length, 0, `${d.name}: ${JSON.stringify(d.undefinedRefs)} ${JSON.stringify(d.errors)}`);
+    assert.ok(d.pdf && d.pdf.startsWith(path.join(dir, 'build')), d.name + ' pdf ' + d.pdf);
+  }
+  assert.ok(fs.existsSync(path.join(dir, 'build', 'aux', 'appendix.aux')));
+  // SyncTeX: a click on page 1 comes back to paper.tex, not build/paper.tex.
+  const pdf = res.docs.find((d) => d.name === 'paper.tex').pdf;
+  const inv = await sync.inverse({ pdf, page: 1, x: 150, y: 130 });
+  assert.ok(inv.ok, JSON.stringify(inv));
+  assert.equal(fs.realpathSync(inv.file), fs.realpathSync(paper));
+  // The ZIP carries appendix.aux next to paper.tex and still compiles alone.
+  const zip = await exportZip(paper, { check: true });
+  assert.ok(zip.files.includes('appendix.aux'), JSON.stringify(zip.files));
+  assert.equal(zip.check.undefinedRefs.length, 0, JSON.stringify(zip.check));
+});

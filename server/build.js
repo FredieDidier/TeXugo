@@ -21,6 +21,7 @@ import path from 'node:path';
 import { docInfo, projectSymbols, includeClosure } from './project.js';
 import { parseLog, auxFingerprint, auxLabels } from './logparse.js';
 import { toolEnv, which } from './util.js';
+import { rcInfo, outputs } from './outdirs.js';
 import { killTree, texInstallHint } from './platform.js';
 
 const MAX_PASSES = 6;
@@ -28,31 +29,7 @@ const ENGINE_FLAG = { pdflatex: '-pdf', xelatex: '-pdfxe', lualatex: '-pdflua' }
 
 const stem = (doc) => doc.replace(/\.tex$/, '');
 
-// What a latexmkrc next to the document changes for us: whether it picks
-// the output format itself ($pdf_mode), and where log, aux and PDF go
-// ($out_dir, $aux_dir). Only plain literal assignments are understood.
-export function rcInfo(dir) {
-  let text = '';
-  let exists = false;
-  for (const f of ['latexmkrc', '.latexmkrc']) {
-    const t = readMaybe(path.join(dir, f));
-    if (t != null) (exists = true), (text += t + '\n');
-  }
-  text = text.replace(/#.*$/gm, '');
-  const lit = (name) => {
-    const m = text.match(new RegExp('\\$' + name + '\\s*=\\s*([\'"])([^\'"]+)\\1'));
-    return m ? path.resolve(dir, m[2]) : null;
-  };
-  const outDir = lit('out_dir');
-  return { exists, pdfMode: /\$pdf_mode\s*=/.test(text), outDir, auxDir: lit('aux_dir') || outDir };
-}
-
-// Where the build of a document leaves its log and PDF.
-export function outputs(doc) {
-  const rc = rcInfo(path.dirname(doc));
-  const base = path.basename(stem(doc));
-  return { log: path.join(rc.auxDir || path.dirname(doc), base + '.log'), pdf: path.join(rc.outDir || path.dirname(doc), base + '.pdf') };
-}
+export { rcInfo, outputs };
 
 export class BuildManager extends EventEmitter {
   constructor() {
@@ -167,11 +144,11 @@ export class BuildManager extends EventEmitter {
         if (this.running.cancelled) break;
         const info = infos.get(doc);
         const deps = info.externals.filter((e) => infos.has(e));
-        const fp = deps.map((e) => auxFingerprint(stem(e) + '.aux')).join('\u0000');
+        const fp = deps.map((e) => auxFingerprint(outputs(e).aux)).join('\u0000');
         let reason = null;
         if (pass === 1) reason = req.docs.includes(doc) ? 'pedido' : 'dependência';
         else if (seen.get(doc) !== fp) {
-          const changed = deps.find((e, k) => (seen.get(doc) || '').split('\u0000')[k] !== auxFingerprint(stem(e) + '.aux'));
+          const changed = deps.find((e, k) => (seen.get(doc) || '').split('\u0000')[k] !== auxFingerprint(outputs(e).aux));
           reason = `rótulos de ${path.basename(changed || deps[0] || doc)} mudaram`;
         }
         if (!reason) continue;
@@ -192,7 +169,7 @@ export class BuildManager extends EventEmitter {
         runs.set(doc, runs.get(doc) + 1);
         // Record what this run read. Taken after the run, the dependency aux
         // files are unchanged by it, so this is exactly its input.
-        seen.set(doc, deps.map((e) => auxFingerprint(stem(e) + '.aux')).join('\u0000'));
+        seen.set(doc, deps.map((e) => auxFingerprint(outputs(e).aux)).join('\u0000'));
         this.seenAcross.set(doc, seen.get(doc));
       }
       if (!ranAny || this.running.cancelled) break;
@@ -267,23 +244,30 @@ export class BuildManager extends EventEmitter {
       // does not would make latexmk fall back to DVI, so we pass the flag.
       const rc = rcInfo(dir);
       const rcPicksFormat = rc.exists && rc.pdfMode;
-      const s = stem(doc);
+      const o = outputs(doc);
       // An .fls without its .aux (aux deleted by hand or by another editor)
       // makes latexmk run BibTeX on an empty aux and stop. Drop that stale
       // bookkeeping so latexmk starts as on a first build.
       // A leftover .bbl without .aux does the same (latexmk 4.83 sets up the
       // BibTeX rule first); a direct engine run below recreates the aux.
-      const auxMissing = !fs.existsSync(s + '.aux');
+      const auxMissing = !fs.existsSync(o.aux);
       if (auxMissing) {
-        for (const ext of ['.fls', '.fdb_latexmk']) fs.rmSync(s + ext, { force: true });
+        for (const f of [o.fls, o.fdb]) fs.rmSync(f, { force: true });
       }
+      // With $aux_dir/$out_dir the other documents' .aux files are not next
+      // to their .tex, where \externaldocument looks: put their folders on
+      // TEXINPUTS. The direct run below writes where latexmk will look.
+      const auxDirs = [...new Set([o, ...(info.externals || []).map((e) => outputs(e))].filter((x) => x.moved).map((x) => x.auxDir))];
+      const env = auxDirs.length ? { TEXINPUTS: auxDirs.join(path.delimiter) + path.delimiter + (process.env.TEXINPUTS || '') } : {};
+      const direct = o.auxDir !== dir ? [`-output-directory=${o.auxDir}`] : [];
+      if (o.auxDir !== dir) fs.mkdirSync(o.auxDir, { recursive: true });
       // To force a rerun we do not use latexmk -g, which forces every rule
       // including BibTeX before LaTeX has written the aux. One direct engine
       // run reads the new labels of the other documents; latexmk then sees
       // the changed aux and does whatever BibTeX/rerun work follows.
-      if (force || (auxMissing && fs.existsSync(s + '.bbl'))) {
+      if (force || (auxMissing && fs.existsSync(o.bbl))) {
         this.emit('event', { type: 'build:step', id, doc, rule: info.engine, run: 0 });
-        await this._spawn(id, doc, info.engine, ['-interaction=nonstopmode', '-file-line-error', '-synctex=1', '-recorder', base], dir);
+        await this._spawn(id, doc, info.engine, ['-interaction=nonstopmode', '-file-line-error', '-synctex=1', '-recorder', ...direct, base], dir, env);
         if (this.running.cancelled) return resolve(-1);
       }
       const args = [
@@ -294,19 +278,19 @@ export class BuildManager extends EventEmitter {
         '-recorder',
         base,
       ].filter(Boolean);
-      const code = await this._spawn(id, doc, 'latexmk', args, dir);
+      const code = await this._spawn(id, doc, 'latexmk', args, dir, env);
       resolve(code);
     });
   }
 
-  _spawn(id, doc, cmd, args, cwd) {
+  _spawn(id, doc, cmd, args, cwd, extraEnv = {}) {
     // Preferências (stallSeconds) win; the variable stays for tests.
     const STALL_MS = Number(process.env.TEXUGO_STALL_MS) || (this.stallSeconds > 0 ? this.stallSeconds * 1000 : 180000);
     const MAX_LOG = 50 * 1024 * 1024;
     const STALL_MSG = `compilação parada: ${Math.round(STALL_MS / 1000)} s sem nenhum progresso (laço infinito ou comando esperando resposta?)`;
     const FLOOD_MSG = 'compilação parada: o log passou de 50 MB, sinal de laço infinito';
     return new Promise((resolve) => {
-      const child = spawn(cmd, args, { cwd, env: toolEnv(), detached: true });
+      const child = spawn(cmd, args, { cwd, env: toolEnv(extraEnv), detached: true });
       this.running.child = child;
       this.emit('event', { type: 'build:log', id, doc, text: `$ ${cmd} ${args.join(' ')}\n` });
       let buf = '';
@@ -371,7 +355,7 @@ function explainRef(key, doc, info, infos, symbols, projectRoot) {
   // Is it in another document's aux, i.e. defined in a separate document?
   for (const other of infos.keys()) {
     if (other === doc) continue;
-    if (auxLabels(stem(other) + '.aux').has(key)) {
+    if (auxLabels(outputs(other).aux).has(key)) {
       return info.externals.includes(other)
         ? `O rótulo está em ${path.basename(other)}, que este documento importa. Recompile o grupo todo (o TeXugo faz isso sozinho).`
         : `O rótulo está em ${path.basename(other)}, mas ${path.basename(doc)} não tem \\externaldocument{${path.basename(stem(other))}}.`;
