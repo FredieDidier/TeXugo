@@ -10,6 +10,7 @@ import path from 'node:path';
 import { toolEnv, which, winSpawn } from './util.js';
 import { claudeFlags } from './agent.js';
 import { claudeSourceFlags } from './trust.js';
+import { killTree } from './platform.js';
 
 export const ACTIONS = {
   revisar: 'Revise the passage: fix grammar, wording, clarity and any claim the wording overstates. Keep the meaning, the structure and the length roughly the same.',
@@ -39,7 +40,7 @@ export function cancelAi(root) {
   for (const [r, child] of current) {
     if (root && r !== root) continue;
     try {
-      child.kill('SIGTERM');
+      killTree(child);
     } catch {}
     current.delete(r);
     any = true;
@@ -97,7 +98,7 @@ export async function runClaude(prompt, opts) {
     current.set(key, child);
     let stdout = '';
     let stderr = '';
-    const timer = setTimeout(() => child.kill('SIGTERM'), opts.timeout || 300000);
+    const timer = setTimeout(() => killTree(child), opts.timeout || 300000);
     child.stdout.on('data', (d) => (stdout += d));
     child.stderr.on('data', (d) => (stderr += d));
     child.on('error', (err) => resolve({ code: -1, stdout, stderr: String(err) }));

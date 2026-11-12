@@ -403,7 +403,7 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
   - [server/submission.js:58](server/submission.js:58): `isInDir` com `path.sep` contra caminhos do `.fls`, que usam `/`; e `/dev/` fixo. ✅ **FEITO (12/11):** `isInDir` por `path.relative`; `/dev/` e `nul` checados no caminho original do `.fls`.
   - [server/git.js:59](server/git.js:59): `git diff --no-index -- /dev/null`.
   - [server/index.js:171](server/index.js:171): `home: process.env.HOME`, indefinido no Windows. ✅ **FEITO (12/11):** `os.homedir()`.
-  - [server/ai.js:36](server/ai.js:36) e [agent.js:184](server/agent.js:184): `kill('SIGTERM')` no `cmd.exe` que embrulha o `claude.cmd` não encerra o processo filho.
+  - [server/ai.js:36](server/ai.js:36) e [agent.js:184](server/agent.js:184): `kill('SIGTERM')` no `cmd.exe` que embrulha o `claude.cmd` não encerra o processo filho. ✅ **FEITO (12/11):** `killTree` (`taskkill /T /F` no Windows).
   - `node-pty` 1.1.0 traz binários prontos para macOS e Windows, não para Linux: o AppImage exige compilar na CI.
   - `latexdiff` e `latexindent` dependem de Perl; no MiKTeX ele não vem.
   - `spellcheck: true` em [electron/main.js:41](electron/main.js:41): no Windows e no Linux o Chromium baixa os dicionários de um servidor do Google (no Mac usa o do sistema). Entra na página de privacidade ou se desliga.

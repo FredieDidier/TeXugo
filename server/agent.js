@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { toolEnv, which, winSpawn } from './util.js';
 import { claudeSourceFlags } from './trust.js';
+import { killTree } from './platform.js';
 
 // Model and effort picked in the panel (or Preferências). The CLI gets the
 // full id; an older Claude Code that does not know it says so, and we explain.
@@ -191,7 +192,7 @@ export class Agents {
       this.sessions.delete(root);
       s.running = false;
       try {
-        s.child.kill('SIGTERM');
+        killTree(s.child);
       } catch {}
     }
     return true;
