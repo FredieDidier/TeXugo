@@ -3,6 +3,7 @@
 // one-line BibTeX); arXiv ids through the arXiv API, switching to the
 // journal DOI when the preprint has one.
 import fs from 'node:fs';
+import { writeKeepingLink } from './util.js';
 
 const UA = 'TeXugo (LaTeX editor; https://github.com/FredieDidier/TeXugo)';
 const TIMEOUT = 15000;
@@ -185,7 +186,7 @@ export function addToBib(bibFile, ref) {
   }
   const key = makeKey(ref, new Set(entries.map((e) => e[1])));
   const bib = toBibtex(ref, key);
-  fs.writeFileSync(bibFile, text + (text && !text.endsWith('\n\n') ? (text.endsWith('\n') ? '\n' : '\n\n') : '') + bib);
+  writeKeepingLink(bibFile, text + (text && !text.endsWith('\n\n') ? (text.endsWith('\n') ? '\n' : '\n\n') : '') + bib);
   return { key, existed: false, bibtex: bib };
 }
 

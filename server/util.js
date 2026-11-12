@@ -9,7 +9,7 @@ import { extraPaths, appDataDir, IS_WIN } from './platform.js';
 // Apps launched from Finder (or the Start menu, or a desktop launcher) do
 // not inherit the login shell PATH, so TeX and other tools would be
 // invisible. platform.js lists the usual places on each system.
-const EXTRA_PATHS = extraPaths();
+let EXTRA_PATHS = extraPaths();
 
 // Variables a parent Claude Code session (or the desktop app that launched
 // TeXugo from one) leaves in the environment. Passed on, they make the
@@ -99,6 +99,12 @@ export function winSpawn(cmd, args, env) {
 }
 
 let whichCache = new Map();
+// After the user installs TeX (or anything else) with the app open: forget
+// what was missing and look for the TeX Live year folder again.
+export function refreshTools() {
+  whichCache = new Map();
+  EXTRA_PATHS = extraPaths();
+}
 export async function which(bin) {
   if (whichCache.has(bin)) return whichCache.get(bin);
   const found = findOnPath(bin);

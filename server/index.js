@@ -18,7 +18,7 @@ import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
 import { LiveManager, overlayPath, realPath } from './live.js';
 import { Grammar } from './grammar.js';
-import { isInside, dataDir, run, which, toolEnv, writeKeepingLink } from './util.js';
+import { isInside, dataDir, run, which, toolEnv, writeKeepingLink, refreshTools } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
 import * as replication from './replication.js';
@@ -158,7 +158,8 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
   }
 
   const api = {
-    async hello() {
+    async hello({ refresh } = {}) {
+      if (refresh) refreshTools();
       const tools = {};
       for (const t of ['latexmk', 'pdflatex', 'xelatex', 'lualatex', 'biber', 'bibtex', 'synctex', 'git', 'chktex']) tools[t] = await which(t);
       const tex = tools.pdflatex ? (await run('pdflatex', ['--version'])).stdout.split('\n')[0] : null;

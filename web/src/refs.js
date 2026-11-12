@@ -36,6 +36,8 @@ export async function addReference(app, S) {
   const go = h('button', { class: 'btn primary' }, 'Buscar');
 
   const add = async (ref, andCite) => {
+    const bibTab = app.tabByPath && app.tabByPath(bibSel.value);
+    if (bibTab && bibTab.dirty) return toast(`Salve ${basename(bibSel.value)} antes (tem alterações não salvas).`, 'warn');
     try {
       const r = await call('refAdd', { bib: bibSel.value, ref });
       m.close();

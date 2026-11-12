@@ -12,7 +12,7 @@ export async function showWelcome(app, S) {
   } catch {}
   // The list as it is now: a project opened in this session is a recent too.
   try {
-    const now = await call('hello');
+    const now = await call('hello', { refresh: true });
     S.hello.recents = now.recents;
     S.hello.tools = now.tools;
     S.hello.tex = now.tex;

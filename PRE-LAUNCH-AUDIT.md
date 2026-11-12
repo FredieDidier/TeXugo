@@ -94,7 +94,7 @@ Os outros três são de distribuição: assinatura e notarização no Mac (B5), 
 
 A maior lacuna de QA é estrutural: `server/index.js` (toda a API), `git.js`, `terminal.js`, o Electron e cerca de 40 dos 50 módulos da interface não têm nenhum teste. Os quatro defeitos acima moram exatamente aí.
 
-Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/2026: 3 bloqueadores (B1, B2, B3), 4 importantes (I1, I11, I12, I14), 3 desejáveis (D1, D6, D10).
+Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/2026: 3 bloqueadores (B1, B2, B3), 6 importantes (I1, I3, I11, I12, I14, I15), 3 desejáveis (D1, D6, D10).
 
 ---
 
@@ -219,7 +219,9 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Correção:** a cada 20 a 30 segundos, e ao perder o foco, gravar as abas sujas em `<dados do app>/recovery/<hash do projeto>/` (nunca dentro do projeto, para não sujar o Git). Ao abrir um projeto com cópias mais novas que o disco, oferecer *Recuperar* com o diff. Apagar a cópia ao salvar ou descartar. Não é salvamento automático no arquivo do usuário, e isso é de propósito: quem usa Git e compila ao salvar não quer gravações que não pediu.
 - **Aceite:** matar o processo com aba suja e reabrir mostra a oferta de recuperação com o texto certo.
 
-## I3. O servidor escreve em `.bib` por baixo do editor
+## ✅ I3. O servidor escreve em `.bib` por baixo do editor — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 12/11/2026.** `addToBib`, `applyFixes` e `importBib` gravam por `writeKeepingLink` (temporário, renomear, link e modo mantidos). *Adicionar referência* agora recusa com o `.bib` aberto e sujo, como Verificar e Zotero já faziam. Não aplica a mudança no próprio editor; pede para salvar antes. `npm test` verde; não exercitei na interface.
 
 - **Classificação:** confirmado (leitura). **Gravidade:** média. **Esforço:** P.
 - **Evidência:** [server/refs.js:188](server/refs.js:188) (`addToBib`), [server/refcheck.js:209](server/refcheck.js:209) (`applyFixes`) e [server/zotero.js:188](server/zotero.js:188) (`importBib`) gravam direto no disco, sem temporário. Verificar e Zotero exigem o `.bib` salvo ([references.js:60](web/src/references.js:60), [zotero.js:53](web/src/zotero.js:53)); *Adicionar referência* ([web/src/refs.js:38](web/src/refs.js:38)) não confere.
@@ -339,7 +341,9 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Evidência:** [web/src/sidebar.js:211](web/src/sidebar.js:211) atualiza só a aba cujo caminho é o do item renomeado. Abas de arquivos dentro da pasta renomeada, a raiz do documento (`t.root`), `S.savedRoots` e as abas de PDF ficam com o caminho velho; salvar falha com "Não salvou" (a pasta não existe mais).
 - **Correção:** ao renomear, trocar o prefixo em todas as abas, raízes, PDFs e em `savedRoots`, e chamar `refreshRoots`.
 
-## I15. Depois de instalar o TeX, o app continua dizendo que falta
+## ✅ I15. Depois de instalar o TeX, o app continua dizendo que falta — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 12/11/2026.** `refreshTools()` em `server/util.js` limpa o cache do `which` e recalcula os caminhos extras; `hello({ refresh: true })` chama, e a tela inicial pede assim toda vez que se desenha. Teste em `test/writelink.test.js`. O assistente do item 5 deve usar o mesmo `refresh`.
 
 - **Classificação:** confirmado (leitura). **Gravidade:** média para o item 5. **Esforço:** P.
 - **Evidência:** [server/util.js:101](server/util.js:101): `whichCache` nunca é limpo. [util.js:12](server/util.js:12): `EXTRA_PATHS` é calculado uma vez, na carga do módulo, e é ele que descobre a pasta do TeX Live pelo ano.

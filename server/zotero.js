@@ -9,7 +9,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { run } from './util.js';
+import { run, writeKeepingLink } from './util.js';
 import { parseBib, texToText } from './bibparse.js';
 import { addToBib } from './refs.js';
 
@@ -185,7 +185,7 @@ export function importBib(target, source) {
     out += (out.endsWith('\n\n') || !out ? '' : out.endsWith('\n') ? '\n' : '\n\n') + b.text + '\n';
     added.push(e.key);
   }
-  if (added.length) fs.writeFileSync(target, out);
+  if (added.length) writeKeepingLink(target, out);
   return { added, skipped };
 }
 

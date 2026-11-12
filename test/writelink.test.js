@@ -28,3 +28,21 @@ test('saving keeps the file mode', { skip: process.platform === 'win32' }, () =>
 test('model text in \\todo and \\change cannot comment out the brace', () => {
   assert.equal(pct('up 5% and 3\\% ok%%'), 'up 5\\% and 3\\% ok\\%\\%');
 });
+
+test('refreshTools forgets a tool that was missing', async () => {
+  const { which, refreshTools } = await import('../server/util.js');
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-which-'));
+  const old = process.env.PATH;
+  process.env.PATH = d + path.delimiter + old;
+  try {
+    assert.equal(await which('texugo-fake-tool'), null);
+    const f = path.join(d, process.platform === 'win32' ? 'texugo-fake-tool.cmd' : 'texugo-fake-tool');
+    fs.writeFileSync(f, '');
+    fs.chmodSync(f, 0o755);
+    assert.equal(await which('texugo-fake-tool'), null);
+    refreshTools();
+    assert.ok(await which('texugo-fake-tool'));
+  } finally {
+    process.env.PATH = old;
+  }
+});

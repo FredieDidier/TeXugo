@@ -5,6 +5,7 @@
 // value, and a missing DOI is offered; nothing changes until the user
 // accepts a suggestion.
 import fs from 'node:fs';
+import { writeKeepingLink } from './util.js';
 import { parseBib, texToText, setField } from './bibparse.js';
 import { openAlexDois } from './refs.js';
 
@@ -206,6 +207,6 @@ export function applyFixes(bibFile, fixes) {
     const next = setField(text, key, field, v);
     if (next != null) (text = next), n++;
   }
-  fs.writeFileSync(bibFile, text);
+  writeKeepingLink(bibFile, text);
   return { applied: n };
 }
