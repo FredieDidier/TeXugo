@@ -155,7 +155,9 @@ Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/
   2. (M) Trocar o diálogo de conflito por três saídas: *Ver diferenças* (o diff entre o disco e a aba, que `web/src/diff.js` já sabe desenhar), *Ficar com a do disco* (recarrega e descarta as minhas) e *Sobrescrever*. Uma quarta, *Juntar*, pode usar `git merge-file` com três versões (a que a aba carregou, a do disco, a da aba); guarde a versão carregada em `t.loadedText` para isso.
 - **Critério de aceite:** teste de `git.js` com remoto local (ver Apêndice A) em que a edição não salva entra no commit do Sincronizar; teste de interface em que o conflito oferece recarregar.
 
-## B4. Projeto com `latexmkrc`: DVI no lugar de PDF e "ok, zero ??" sem ler o log
+## ✅ B4. Projeto com `latexmkrc`: DVI no lugar de PDF e "ok, zero ??" sem ler o log — **CORRIGIDO**
+
+- **Estado (12/11/2026):** `rcInfo` em server/build.js lê o rc. Sem `$pdf_mode`, o TeXugo passa a flag do motor. Com `$out_dir`/`$aux_dir` literais, log e PDF são lidos lá. Saída 0 sem log vira erro com o caminho procurado. Os dois testes do critério estão em test/build.test.js. Ficou de fora: `$out_dir` calculado em Perl, e SyncTeX, `.aux` de documentos externos, prévia ao vivo e ZIP de submissão continuam olhando ao lado do `.tex`.
 
 - **Classificação:** confirmado (execução). **Gravidade:** alta. **Esforço:** P a M.
 - **Evidência:**
@@ -187,7 +189,9 @@ Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/
 - **Correção recomendada:** subir para a versão maior estável corrente antes de empacotar, rodar os testes e o roteiro de fumaça. Pontos a conferir na subida: `node:sqlite` (usado em `server/zotero.js`), `titleBarOverlay` no Windows, `fs.watch` recursivo no Linux, e o `node-pty` (N-API, deve seguir funcionando). Atualizar junto `katex` (0.16.11 tem dois avisos moderados; a 0.19.1 está publicada). `esbuild` e `extract-zip` aparecem no audit, mas são só de desenvolvimento.
 - **Critério de aceite:** `npm audit --omit=dev` sem *high*; 94 testes verdes; roteiro de fumaça verde.
 
-## B7. Licenças: o repositório não tem LICENSE e o pacote não leva os avisos de terceiros
+## ✅ B7. Licenças: o repositório não tem LICENSE e o pacote não leva os avisos de terceiros — **CORRIGIDO**
+
+- **Estado (12/11/2026):** `LICENSE` MIT na raiz. `scripts/notices.mjs` gera `THIRD-PARTY-NOTICES.txt` (33 pacotes: dependências, Electron, pdf.js e o que o esbuild embute) e roda a cada `npm run package`. O pacote leva LICENSE, os avisos e `LICENSES.chromium.html`. Ajuda → Licenças abre o arquivo. `test/notices.test.js` falha se faltar algum pacote. Não conferido no app instalado.
 
 - **Classificação:** confirmado (inspeção). **Gravidade:** alta (jurídica). **Esforço:** P.
 - **Evidência:** o `package.json` declara MIT, mas não existe `LICENSE` na raiz. `node_modules/electron/dist/LICENSE` e `LICENSES.chromium.html` ficam ao lado do `Electron.app` e não entram em `out/TeXugo.app`. O `dist/app.js` embute CodeMirror, Lezer, marked, xterm e KaTeX (MIT) e o pdf.js (Apache 2.0) sem o texto das licenças. Os CMaps da Adobe e as fontes padrão do pdf.js vão com os seus arquivos de licença (o `cpSync` recursivo os leva), e os modelos não trazem `.bst` nem `.cls` de terceiros, o que é bom.
@@ -253,7 +257,7 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 
 ## ✅ I6. O limite de 3.000 arquivos `.tex` esconde documentos — **CORRIGIDO**
 
-- **Estado (12/11/2026):** `listTexFiles` agora percorre em largura e marca `truncated`; quando corta, os rótulos e macros dos arquivos incluídos pelos documentos são lidos primeiro. O projeto de teste (3.100 tabelas) acha `writing/paper.tex` e `sec:intro`. Ainda não há aviso na interface quando o limite corta.
+- **Estado (12/11/2026):** `listTexFiles` agora percorre em largura e marca `truncated`; quando corta, os rótulos e macros dos arquivos incluídos pelos documentos são lidos primeiro. O projeto de teste (3.100 tabelas) acha `writing/paper.tex` e `sec:intro`. Quando o limite corta, a interface avisa uma vez por projeto.
 
 - **Classificação:** confirmado (execução). **Gravidade:** média. **Esforço:** P a M.
 - **Evidência:** [server/project.js:57](server/project.js:57): `listTexFiles` percorre em profundidade, em ordem alfabética, e para em 3.000. Projeto de teste com 3.100 tabelas em `analysis/output/` e o paper em `writing/`: `documents found: []`, `rootsFor(sections/intro.tex): []`, `labels found: 0`.

@@ -211,7 +211,8 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     },
     async documents({ root }) {
       mustAllow(root);
-      return project.listDocuments(root).map((d) => project.docInfo(d));
+      const docs = project.listDocuments(root);
+      return { docs: docs.map((d) => project.docInfo(d)), truncated: !!docs.truncated };
     },
     async read({ path: p }) {
       p = mustAllow(p);

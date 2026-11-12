@@ -4,6 +4,7 @@
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { writeNotices } from './notices.mjs';
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
@@ -21,6 +22,10 @@ const dest = path.join(res, 'app');
 fs.mkdirSync(dest, { recursive: true });
 const copy = (rel) => fs.cpSync(path.join(root, rel), path.join(dest, rel), { recursive: true });
 ['electron', 'server', 'dist', 'build'].forEach(copy);
+// Licenses: ours, every shipped package's (regenerated now), and Chromium's.
+await writeNotices();
+['LICENSE', 'THIRD-PARTY-NOTICES.txt'].forEach(copy);
+for (const f of ['LICENSE', 'LICENSES.chromium.html']) fs.copyFileSync(path.join(root, 'node_modules', 'electron', 'dist', f), path.join(res, f === 'LICENSE' ? 'LICENSE.electron.txt' : f));
 fs.rmSync(path.join(dest, 'dist', 'app.js.map'), { force: true });
 fs.mkdirSync(path.join(dest, 'node_modules'), { recursive: true });
 fs.cpSync(path.join(root, 'node_modules', 'ws'), path.join(dest, 'node_modules', 'ws'), { recursive: true });

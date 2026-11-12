@@ -75,7 +75,13 @@ export class Sidebar {
     if (!this.S.project) return;
     try {
       this.tree = await call('tree', { root: this.S.project.root, showArtifacts: !!this.S.settings.showArtifacts });
-      this.S.project.docs = await call('documents', { root: this.S.project.root });
+      const found = await call('documents', { root: this.S.project.root });
+      this.S.project.docs = found.docs;
+      // Say once per project that the .tex scan stopped at the file limit.
+      if (found.truncated && this.truncWarned !== this.S.project.root) {
+        this.truncWarned = this.S.project.root;
+        toast('O projeto tem mais de 3.000 arquivos .tex; a busca parou no limite. Algum documento ou rótulo pode faltar.', 'warn', 9000);
+      }
     } catch (err) {
       toast(err.message, 'error');
       return;

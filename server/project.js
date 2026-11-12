@@ -223,10 +223,13 @@ function includeClosureText(doc) {
 }
 
 export function listDocuments(projectRoot) {
-  return listTexFiles(projectRoot).filter((f) => {
+  const all = listTexFiles(projectRoot);
+  const docs = all.filter((f) => {
     const t = readText(f);
     return t && RE_DOCCLASS.test(stripComments(t.slice(0, 20000)));
   });
+  if (all.truncated) docs.truncated = true;
+  return docs;
 }
 
 // Every \label in the project with its file and line, plus .bib keys, for

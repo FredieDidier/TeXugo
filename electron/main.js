@@ -102,7 +102,7 @@ function send(action) {
 
 // Native menu labels in English; the page translates itself (web/src/i18n.js).
 const MENU_EN = {
-  'Ajuda': 'Help', 'Atalhos e comandos': 'Shortcuts and commands',
+  'Ajuda': 'Help', 'Atalhos e comandos': 'Shortcuts and commands', 'Licenças': 'Licenses',
   'Sobre o TeXugo': 'About TeXugo', 'Preferências…': 'Settings…', 'Ocultar TeXugo': 'Hide TeXugo', 'Encerrar TeXugo': 'Quit TeXugo', 'Arquivo': 'File',
   'Novo projeto…': 'New project…', 'Abrir pasta…': 'Open folder…', 'Nova janela': 'New window', 'Tela inicial': 'Start screen', 'Abrir arquivo rápido': 'Quick open',
   'Salvar': 'Save', 'Salvar todos': 'Save all', 'Fechar aba': 'Close tab', 'Fechar janela': 'Close window', 'Sair': 'Exit', 'Editar': 'Edit', 'Compilar': 'Build',
@@ -150,7 +150,7 @@ function buildMenu() {
       submenu: [item('Paleta de comandos', 'CmdOrCtrl+K', 'palette'), item('Biblioteca de papers', 'CmdOrCtrl+Alt+B', 'library'), item('Painel inferior', 'CmdOrCtrl+Shift+Y', 'toggleBottom'), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools', label: L('Ferramentas de desenvolvedor') }],
     },
     { role: 'windowMenu', label: L('Janela') },
-    { role: 'help', label: L('Ajuda'), submenu: [item('Atalhos e comandos', 'CmdOrCtrl+Shift+/', 'shortcuts')] },
+    { role: 'help', label: L('Ajuda'), submenu: [item('Atalhos e comandos', 'CmdOrCtrl+Shift+/', 'shortcuts'), { type: 'separator' }, { label: L('Licenças'), click: () => shell.openPath(path.join(app.getAppPath(), 'THIRD-PARTY-NOTICES.txt')) }] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template.filter(Boolean)));
 }

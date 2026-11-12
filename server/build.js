@@ -28,6 +28,32 @@ const ENGINE_FLAG = { pdflatex: '-pdf', xelatex: '-pdfxe', lualatex: '-pdflua' }
 
 const stem = (doc) => doc.replace(/\.tex$/, '');
 
+// What a latexmkrc next to the document changes for us: whether it picks
+// the output format itself ($pdf_mode), and where log, aux and PDF go
+// ($out_dir, $aux_dir). Only plain literal assignments are understood.
+export function rcInfo(dir) {
+  let text = '';
+  let exists = false;
+  for (const f of ['latexmkrc', '.latexmkrc']) {
+    const t = readMaybe(path.join(dir, f));
+    if (t != null) (exists = true), (text += t + '\n');
+  }
+  text = text.replace(/#.*$/gm, '');
+  const lit = (name) => {
+    const m = text.match(new RegExp('\\$' + name + '\\s*=\\s*([\'"])([^\'"]+)\\1'));
+    return m ? path.resolve(dir, m[2]) : null;
+  };
+  const outDir = lit('out_dir');
+  return { exists, pdfMode: /\$pdf_mode\s*=/.test(text), outDir, auxDir: lit('aux_dir') || outDir };
+}
+
+// Where the build of a document leaves its log and PDF.
+export function outputs(doc) {
+  const rc = rcInfo(path.dirname(doc));
+  const base = path.basename(stem(doc));
+  return { log: path.join(rc.auxDir || path.dirname(doc), base + '.log'), pdf: path.join(rc.outDir || path.dirname(doc), base + '.pdf') };
+}
+
 export class BuildManager extends EventEmitter {
   constructor() {
     super();
@@ -179,9 +205,10 @@ export class BuildManager extends EventEmitter {
     const docsOut = [];
     for (const doc of order) {
       const info = infos.get(doc);
-      const log = readMaybe(stem(doc) + '.log');
+      const where = outputs(doc);
+      const log = readMaybe(where.log);
       const parsed = log ? parseLog(log, path.dirname(doc)) : null;
-      const pdf = stem(doc) + '.pdf';
+      const pdf = where.pdf;
       const pdfExists = fs.existsSync(pdf);
       if (parsed && parsed.undefinedRefs.length) {
         symbols = symbols || projectSymbols(req.projectRoot);
@@ -198,6 +225,8 @@ export class BuildManager extends EventEmitter {
       }
       const code = exitCodes.get(doc);
       const errors = parsed ? parsed.errors : [];
+      // Never report success without having read the log.
+      if (code === 0 && !parsed) errors.push({ file: doc, line: null, message: `A compilação terminou, mas não achei o log em ${where.log}; não dá para dizer se há ?? no PDF.` });
       const status = code == null ? 'skipped' : errors.length || code !== 0 ? 'error' : parsed && (parsed.undefinedRefs.length || parsed.undefinedCites.length) ? 'undefined' : 'ok';
       const out = {
         doc,
@@ -234,7 +263,10 @@ export class BuildManager extends EventEmitter {
       const dir = path.dirname(doc);
       const base = path.basename(doc);
       if (clean) await this._spawn(id, doc, 'latexmk', ['-C', base], dir);
-      const hasRc = ['latexmkrc', '.latexmkrc'].some((f) => fs.existsSync(path.join(dir, f)));
+      // A latexmkrc that picks the format itself ($pdf_mode) wins; one that
+      // does not would make latexmk fall back to DVI, so we pass the flag.
+      const rc = rcInfo(dir);
+      const rcPicksFormat = rc.exists && rc.pdfMode;
       const s = stem(doc);
       // An .fls without its .aux (aux deleted by hand or by another editor)
       // makes latexmk run BibTeX on an empty aux and stop. Drop that stale
@@ -255,7 +287,7 @@ export class BuildManager extends EventEmitter {
         if (this.running.cancelled) return resolve(-1);
       }
       const args = [
-        info.engineSource === 'padrão' && hasRc ? null : ENGINE_FLAG[info.engine] || '-pdf',
+        info.engineSource === 'padrão' && rcPicksFormat ? null : ENGINE_FLAG[info.engine] || '-pdf',
         '-interaction=nonstopmode',
         '-file-line-error',
         '-synctex=1',

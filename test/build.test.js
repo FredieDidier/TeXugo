@@ -56,3 +56,28 @@ test('broken document reports file and line', { timeout: 60000 }, async () => {
   assert.equal(d.errors[0].file, f);
   assert.match(d.errors[0].hint, /Comando desconhecido/);
 });
+
+// B4: a latexmkrc that does not set $pdf_mode must still give a PDF, and one
+// that moves the output ($out_dir) must still have its log read.
+function rcProject(rc, body) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-rc-'));
+  fs.writeFileSync(path.join(dir, '.latexmkrc'), rc);
+  fs.writeFileSync(path.join(dir, 'paper.tex'), `\\documentclass{article}\n\\begin{document}\n${body}\n\\end{document}\n`);
+  return path.join(dir, 'paper.tex');
+}
+
+test('latexmkrc without $pdf_mode still gives a PDF', { timeout: 60000 }, async () => {
+  const paper = rcProject('$bibtex_use = 2;\n', 'Hello.');
+  const res = await buildOnce(new BuildManager(), path.dirname(paper), [paper]);
+  assert.ok(res.docs[0].pdf, JSON.stringify(res.docs[0]));
+  assert.equal(res.docs[0].status, 'ok');
+});
+
+test('latexmkrc with $out_dir: log read, ?? counted', { timeout: 60000 }, async () => {
+  const paper = rcProject('$out_dir = "build";\n', 'See \\ref{missing}.');
+  const res = await buildOnce(new BuildManager(), path.dirname(paper), [paper]);
+  const d = res.docs[0];
+  assert.ok(d.pdf && d.pdf.includes(`${path.sep}build${path.sep}`), JSON.stringify(d));
+  assert.equal(d.undefinedRefs.length, 1);
+  assert.notEqual(d.status, 'ok');
+});
