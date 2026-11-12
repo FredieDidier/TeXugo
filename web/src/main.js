@@ -19,7 +19,7 @@ import { viciosConfig, viciosOf } from './vicios/cm.js';
 import { AI_ACTIONS, runAiAction, focusedTarget, replaceFlagged } from './ai.js';
 import { TerminalPanel } from './terminal.js';
 import { setupIde, mentionInClaude } from './ide.js';
-import { AgentPanel } from './agent.js';
+import { AgentPanel, setClaudeModels } from './agent.js';
 import { setBaseline } from './changes.js';
 import { addReference } from './refs.js';
 import { compareDialog } from './compare.js';
@@ -1890,6 +1890,7 @@ async function boot() {
     return;
   }
   Object.assign(S.settings, S.hello.settings || {});
+  setClaudeModels(S.hello.models);
   viciosConfig.enabled = S.settings.vicios !== false;
   viciosConfig.onReplace = (view, from, to) => replaceFlagged(app, S, view, from, to);
   document.body.classList.toggle('no-change-marks', S.settings.changeMarks === false);

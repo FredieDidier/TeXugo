@@ -9,12 +9,12 @@ import { h, clear, icon, toast, basename, relPath, joinPath } from './dom.js';
 import { fileDiff } from './ide.js';
 
 // What the panel and the Claude terminal run with. Default: Opus 5.5, medium.
-export const CLAUDE_MODELS = [
-  { id: 'claude-opus-5-5', label: 'Opus 5.5' },
-  { id: 'claude-sonnet-5-5', label: 'Sonnet 5.5' },
-  { id: 'claude-fable-5-1', label: 'Fable 5.1' },
-  { id: 'claude-haiku-5-5', label: 'Haiku 5.5' },
-];
+// The list itself lives in server/agent.js and arrives with `hello`
+// (setClaudeModels); this is only the fallback before it does.
+export const CLAUDE_MODELS = [{ id: 'claude-opus-5-5', label: 'Opus 5.5' }];
+export function setClaudeModels(list) {
+  if (Array.isArray(list) && list.length) CLAUDE_MODELS.splice(0, CLAUDE_MODELS.length, ...list);
+}
 export const CLAUDE_EFFORTS = [
   { id: 'low', label: 'Baixo' },
   { id: 'medium', label: 'Médio' },

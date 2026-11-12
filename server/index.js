@@ -26,7 +26,7 @@ import { journalById } from './replication-journals.js';
 import * as ai from './ai.js';
 import { Terminals } from './terminal.js';
 import { IdeBridge } from './ide.js';
-import { Agents, claudeFlags } from './agent.js';
+import { Agents, claudeFlags, MODEL_LIST } from './agent.js';
 import * as doctor from './doctor.js';
 import * as refs from './refs.js';
 import * as compare from './compare.js';
@@ -168,6 +168,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
         tex,
         recents: (state.recents || []).filter((r) => fs.existsSync(r)),
         settings: state.settings || {},
+        models: MODEL_LIST,
         home: process.env.HOME,
         // Nothing chosen and nothing opened yet: the page picks the language.
         firstRun: !(state.recents || []).length && !state.projects && !(state.settings || {}).lang,

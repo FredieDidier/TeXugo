@@ -15,7 +15,14 @@ import { toolEnv, which, winSpawn } from './util.js';
 
 // Model and effort picked in the panel (or Preferências). The CLI gets the
 // full id; an older Claude Code that does not know it says so, and we explain.
-export const MODELS = ['claude-opus-5-5', 'claude-sonnet-5-5', 'claude-fable-5-1', 'claude-haiku-5-5'];
+// The one list of models: the page gets it from `hello`.
+export const MODEL_LIST = [
+  { id: 'claude-opus-5-5', label: 'Opus 5.5' },
+  { id: 'claude-sonnet-5-5', label: 'Sonnet 5.5' },
+  { id: 'claude-fable-5-2', label: 'Fable 5.2' },
+  { id: 'claude-haiku-5-5', label: 'Haiku 5.5' },
+];
+export const MODELS = MODEL_LIST.map((m) => m.id);
 export const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
 export const DEFAULT_MODEL = 'claude-opus-5-5';
 export const DEFAULT_EFFORT = 'medium';

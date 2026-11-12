@@ -94,7 +94,7 @@ Os outros três são de distribuição: assinatura e notarização no Mac (B5), 
 
 A maior lacuna de QA é estrutural: `server/index.js` (toda a API), `git.js`, `terminal.js`, o Electron e cerca de 40 dos 50 módulos da interface não têm nenhum teste. Os quatro defeitos acima moram exatamente aí.
 
-Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 11/11/2026: 3 bloqueadores (B1, B2, B3), 1 importante (I14), 2 desejáveis (D1, D6).
+Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/2026: 3 bloqueadores (B1, B2, B3), 3 importantes (I11, I12, I14), 2 desejáveis (D1, D6).
 
 ---
 
@@ -306,14 +306,18 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Correção:** tirar a conta do caminho da tecla. Opção simples: um `ViewPlugin` que recalcula com 150 ms de espera. Opção melhor: manter as marcas de forma incremental (mapear as existentes pela mudança e marcar as linhas tocadas) e refazer o diff completo só quando a linha de base muda. Não incluir o campo quando a opção está desligada.
 - **Aceite:** teste de tempo no estilo de "fast enough to run while typing" de `test/vicios.test.js`: menos de 4 ms por transação em 2.000 linhas.
 
-## I11. O README promete "nada vai para a nuvem", e não é isso que o código faz
+## ✅ I11. O README promete "nada vai para a nuvem", e não é isso que o código faz — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 12/11/2026.** A frase dos dois READMEs agora diz que os arquivos e a compilação são locais e lista os serviços externos opcionais (Anthropic pelo Claude Code, Crossref, OpenAlex, arXiv, remoto do Git, Médico do TeX, LanguageTool online). Falta a página de privacidade (item 8) e tirar "para Mac" quando Windows e Linux saírem.
 
 - **Classificação:** confirmado (leitura). **Gravidade:** média. **Esforço:** P.
 - **Evidência:** [README.md:7](README.md:7). O app fala com serviços externos em vários recursos; a lista completa está no Apêndice B.
 - **Impacto:** é uma afirmação pública de privacidade que não se sustenta. O trabalho de pessoas com papers inéditos e pareceres confidenciais passa pela Anthropic quando usam as ações de IA.
 - **Correção:** trocar a frase por algo exato ("os arquivos ficam no seu disco e a compilação é local; alguns recursos opcionais consultam serviços externos, listados na página de privacidade") e publicar a página (item 8). Aproveitar para tirar "para Mac" das descrições quando Windows e Linux saírem.
 
-## I12. Lista de modelos do Claude desatualizada e repetida em três lugares
+## ✅ I12. Lista de modelos do Claude desatualizada e repetida em três lugares — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 12/11/2026.** Lista única `MODEL_LIST` em `server/agent.js`, com Fable 5.2, entregue pelo `hello` (`models`); a página a recebe por `setClaudeModels`. READMEs atualizados. Quem tinha `claude-fable-5-1` salvo volta ao padrão (Opus 5.5). `npm test` verde; não abri o menu na interface.
 
 - **Classificação:** confirmado (leitura). **Gravidade:** baixa a média. **Esforço:** P.
 - **Evidência:** `claude-fable-5-1` em [server/agent.js:18](server/agent.js:18), [web/src/agent.js:15](web/src/agent.js:15) e [README.md:51](README.md:51). O modelo atual é o Fable 5.2 (`claude-fable-5-2`).
