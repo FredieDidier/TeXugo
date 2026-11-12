@@ -398,7 +398,7 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
   - [server/index.js:139](server/index.js:139): o filtro do observador usa `/`; no Windows os eventos de `.git\` não são filtrados. [web/src/main.js:1533](web/src/main.js:1533): `'/.texugo-comments/'`, mesmo problema. ✅ **FEITO (12/11):** o servidor troca `\` por `/` antes do filtro; o cliente aceita os dois separadores.
   - [server/compare.js:190](server/compare.js:190): `BIBINPUTS: docDir + ':'` (no Windows o separador é `;`). ✅ **FEITO (12/11):** `path.delimiter`, também em `BSTINPUTS`.
   - [server/refs.js:200](server/refs.js:200): `bibsOf` manipula caminhos como texto com `/`.
-  - [server/submission.js:58](server/submission.js:58): `isInDir` com `path.sep` contra caminhos do `.fls`, que usam `/`; e `/dev/` fixo.
+  - [server/submission.js:58](server/submission.js:58): `isInDir` com `path.sep` contra caminhos do `.fls`, que usam `/`; e `/dev/` fixo. ✅ **FEITO (12/11):** `isInDir` por `path.relative`; `/dev/` e `nul` checados no caminho original do `.fls`.
   - [server/git.js:59](server/git.js:59): `git diff --no-index -- /dev/null`.
   - [server/index.js:171](server/index.js:171): `home: process.env.HOME`, indefinido no Windows. ✅ **FEITO (12/11):** `os.homedir()`.
   - [server/ai.js:36](server/ai.js:36) e [agent.js:184](server/agent.js:184): `kill('SIGTERM')` no `cmd.exe` que embrulha o `claude.cmd` não encerra o processo filho.

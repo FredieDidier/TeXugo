@@ -59,7 +59,7 @@ export function sourceFiles(doc) {
       const i = line.match(/^INPUT (.+)$/);
       if (!i) continue;
       const p = path.resolve(pwd, i[1]);
-      if (GENERATED.test(p) || isSystemTex(p) || p.startsWith('/dev/')) continue;
+      if (GENERATED.test(p) || isSystemTex(p) || isDevice(i[1])) continue;
       files.add(p);
     }
   }
@@ -81,7 +81,14 @@ export function sourceFiles(doc) {
   return [...files].filter((f) => fs.existsSync(f) && fs.statSync(f).isFile()).sort();
 }
 
-const isInDir = (dir, f) => f.startsWith(dir + path.sep);
+// By path.relative, not by prefix: works with either separator and with the
+// mixed / and \ that TeX writes into .fls on Windows.
+const isInDir = (dir, f) => {
+  const r = path.relative(path.resolve(dir), path.resolve(f));
+  return !!r && !r.startsWith('..') && !path.isAbsolute(r);
+};
+// Device files (/dev/null, /dev/tty) and Windows' nul never go into a ZIP.
+const isDevice = (raw) => raw.startsWith('/dev/') || /^nul(\.|$)/i.test(raw);
 
 // Build files the ZIP carries: the compiled bibliography (.bbl; arXiv does
 // not run BibTeX) and the labels of external documents (.aux, so
@@ -208,7 +215,7 @@ export async function checkZip(zip, mainRel, engine = 'pdflatex', origLog = null
       const i = line.match(/^INPUT (.+)$/);
       if (!i) continue;
       const p = path.resolve(cwd, i[1]);
-      if (isInDir(tmp, p) || isSystemTex(p) || p.startsWith('/dev/') || leaks.includes(p)) continue;
+      if (isInDir(tmp, p) || isSystemTex(p) || isDevice(i[1]) || leaks.includes(p)) continue;
       leaks.push(p);
     }
     const rel = (f) => (f && isInDir(tmp, f) ? path.relative(tmp, f) : f);
