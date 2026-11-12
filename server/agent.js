@@ -12,6 +12,7 @@ import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { toolEnv, which, winSpawn } from './util.js';
+import { claudeSourceFlags } from './trust.js';
 
 // Model and effort picked in the panel (or Preferências). The CLI gets the
 // full id; an older Claude Code that does not know it says so, and we explain.
@@ -54,7 +55,7 @@ export class Agents {
   async start(root, opts = {}) {
     const claude = await which('claude');
     if (!claude) throw new Error('Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash');
-    const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--permission-prompt-tool', 'stdio', '--allowedTools', FREE.join(','), '--append-system-prompt', SYSTEM, ...claudeFlags(opts)];
+    const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--permission-prompt-tool', 'stdio', '--allowedTools', FREE.join(','), '--append-system-prompt', SYSTEM, ...claudeSourceFlags(root), ...claudeFlags(opts)];
     if (opts.resume) args.push('--resume', opts.resume);
     const [cmd, cargs, copts] = winSpawn(claude, args, toolEnv());
     const child = spawn(cmd, cargs, { cwd: root, env: toolEnv(), ...copts });
@@ -120,7 +121,9 @@ export class Agents {
   permission(s, requestId, req) {
     const reqId = randomUUID();
     const input = req.input || {};
-    const ev = { kind: 'permission', reqId, tool: req.tool_name, input: brief(input) };
+    // The card shows every field whole (it scrolls), so a WebFetch URL or an
+    // MCP tool's arguments are never approved half-read.
+    const ev = { kind: 'permission', reqId, tool: req.tool_name, input: ['Edit', 'MultiEdit', 'Write', 'NotebookEdit'].includes(req.tool_name) ? brief(input) : input };
     const file = input.file_path || input.notebook_path;
     try {
       if (file && ['Edit', 'MultiEdit', 'Write'].includes(req.tool_name)) {

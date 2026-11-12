@@ -32,6 +32,8 @@ import * as refs from './refs.js';
 import * as compare from './compare.js';
 import * as refcheck from './refcheck.js';
 import * as zotero from './zotero.js';
+import { setTrustCheck, riskyItems, underTrusted } from './trust.js';
+import { outputs } from './outdirs.js';
 import * as library from './library.js';
 import * as reviewer from './review.js';
 import * as rr from './rr.js';
@@ -77,6 +79,11 @@ function saveState(s) {
 
 export function createServer({ port = 0, token = randomBytes(24).toString('hex'), hooks = {} } = {}) {
   const state = loadState();
+  // Folders trusted to run their own latexmkrc and .claude/ settings (I8).
+  // On the first run of this version, the folders already in the recents
+  // count as the user's own.
+  if (!Array.isArray(state.trusted)) state.trusted = [...(state.recents || [])];
+  setTrustCheck((dir) => underTrusted(state.trusted, dir));
   const openProjects = new Set(); // roots the UI opened; file access is limited to these
   const watchers = new Map();
   const builds = new BuildManager();
@@ -182,6 +189,21 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       saveState(state);
       return state.settings;
     },
+    // Before opening: does the folder bring configuration that runs code,
+    // and has the user already said they trust it? Reads only file names.
+    async projectRisk({ root }) {
+      root = path.resolve(String(root || ''));
+      if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) throw httpError(404, 'Pasta não encontrada.');
+      const docDirs = project.listDocuments(root).map((d) => path.dirname(d));
+      return { risky: riskyItems(root, docDirs), trusted: underTrusted(state.trusted, root) };
+    },
+    async trustProject({ root }) {
+      root = path.resolve(String(root || ''));
+      if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) throw httpError(404, 'Pasta não encontrada.');
+      if (!state.trusted.includes(root)) state.trusted.push(root);
+      saveState(state);
+      return true;
+    },
     async openProject({ root }) {
       root = path.resolve(root);
       if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) throw httpError(404, 'Pasta não encontrada.');
@@ -190,7 +212,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       watch(root);
       rememberRecent(root);
       ensureGitignore(root);
-      const docs = project.listDocuments(root).map((d) => project.docInfo(d));
+      const docs = project.listDocuments(root).map((d) => ({ ...project.docInfo(d), pdf: outputs(d).pdf }));
       return { root, name: path.basename(root), docs, ui: (state.projects || {})[root] || null };
     },
     async saveProjectUi({ root, ui }) {
@@ -514,6 +536,8 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       const target = path.join(path.resolve(parent), name);
       if (fs.existsSync(target) && fs.readdirSync(target).length) throw httpError(409, 'A pasta já existe e não está vazia.');
       createFromTemplate(template, target, fields || {}, lang);
+      // A project TeXugo made from its own template is the user's.
+      if (!state.trusted.includes(target)) state.trusted.push(target), saveState(state);
       return api.openProject({ root: target });
     },
     async texDoctor() {

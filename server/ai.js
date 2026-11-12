@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { toolEnv, which, winSpawn } from './util.js';
 import { claudeFlags } from './agent.js';
+import { claudeSourceFlags } from './trust.js';
 
 export const ACTIONS = {
   revisar: 'Revise the passage: fix grammar, wording, clarity and any claim the wording overstates. Keep the meaning, the structure and the length roughly the same.',
@@ -90,7 +91,7 @@ export async function runClaude(prompt, opts) {
   const key = opts.root || '';
   if (current.has(key)) throw new Error('Já há uma ação de IA em andamento neste projeto.');
   const out = await new Promise((resolve) => {
-    const [cmd, cargs, copts] = winSpawn(claude, ['-p', '--output-format', 'json', '--tools', opts.tools || 'Skill,Read', '--no-session-persistence', ...claudeFlags(opts)], toolEnv());
+    const [cmd, cargs, copts] = winSpawn(claude, ['-p', '--output-format', 'json', '--tools', opts.tools || 'Skill,Read', '--no-session-persistence', ...claudeSourceFlags(opts.root), ...claudeFlags(opts)], toolEnv());
     const child = spawn(cmd, cargs, { cwd: opts.root, env: toolEnv(), ...copts });
     current.set(key, child);
     let stdout = '';

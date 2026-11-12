@@ -303,7 +303,7 @@ export class AgentPanel {
     } else if (e.tool === 'Bash') {
       body = [h('div', { class: 'agent-perm-title' }, icon('command'), ' Rodar um comando', e.description ? h('span', { class: 'muted' }, ` (${e.description})`) : null), h('pre', { class: 'agent-cmd' }, document.createTextNode(e.command || ''))];
     } else {
-      body = [h('div', { class: 'agent-perm-title' }, icon('info'), ` Usar ${e.tool}`), h('pre', { class: 'agent-cmd' }, document.createTextNode(JSON.stringify(e.input, null, 1).slice(0, 800)))];
+      body = [h('div', { class: 'agent-perm-title' }, icon('info'), ` Usar ${e.tool}`), h('pre', { class: 'agent-cmd' }, document.createTextNode(JSON.stringify(e.input, null, 1)))];
     }
     clear(card, body, btns);
     return card;

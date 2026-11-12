@@ -1567,10 +1567,30 @@ async function confirmLeave() {
 }
 app.confirmLeave = confirmLeave;
 
+// I8: the first time a folder that brings a latexmkrc or a .claude/ folder
+// is opened, say that it runs commands and ask whether to go on. The answer
+// is kept per folder; saying no leaves the folder closed.
+async function trustFolder(root) {
+  const r = await call('projectRisk', { root });
+  if (!r.risky.length || r.trusted) return true;
+  const body = h(
+    'div',
+    {},
+    h('p', {}, 'Este projeto traz configurações que executam comandos no seu computador ao compilar ou ao usar a IA:'),
+    h('ul', {}, r.risky.map((x) => h('li', {}, h('code', {}, x)))),
+    h('p', {}, 'Abra só se confia em quem o fez. A resposta fica guardada para esta pasta.'),
+  );
+  const ok = await confirmBox('Confia neste projeto?', body, { ok: 'Confio, abrir' });
+  if (!ok) return false;
+  await call('trustProject', { root });
+  return true;
+}
+
 async function openProject(root) {
   if (S.project && !(await confirmLeave())) return false;
   let p;
   try {
+    if (!(await trustFolder(root))) return false;
     p = await call('openProject', { root });
   } catch (err) {
     toast(err.message, 'error');
@@ -1617,7 +1637,7 @@ async function openProject(root) {
     for (const t of S.tabs) {
       const root = t.root || (p.docs.some((d) => d.path === t.path) ? t.path : null);
       if (!root) continue;
-      const pdf = root.replace(/\.tex$/, '.pdf');
+      const pdf = p.docs.find((d) => d.path === root)?.pdf || root.replace(/\.tex$/, '.pdf');
       if (!S.pdfTabs.some((x) => x.path === pdf)) openPdf(pdf, { doc: root, activate: false });
     }
     if (S.pdfTabs[0]) activatePdf(S.pdfTabs[0].path);
@@ -1933,8 +1953,9 @@ async function boot() {
   // "Nova janela" asks for the start screen: reopening the last project
   // would give two windows with separate copies of the same files.
   const last = qp || (!qs0.get('welcome') && S.settings.reopenLast !== false && S.hello.recents[0]);
-  if (last) await openProject(last);
-  else showWelcome(app, S);
+  // A folder the user did not trust (or that failed to open) leaves the
+  // start screen up.
+  if (!last || (await openProject(last)) === false || !S.project) showWelcome(app, S);
 }
 
 app.S = S;

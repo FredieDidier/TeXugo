@@ -40,7 +40,7 @@ Feita no app Electron real, com perfil e projeto temporários (modelo *Artigo + 
 
 - Barra do PDF e barra de atividades só com ícones; a explicação vem da dica ao passar o mouse, que no teclado não aparece.
 - ✅ **FEITO (12/11).** O botão "Ir ao trecho no código" da barra do PDF, que só mostrava um aviso, saiu (dois cliques no PDF já levam ao código).
-- Paleta com cerca de 60 comandos numa lista só quando nada foi digitado; agrupar por área.
+- ✅ **FEITO (12/11).** A paleta vazia mostra os comandos usados por último e depois nove grupos: Compilar, Editar, Escrita, Projeto e arquivos, Referências, Coautores, Revisão e submissão, Claude, Janela e ajuda. Com texto digitado, a busca continua numa lista só, por relevância.
 - Preferências numa coluna longa (930 px de conteúdo em 600 visíveis); pedir abas ou busca.
 - Aba Revisão com 12 linhas sem recolher seções.
 - `Commit de tudo` inclui os PDFs e o `.bbl` gerados; decidir se o `.gitignore` criado pelo app deve cobri-los.
@@ -275,7 +275,14 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Correção:** sanitizar a saída do `marked` (DOMPurify, ou o mesmo `renderer: { html: () => '' }` do painel do agente mais uma lista de etiquetas permitidas); mandar o CSP também por cabeçalho HTTP, com `base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'`; em `/file`, responder com `Content-Security-Policy: sandbox` e `X-Content-Type-Options: nosniff`; conferir `Origin` no WebSocket (só a própria origem), o que também protege o modo `--dev`, cujo token é fixo (`dev`).
 - **Aceite:** um `.md` de teste com `<script>`, `<img onerror>`, `<base>`, `<style>` e `<form>` rende só o texto; teste de API confirma os cabeçalhos.
 
-## I8. Abrir e usar um projeto de terceiros executa código do projeto
+## ✅ I8. Abrir e usar um projeto de terceiros executa código do projeto — **CORRIGIDO**
+
+- **Estado (12/11/2026):**
+  1. *Teste do hook*, com Claude Code 2.1.321: projeto com `.claude/settings.json` com hooks `SessionStart` e `UserPromptSubmit` que criam arquivos. `claude -p` sem a flag: **os dois hooks rodaram**, sem nenhuma pergunta. Com `--setting-sources user`: nenhum rodou, e as 63 skills do usuário continuaram carregadas (`applied-micro-paper-writing` entre elas).
+  2. `server/trust.js`: as pastas confiáveis ficam em `state.json` (`trusted`). Na primeira execução desta versão, as pastas que já estavam nos recentes entram como suas, e os projetos criados por modelo do TeXugo também. A primeira abertura de uma pasta que traz `latexmkrc`, `.latexmkrc` ou `.claude/` com configurações mostra o aviso "Confia neste projeto?". *Cancelar* deixa a pasta fechada e pergunta de novo na próxima vez; *Confio, abrir* grava a resposta. Isso foi conferido na tela: o aviso aparece, *Cancelar* volta à tela inicial, e depois de *Confio* ele não aparece mais.
+  3. Em pasta sem confiança, as ações de IA, o parecer, o R&R e o painel do Claude rodam com `--setting-sources user`, e o latexmk não é chamado para calcular `$out_dir` em Perl fora de uma compilação.
+  4. O cartão de permissão mostra os campos inteiros, com rolagem, para toda ferramenta que não é de edição.
+  - Testes em test/trust.test.js. Ficou de fora: um `latexmkrc` que chegue por `git pull` com o projeto já aberto não dispara o aviso até a próxima abertura.
 
 - **Classificação:** risco potencial (inerente às ferramentas; não testei exploração). **Gravidade:** média. **Esforço:** P a M.
 - **Evidência:**

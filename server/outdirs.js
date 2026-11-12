@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { toolEnv } from './util.js';
+import { isTrusted } from './trust.js';
 
 const RC_NAMES = ['latexmkrc', '.latexmkrc'];
 const cache = new Map(); // dir -> { key, info }
@@ -32,7 +33,7 @@ function askLatexmk(dir) {
 
 export function rcInfo(dir) {
   const files = RC_NAMES.map((f) => path.join(dir, f));
-  const key = files.map((f) => (fs.existsSync(f) ? fs.statSync(f).mtimeMs : 0)).join(':');
+  const key = files.map((f) => (fs.existsSync(f) ? fs.statSync(f).mtimeMs : 0)).join(':') + ':' + isTrusted(dir);
   const hit = cache.get(dir);
   if (hit && hit.key === key) return hit.info;
   let text = '';
@@ -49,7 +50,8 @@ export function rcInfo(dir) {
   };
   let out = literal('out_dir');
   let aux = literal('aux_dir');
-  if ((assigned('out_dir') && !out) || (assigned('aux_dir') && !aux)) {
+  // Asking latexmk runs the rc's Perl: only in a folder the user trusts.
+  if (((assigned('out_dir') && !out) || (assigned('aux_dir') && !aux)) && isTrusted(dir)) {
     const asked = askLatexmk(dir);
     out = asked.out || out;
     aux = asked.aux || aux;
