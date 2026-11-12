@@ -176,7 +176,17 @@ app.whenReady().then(async () => {
       await activity('Git');
       await sleep(600);
       await js(`[...document.querySelectorAll('.sidebar .btn')].find((b) => b.innerText.includes('Commit')).click(); return true;`);
-      check('B3: commit saves the open tabs first', await until(`return !document.querySelector('.tab.dirty');`, 6000) && execFileSync('git', ['show', 'HEAD:parts/body.tex'], { cwd: PROJ }).toString().includes('BEFORE-COMMIT'));
+      // The tab is clean as soon as it is saved; the commit lands a moment later.
+      const committed = async () => {
+        for (let k = 0; k < 40; k++) {
+          try {
+            if (execFileSync('git', ['show', 'HEAD:parts/body.tex'], { cwd: PROJ, stdio: 'pipe' }).toString().includes('BEFORE-COMMIT')) return true;
+          } catch {}
+          await sleep(150);
+        }
+        return false;
+      };
+      check('B3: commit saves the open tabs first', (await until(`return !document.querySelector('.tab.dirty');`, 6000)) && (await committed()));
     }
 
     // ---- B2: another project with unsaved edits

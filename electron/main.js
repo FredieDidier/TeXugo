@@ -24,7 +24,9 @@ function titleBar() {
   return { titleBarStyle: 'hidden', titleBarOverlay: { color: dark ? '#1b1e24' : '#efebe3', symbolColor: dark ? '#d6d3cc' : '#3b3a36', height: 44 }, autoHideMenuBar: true };
 }
 
-function createWindow(openPath) {
+// `welcome`: a new window starts on the start screen. Without it the page
+// reopens the most recent project, which is the one already open elsewhere.
+function createWindow(openPath, { welcome = false } = {}) {
   const win = new BrowserWindow({
     width: 1480,
     height: 920,
@@ -44,6 +46,7 @@ function createWindow(openPath) {
   });
   const url = new URL(server.url);
   if (openPath) url.searchParams.set('open', openPath);
+  else if (welcome) url.searchParams.set('welcome', '1');
   win.loadURL(url.toString());
   // Links in the PDF or the UI open in the default browser, never in-app.
   win.webContents.setWindowOpenHandler(({ url: u }) => {
@@ -125,7 +128,7 @@ function buildMenu() {
         item('Novo projeto…', 'CmdOrCtrl+Shift+N', 'newProject'),
         ...(IS_MAC ? [] : [item('Preferências…', 'CmdOrCtrl+,', 'settings')]),
         item('Abrir pasta…', 'CmdOrCtrl+O', 'open'),
-        { label: L('Nova janela'), accelerator: 'CmdOrCtrl+Alt+N', click: () => createWindow() },
+        { label: L('Nova janela'), accelerator: 'CmdOrCtrl+Alt+N', click: () => createWindow(null, { welcome: true }) },
         item('Tela inicial', null, 'welcome'),
         { type: 'separator' },
         item('Abrir arquivo rápido', 'CmdOrCtrl+P', 'quickOpen'),
@@ -199,12 +202,43 @@ ipcMain.handle('close-saved', (e) => {
   return true;
 });
 ipcMain.handle('new-window', () => {
-  createWindow();
+  createWindow(null, { welcome: true });
   return true;
 });
 
+// A folder handed to the app on the command line (Windows, Linux, `electron
+// . folder`): any existing directory except the app's own.
+const ownDirs = [app.getAppPath(), path.dirname(process.execPath)].map((d) => path.resolve(d));
+function folderArg(argv) {
+  return argv.slice(1).find((a) => {
+    if (!path.isAbsolute(a) || ownDirs.includes(path.resolve(a))) return false;
+    try {
+      return fs.statSync(a).isDirectory();
+    } catch {
+      return false;
+    }
+  });
+}
+
+// One TeXugo at a time: a second launch (common on Windows and Linux) would
+// start a second server writing the same state.json. It hands its folder to
+// this one, which opens a window, and quits.
+const primary = app.requestSingleInstanceLock();
+if (!primary) app.quit();
+app.on('second-instance', (_e, argv) => {
+  if (!server) return;
+  const p = folderArg(argv);
+  const win = createWindow(p || null, { welcome: !p });
+  if (win && win.focus) win.focus();
+});
+
+// open-file can arrive before the server is up (double-click on a folder
+// that launches the app): keep it and open it once ready.
+const pendingOpen = [];
+
 app.setName('TeXugo');
 app.whenReady().then(async () => {
+  if (!primary) return;
   server = await createServer({
     hooks: {
       trash: (p) => shell.trashItem(p),
@@ -218,8 +252,9 @@ app.whenReady().then(async () => {
   });
   buildMenu();
   if (IS_MAC && app.dock) app.dock.setIcon(path.join(HERE, '..', 'build', 'icon.png'));
-  const argPath = process.argv.slice(1).find((a) => path.isAbsolute(a) && !/electron/i.test(a) && fs.existsSync(a));
-  createWindow(argPath);
+  const argPath = folderArg(process.argv);
+  if (pendingOpen.length) for (const p of pendingOpen.splice(0)) createWindow(p);
+  else createWindow(argPath);
   app.on('activate', () => {
     if (!windows.size) createWindow();
   });
@@ -229,6 +264,7 @@ app.whenReady().then(async () => {
 app.on('open-file', (e, p) => {
   e.preventDefault();
   if (server) createWindow(p);
+  else pendingOpen.push(p);
 });
 
 app.on('window-all-closed', () => {

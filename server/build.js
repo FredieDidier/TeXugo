@@ -268,7 +268,8 @@ export class BuildManager extends EventEmitter {
   }
 
   _spawn(id, doc, cmd, args, cwd) {
-    const STALL_MS = Number(process.env.TEXUGO_STALL_MS) || 180000;
+    // Preferências (stallSeconds) win; the variable stays for tests.
+    const STALL_MS = Number(process.env.TEXUGO_STALL_MS) || (this.stallSeconds > 0 ? this.stallSeconds * 1000 : 180000);
     const MAX_LOG = 50 * 1024 * 1024;
     const STALL_MSG = `compilação parada: ${Math.round(STALL_MS / 1000)} s sem nenhum progresso (laço infinito ou comando esperando resposta?)`;
     const FLOOD_MSG = 'compilação parada: o log passou de 50 MB, sinal de laço infinito';

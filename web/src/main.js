@@ -1929,8 +1929,11 @@ async function boot() {
   renderPdfStack();
   renderPdfTools();
   activate(null);
-  const qp = new URLSearchParams(location.search).get('open');
-  const last = qp || (S.settings.reopenLast !== false && S.hello.recents[0]);
+  const qs0 = new URLSearchParams(location.search);
+  const qp = qs0.get('open');
+  // "Nova janela" asks for the start screen: reopening the last project
+  // would give two windows with separate copies of the same files.
+  const last = qp || (!qs0.get('welcome') && S.settings.reopenLast !== false && S.hello.recents[0]);
   if (last) await openProject(last);
   else showWelcome(app, S);
 }

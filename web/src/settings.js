@@ -138,6 +138,7 @@ export function openSettings(app, S) {
       check('autoCompile', 'Abas novas já vêm com "compilar ao salvar" ligado'),
       check('livePreview', 'Abas novas já vêm com a prévia ao vivo ligada (o PDF segue o que você digita)'),
       check('invertPdf', 'PDF escuro no tema escuro (só na tela; o arquivo não muda)'),
+      row(field('Parar uma compilação que fica sem progresso por (segundos)', num('stallSeconds', { min: 30, max: 3600, step: 30, def: 180, width: '90px' }))),
       check('showUnderfull', 'Mostrar caixas "underfull" em Problemas'),
       check('reopenLast', 'Reabrir o último projeto ao iniciar'),
       h('p', { class: 'faint', style: { marginTop: '14px', fontSize: '12px' } }, `TeXugo ${S.hello.version} · ${S.hello.tex || 'TeX não encontrado'}`),

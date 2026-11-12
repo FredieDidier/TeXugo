@@ -414,10 +414,33 @@ export class Sidebar {
     // or a sync never leaves the latest edits out, and a pull never lands
     // under unsaved text.
     const saved = async () => (await this.app.saveAll()) || (toast('Nada foi enviado ao Git: salve ou resolva os arquivos abertos primeiro.', 'warn', 7000), false);
+    // A new file over 50 MB: ask before it enters the commit (GitHub refuses
+    // over 100 MB at push time, with the commit already made).
+    const askLarge = (large) =>
+      confirmBox(
+        'Arquivo grande no commit',
+        h(
+          'div',
+          {},
+          h('p', {}, large.length === 1 ? 'Este arquivo novo é grande:' : 'Estes arquivos novos são grandes:'),
+          h('ul', {}, large.map((f) => h('li', {}, h('code', {}, f.rel), ` (${f.mb} MB)`))),
+          h('p', { class: 'faint' }, 'O GitHub recusa arquivos acima de 100 MB. Se for dado ou saída gerada, ponha no .gitignore.'),
+        ),
+        { ok: 'Incluir mesmo assim' },
+      );
+    const withLarge = async (method, args) => {
+      let r = await call(method, args);
+      if (r.large && r.large.length) {
+        if (!(await askLarge(r.large))) return null;
+        r = await call(method, { ...args, force: true });
+      }
+      return r;
+    };
     const doCommit = async () => {
       if (!(await saved())) return;
       const m = msg.value.trim();
-      const r = await call('gitCommit', { root: S.project.root, message: m, all: staged.length === 0 });
+      const r = await withLarge('gitCommit', { root: S.project.root, message: m, all: staged.length === 0 });
+      if (!r) return;
       if (r.code === 0) toast(`Commit feito: “${r.message}”.`, 'ok');
       else toast(r.stderr || r.stdout, 'error', 8000);
       this.app.refreshGit();
@@ -471,7 +494,8 @@ export class Sidebar {
                       const btn = e.currentTarget;
                       btn.disabled = true;
                       toast('Sincronizando…', 'info', 1500);
-                      const r = await call('gitSync', { root: S.project.root, message: msg.value.trim() });
+                      const r = await withLarge('gitSync', { root: S.project.root, message: msg.value.trim() });
+                      if (!r) return (btn.disabled = false);
                       if (r.code === 0) toast(r.steps.length ? `Sincronizado: ${r.steps.join(', ')}.` : 'Já estava tudo sincronizado.', 'ok', 6000);
                       else toast((r.stderr || '').trim().split('\n').slice(-3).join(' '), 'error', 10000);
                       this.app.refreshGit();

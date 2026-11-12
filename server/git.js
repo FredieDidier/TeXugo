@@ -71,7 +71,27 @@ export async function unstage(root, files) {
   return git(root, ['reset', '-q', 'HEAD', '--', ...files]);
 }
 
-export async function commit(root, message, { all = false } = {}) {
+// New files above this size are worth a question before they enter a commit:
+// GitHub refuses a push with a file over 100 MB, after the commit is made.
+export const LARGE_MB = 50;
+export function largeNewFiles(files, all) {
+  const out = [];
+  for (const f of files) {
+    const isNew = all ? f.untracked || f.index === 'A' : f.staged && f.index === 'A';
+    if (!isNew) continue;
+    try {
+      const mb = fs.statSync(f.path).size / 1048576;
+      if (mb > LARGE_MB) out.push({ rel: f.rel, mb: Math.round(mb) });
+    } catch {}
+  }
+  return out;
+}
+
+export async function commit(root, message, { all = false, force = false, files } = {}) {
+  if (!force) {
+    const large = largeNewFiles(files || (await status(root)).files || [], all);
+    if (large.length) return { code: 1, large, stderr: `Arquivo novo grande: ${large.map((f) => `${f.rel} (${f.mb} MB)`).join(', ')}.` };
+  }
   if (all) await git(root, ['add', '-A']);
   if (!message || !message.trim()) message = await autoMessage(root);
   const r = await git(root, ['commit', '-m', message]);
@@ -100,12 +120,12 @@ export async function autoMessage(root) {
 
 // One click: commit what changed (if anything), bring the remote's commits
 // (rebase, so no merge commit), send ours. Stops and explains on conflict.
-export async function sync(root, message) {
+export async function sync(root, message, { force = false } = {}) {
   const steps = [];
   const st = await status(root);
   if (st.files.length) {
-    const c = await commit(root, message, { all: !st.files.some((f) => f.staged) });
-    if (c.code !== 0) return { code: c.code, stderr: c.stderr || c.stdout, steps };
+    const c = await commit(root, message, { all: !st.files.some((f) => f.staged), force, files: st.files });
+    if (c.code !== 0) return { code: c.code, large: c.large, stderr: c.stderr || c.stdout, steps };
     steps.push(`commit “${c.message}”`);
   }
   if (st.remote) {

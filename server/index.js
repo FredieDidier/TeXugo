@@ -80,6 +80,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
   const openProjects = new Set(); // roots the UI opened; file access is limited to these
   const watchers = new Map();
   const builds = new BuildManager();
+  builds.stallSeconds = Number((state.settings || {}).stallSeconds) || 0;
   const clients = new Set();
   const selfWrites = new Map(); // path -> time of our own last write, to mute echo
 
@@ -177,6 +178,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     },
     async saveSettings({ settings }) {
       state.settings = { ...(state.settings || {}), ...settings };
+      builds.stallSeconds = Number(state.settings.stallSeconds) || 0;
       saveState(state);
       return state.settings;
     },
@@ -407,13 +409,13 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       mustAllow(root);
       return gitOps.unstage(root, files);
     },
-    async gitCommit({ root, message, all }) {
+    async gitCommit({ root, message, all, force }) {
       mustAllow(root);
-      return gitOps.commit(root, message, { all });
+      return gitOps.commit(root, message, { all, force });
     },
-    async gitSync({ root, message }) {
+    async gitSync({ root, message, force }) {
       mustAllow(root);
-      return gitOps.sync(root, message);
+      return gitOps.sync(root, message, { force });
     },
     async gitFetch({ root }) {
       mustAllow(root);
