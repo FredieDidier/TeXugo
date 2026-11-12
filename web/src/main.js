@@ -1239,7 +1239,6 @@ function renderPdfTools() {
     isSlides(p) ? h('button', { class: 'btn sm', title: 'Tela cheia, um slide por vez (setas, espaço, clique; Esc sai)', onclick: () => v.present() }, icon('slides'), 'Apresentar') : null,
     h('button', { class: 'icon-btn' + (S.settings.followCursor ? ' on' : ''), title: 'O PDF acompanha o cursor do editor', 'data-k': 'follow', onclick: () => ((S.settings.followCursor = !S.settings.followCursor), saveSettingsSoon(), renderPdfTools()) }, icon('target')),
     h('button', { class: 'icon-btn' + (S.settings.invertPdf ? ' on' : ''), title: 'PDF escuro (só na tela)', 'data-k': 'invert', onclick: toggleInvert }, icon('invert')),
-    p.doc ? h('button', { class: 'icon-btn', title: 'Ir ao trecho no código (ou dê 2 cliques no PDF)', 'data-k': 'hint', onclick: () => toast('Dê dois cliques num trecho do PDF para ir à linha do código.', 'info') }, icon('sync')) : null,
     h('button', { class: 'icon-btn', title: 'Abrir este PDF numa janela separada (outro monitor)', 'data-k': 'detach', onclick: () => detachPdf(p) }, icon('columns')),
     h('button', { class: 'icon-btn', title: 'Abrir no Preview', 'data-k': 'external', onclick: () => call('openExternal', { path: p.path }) }, icon('external')),
   );

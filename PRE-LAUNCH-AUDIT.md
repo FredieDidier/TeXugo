@@ -39,12 +39,12 @@ Feita no app Electron real, com perfil e projeto temporários (modelo *Artigo + 
 **O que ainda pede trabalho de design** (não corrigido aqui):
 
 - Barra do PDF e barra de atividades só com ícones; a explicação vem da dica ao passar o mouse, que no teclado não aparece.
-- O botão "Ir ao trecho no código" da barra do PDF só mostra um aviso; deveria agir ou sair.
+- ✅ **FEITO (12/11).** O botão "Ir ao trecho no código" da barra do PDF, que só mostrava um aviso, saiu (dois cliques no PDF já levam ao código).
 - Paleta com cerca de 60 comandos numa lista só quando nada foi digitado; agrupar por área.
 - Preferências numa coluna longa (930 px de conteúdo em 600 visíveis); pedir abas ou busca.
 - Aba Revisão com 12 linhas sem recolher seções.
 - `Commit de tudo` inclui os PDFs e o `.bbl` gerados; decidir se o `.gitignore` criado pelo app deve cobri-los.
-- Os modelos de artigo trazem uma frase e duas referências sobre horário de verão; trocar por texto neutro (mexe nos testes dos modelos).
+- ✅ **FEITO (12/11).** Os modelos de artigo e de projeto agora citam Card e Krueger (1994) e Imbens e Lemieux (2008), com frases neutras, no lugar das referências sobre horário de verão.
 - Fontes de 11 a 12 px em listas e rótulos (pendência de D1).
 - "Mostrar no Finder", "Abrir no Preview", "Lixo do macOS" e "Instale o MacTeX" em outros sistemas (I9, I17).
 

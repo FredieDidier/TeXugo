@@ -295,7 +295,7 @@ const EN = {
   'Página anterior': 'Previous page', 'Próxima página': 'Next page', 'Diminuir': 'Zoom out', 'Aumentar': 'Zoom in', 'Largura da página': 'Page width', 'Página inteira': 'Whole page',
   'Tela cheia, um slide por vez (setas, espaço, clique; Esc sai)': 'Full screen, one slide at a time (arrows, space, click; Esc exits)', 'Apresentar': 'Present',
   'O PDF acompanha o cursor do editor': 'The PDF follows the editor cursor', 'PDF escuro (só na tela)': 'Dark PDF (screen only)',
-  'Ir ao trecho no código (ou dê 2 cliques no PDF)': 'Go to the source (or double-click the PDF)', 'Dê dois cliques num trecho do PDF para ir à linha do código.': 'Double-click a passage of the PDF to go to its source line.',
+
   'Abrir este PDF numa janela separada (outro monitor)': 'Open this PDF in a separate window (another monitor)', 'Abrir no Preview': 'Open in Preview',
   'O navegador bloqueou a janela nova. Permita pop-ups para este endereço.': 'The browser blocked the new window. Allow pop-ups for this address.',
   'Sem posição no PDF para esta linha. Compile de novo.': 'No PDF position for this line. Compile again.', 'Este PDF não tem SyncTeX': 'This PDF has no SyncTeX', 'Compilar agora': 'Compile now',
