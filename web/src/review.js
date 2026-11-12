@@ -87,7 +87,7 @@ export function renderReviewPanel(app, S, body) {
     const s = Math.round((Date.now() - r.start) / 1000);
     return clear(
       body,
-      h('div', { class: 'pad' }, h('span', { class: 'status-dot building' }), ` O Claude está lendo ${basename(r.doc)} e escrevendo o parecer… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}  `, h('button', { class: 'btn sm', onclick: () => call('aiCancel') }, 'Cancelar')),
+      h('div', { class: 'pad' }, h('span', { class: 'status-dot building' }), ` O Claude está lendo ${basename(r.doc)} e escrevendo o parecer… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}  `, h('button', { class: 'btn sm', onclick: () => call('aiCancel', { root: S.project && S.project.root }) }, 'Cancelar')),
     );
   }
   if (r.status === 'error') return clear(body, h('div', { class: 'pad' }, h('div', { class: 'qq-banner' }, icon('warn'), h('div', {}, r.error)), h('button', { class: 'btn sm', onclick: () => reviewDialog(app, S) }, 'Tentar de novo')));

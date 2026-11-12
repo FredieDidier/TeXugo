@@ -1,6 +1,7 @@
 // Git panel backend: status, diff, stage/commit, pull/push, history. Uses
 // the system git, so credentials come from the macOS keychain helper or
 // GitHub Desktop's configuration, as in the terminal.
+import fs from 'node:fs';
 import path from 'node:path';
 import { run } from './util.js';
 
@@ -109,10 +110,19 @@ export async function sync(root, message) {
   }
   if (st.remote) {
     if (st.upstream) {
-      const p = await git(root, ['pull', '--rebase']);
+      // --autostash: changes left out of the commit do not stop the pull.
+      const p = await git(root, ['pull', '--rebase', '--autostash']);
       if (p.code !== 0) {
-        await git(root, ['rebase', '--abort']);
-        return { code: p.code, stderr: 'O pull achou mudanças que conflitam com as suas; nada foi perdido (o commit está feito). Resolva pelo GitHub Desktop ou pelo terminal. ' + (p.stderr || '').trim().split('\n').slice(-2).join(' '), steps };
+        const tail = (p.stderr || p.stdout || '').trim().split('\n').slice(-2).join(' ');
+        // Only a rebase that stopped midway is a conflict; anything else
+        // (no network, no access, a wrong remote) is said as it is.
+        const gitDir = (await git(root, ['rev-parse', '--absolute-git-dir'])).stdout.trim();
+        const midRebase = gitDir && ['rebase-merge', 'rebase-apply'].some((d) => fs.existsSync(path.join(gitDir, d)));
+        if (midRebase) {
+          await git(root, ['rebase', '--abort']);
+          return { code: p.code, conflict: true, stderr: 'O pull achou mudanças que conflitam com as suas; nada foi perdido (o commit está feito). Resolva pelo GitHub Desktop ou pelo terminal. ' + tail, steps };
+        }
+        return { code: p.code, stderr: 'O pull falhou (não foi conflito): ' + tail, steps };
       }
       steps.push('pull');
     }

@@ -575,8 +575,8 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       if (!text || text.length > 12000) throw httpError(400, 'Selecione um trecho de até 12 mil caracteres.');
       return ai.rewrite({ root, file: p, action, text, before, after, hints: hints || [], lang, model, effort });
     },
-    async aiCancel() {
-      return ai.cancelAi();
+    async aiCancel({ root } = {}) {
+      return ai.cancelAi(root);
     },
     async exportZip({ doc }) {
       return exportZip(mustAllow(doc));

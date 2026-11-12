@@ -451,6 +451,9 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  [/^Já há uma ação de IA em andamento neste projeto\.$/, 'An AI action is already running in this project.'],
+  [/^O pull achou mudanças que conflitam com as suas; nada foi perdido \(o commit está feito\)\. Resolva pelo GitHub Desktop ou pelo terminal\. (.*)$/s, 'The pull found changes that conflict with yours; nothing was lost (the commit is done). Resolve it in GitHub Desktop or the terminal. $1'],
+  [/^O pull falhou \(não foi conflito\): (.*)$/s, 'The pull failed (not a conflict): $1'],
   // interface pass
   [/^Pertence a (.+)$/, 'Belongs to $1'],
   [/^(\d+) arquivos$/, '$1 files'],

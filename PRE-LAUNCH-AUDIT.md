@@ -94,7 +94,7 @@ Os outros três são de distribuição: assinatura e notarização no Mac (B5), 
 
 A maior lacuna de QA é estrutural: `server/index.js` (toda a API), `git.js`, `terminal.js`, o Electron e cerca de 40 dos 50 módulos da interface não têm nenhum teste. Os quatro defeitos acima moram exatamente aí.
 
-Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/2026: 3 bloqueadores (B1, B2, B3), 6 importantes (I1, I3, I11, I12, I14, I15), 5 desejáveis (D1, D2, D4, D6, D10).
+Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/2026: 3 bloqueadores (B1, B2, B3), 9 importantes (I1, I3, I4, I5, I11, I12, I14, I15, I16), 6 desejáveis (D1, D2, D3, D4, D6, D10).
 
 ---
 
@@ -229,7 +229,9 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Correção:** uma única função `writeProjectFile(p, text)` no servidor (temporário, renomear, `selfWrites`, a mesma do item I1) usada pelos três; e, na interface, salvar a aba do `.bib` antes ou aplicar a mudança no próprio editor quando ele está aberto.
 - **Aceite:** adicionar referência com o `.bib` sujo mantém as edições e a referência.
 
-## I4. O Sincronizar chama de "conflito" o que não é
+## ✅ I4. O Sincronizar chama de "conflito" o que não é — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 12/11/2026.** `pull --rebase --autostash`; só se fala em conflito quando há `rebase-merge` ou `rebase-apply` na pasta do Git; outras falhas saem como "O pull falhou (não foi conflito): …" com a causa do Git. Os dois casos do Apêndice A reproduzidos num repositório temporário: o primeiro sincroniza, o segundo mostra o erro de acesso. Mensagens traduzidas.
 
 - **Classificação:** confirmado (execução). **Gravidade:** média. **Esforço:** P.
 - **Evidência:** [server/git.js:113](server/git.js:113): qualquer falha do `pull --rebase` vira "O pull achou mudanças que conflitam com as suas". Reproduzi dois casos sem conflito nenhum:
@@ -239,7 +241,9 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Correção:** usar `pull --rebase --autostash`; só falar em conflito quando houver rebase em andamento (pasta `rebase-merge` ou `rebase-apply`, ou `git status` com caminhos `UU`); para rede e permissão, mostrar a causa real.
 - **Aceite:** os dois casos do Apêndice A deixam de devolver a mensagem de conflito.
 
-## I5. ZIP de submissão ignora arquivos quando alguma pasta do caminho começa com "tex"
+## ✅ I5. ZIP de submissão ignora arquivos quando alguma pasta do caminho começa com "tex" — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 12/11/2026.** `isSystemTex` em `server/submission.js` decide pelas raízes do `kpsewhich -var-value` (TEXMFROOT, TEXMFDIST, TEXMFLOCAL, TEXMFSYS*, TEXMFVAR, TEXMFCONFIG, TEXMFHOME, com e sem resolver links), com cache; sem kpsewhich, só nomes de pasta inteiros. `test/submission.test.js` agora roda dentro de uma pasta `tex/` e passa.
 
 - **Classificação:** confirmado (execução da expressão). **Gravidade:** média a alta para quem é afetado. **Esforço:** P.
 - **Evidência:** [server/submission.js:13](server/submission.js:13): `SYSTEM_TEX = /\/(texmf|texlive|TeX)[^/]*\//i`. Por não diferenciar maiúsculas, casa com `/tex/`, `/textos/`, `/texts/` e `/TeXugo/`. Todos os quatro caminhos de teste deram `true`, entre eles `/Users/a/Dropbox/tex/paper/mystyle.sty`. O filtro age em [submission.js:34](server/submission.js:34) (o arquivo sai do ZIP) e em [submission.js:165](server/submission.js:165) (o vazamento de caminho absoluto deixa de ser apontado).
@@ -350,7 +354,9 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Impacto:** o assistente de primeira abertura vai mandar instalar o MacTeX, a pessoa instala, clica em "verificar de novo" e nada muda até reiniciar.
 - **Correção:** `refreshTools()` que limpa o cache e recalcula os caminhos; o `hello` e o assistente chamam com `refresh: true`.
 
-## I16. Servidores do LanguageTool ficam órfãos
+## ✅ I16. Servidores do LanguageTool ficam órfãos — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 12/11/2026.** O servidor iniciado fica registrado em `<dados do app>/languagetool.pid` (PID e porta); ao subir, o app reaproveita o registrado se responde ou o encerra se não; `stop()` apaga o registro; `process.on('exit')` encerra. Mantive `detached` porque o encerramento usa o grupo do processo. Não testei com o LanguageTool real. Os órfãos que já existem continuam: o `pkill` abaixo limpa.
 
 - **Classificação:** confirmado (observado nesta máquina). **Gravidade:** média. **Esforço:** P.
 - **Evidência:** [server/grammar.js:212](server/grammar.js:212) sobe o servidor com `detached: true`; só `close()` o encerra. Durante a auditoria havia **15 processos Java do LanguageTool** com pai 1, ligados havia entre 17 horas e 1 dia e 8 horas, em portas aleatórias, com o TeXugo fechado. Nenhum veio dos meus testes (desliguei o corretor nos perfis de teste).
@@ -386,7 +392,7 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 |---|---|---|---|---|
 | ✅ D1 | **CORRIGIDO (11/11/2026), com ressalvas.** Feito: tudo o que tem clique é alcançável e acionável pelo teclado (`h()` em `dom.js`), setas nas listas, abas e menus, F6 entre as áreas, anel de foco único, diálogos com `role="dialog"`, foco preso e devolvido, Esc só no de cima, chaves liga/desliga focáveis, `prefers-reduced-motion`, cores de texto a 4,5:1, textos de 10 px subiram. Falta: teste com leitor de tela (VoiceOver) e as fontes de 11 a 12 px, que ficaram. Texto original: **Acessibilidade.** Quase não há ARIA; abas, linhas da árvore e listas são `div` com clique, sem foco pelo teclado; botões não têm anel de foco; os diálogos não têm `role="dialog"`, não prendem o foco nem o devolvem; a interface usa fontes de 10 a 12,5 px; não há `prefers-reduced-motion`. O zoom do menu Visualizar atenua o tamanho. | 2 ocorrências de `aria-`/`role`/`tabindex` em toda a interface (em `dom.js`); `:focus` só para campos em [web/styles.css:61](web/styles.css:61); `modal` em [web/src/dom.js:217](web/src/dom.js:217) | Confirmado (leitura) | M |
 | ✅ D2 | **CORRIGIDO (12/11/2026).** No máximo 6 commits processados ao mesmo tempo em `news()`. Texto original: **`news()` dispara cerca de 3 processos `git` por commit, todos de uma vez.** 120 commits: 1,5 s e uns 360 processos. No Windows, onde criar processo é caro, vira segundos. Limitar a 6 ao mesmo tempo. | [server/coauthors.js:218](server/coauthors.js:218) | Confirmado (medição) | P |
-| D3 | **Uma ação de IA por vez no app inteiro.** A resposta aos pareceristas (até 30 min) bloqueia "Revisar o trecho" em todas as janelas com "Já há uma ação de IA em andamento". Trava por projeto, ou fila visível. | [server/ai.js:31](server/ai.js:31), [ai.js:86](server/ai.js:86), [rr.js:143](server/rr.js:143) | Confirmado (leitura) | P |
+| ✅ D3 | **CORRIGIDO (12/11/2026).** Trava por projeto em `server/ai.js`; Cancelar encerra só a ação do projeto da janela. Texto original: **Uma ação de IA por vez no app inteiro.** A resposta aos pareceristas (até 30 min) bloqueia "Revisar o trecho" em todas as janelas com "Já há uma ação de IA em andamento". Trava por projeto, ou fila visível. | [server/ai.js:31](server/ai.js:31), [ai.js:86](server/ai.js:86), [rr.js:143](server/rr.js:143) | Confirmado (leitura) | P |
 | ✅ D4 | **CORRIGIDO (12/11/2026).** Pausa = maior entre 700 ms e metade da última passada. Texto original: **Prévia ao vivo com pausa fixa de 700 ms.** Em paper cuja passada leva 10 s, o motor roda sem parar enquanto se digita. Pausa proporcional à última passada (por exemplo, o maior entre 700 ms e metade dela). | [web/src/live.js:7](web/src/live.js:7) | Sugestão | P |
 | D5 | **Sincronizar faz `git add -A`.** Uma pasta de dados fora do `.gitignore` entra no commit; arquivo acima de 100 MB faz o push falhar com o commit já feito. Avisar antes quando houver arquivo novo acima de uns 50 MB. | [server/git.js:74](server/git.js:74), [git.js:106](server/git.js:106) | Risco potencial | P |
 | ✅ D6 | **CORRIGIDO (11/11/2026).** Todo aviso de erro fica na tela até ser fechado (botão ×, `role="alert"`); os demais pausam sob o mouse; mensagem repetida substitui a anterior. Texto original: **Erros importantes somem em 8 a 10 s.** Falha de sincronização, de commit e de salvamento aparecem só num aviso temporário. Manter até fechar, ou guardar numa lista. | [web/src/sidebar.js:432](web/src/sidebar.js:432), [main.js:730](web/src/main.js:730) | Confirmado (leitura) | P |

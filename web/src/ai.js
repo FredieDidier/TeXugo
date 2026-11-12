@@ -73,11 +73,11 @@ export async function runAiAction(app, S, action, target = focusedTarget(app)) {
   const wait = modal({
     title: [icon('edit'), ` ${act.label}`],
     body: h('div', {}, h('p', {}, h('span', { class: 'status-dot building' }), ' O Claude Code está reescrevendo o trecho selecionado…'), h('p', { class: 'muted' }, 'Roda na pasta do projeto, com a sua conta e as suas skills. Leva de 10 segundos a um minuto.')),
-    footer: [h('button', { class: 'btn', onclick: () => ((cancelled = true), call('aiCancel'), wait.close()) }, 'Cancelar')],
+    footer: [h('button', { class: 'btn', onclick: () => ((cancelled = true), call('aiCancel', { root: S.project && S.project.root }), wait.close()) }, 'Cancelar')],
     onClose: () => {
       if (!cancelled) {
         cancelled = true;
-        call('aiCancel');
+        call('aiCancel', { root: S.project && S.project.root });
       }
     },
   });

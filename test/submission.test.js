@@ -25,7 +25,9 @@ function buildOnce(mgr, root, docs) {
 const FIG = '\\documentclass{standalone}\\begin{document}X\\end{document}\n';
 
 test('ZIP pulls in ../ files, fixes paths, and compiles alone', { timeout: 240000 }, async () => {
-  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-sub-'));
+  // Inside a folder named tex/: the old name rule dropped every file here.
+  const root = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-sub-')), 'tex');
+  fs.mkdirSync(root);
   const paper = path.join(root, 'paper');
   fs.mkdirSync(paper);
   fs.mkdirSync(path.join(root, 'analysis', 'out'), { recursive: true });

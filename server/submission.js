@@ -5,12 +5,39 @@ import os from 'node:os';
 import path from 'node:path';
 import { includeClosure, docInfo } from './project.js';
 import { parseLog } from './logparse.js';
-import { readText, run, stripComments } from './util.js';
+import { execFileSync } from 'node:child_process';
+import { readText, run, stripComments, toolEnv, findOnPath } from './util.js';
 import { zipCommand, unzipCommand } from './platform.js';
 
 const stem = (d) => d.replace(/\.tex$/, '');
 
-const SYSTEM_TEX = /\/(texmf|texlive|TeX)[^/]*\//i;
+// A file belongs to the TeX installation when it lies inside one of its
+// roots, as kpsewhich reports them. By name alone, a project in ~/tex/ or
+// ~/Documents/textos/ looked like part of the system and lost files.
+let texRoots = null;
+export function systemTexRoots() {
+  if (texRoots) return texRoots;
+  texRoots = [];
+  const kpse = findOnPath('kpsewhich');
+  if (kpse) {
+    for (const v of ['TEXMFROOT', 'TEXMFDIST', 'TEXMFLOCAL', 'TEXMFSYSVAR', 'TEXMFSYSCONFIG', 'TEXMFVAR', 'TEXMFCONFIG', 'TEXMFHOME']) {
+      try {
+        const out = execFileSync(kpse, ['-var-value', v], { env: toolEnv(), encoding: 'utf8', timeout: 5000 }).trim();
+        for (const r of out.split(/[;:](?![\\/])/).map((x) => x.replace(/^!!/, '').trim()).filter((x) => path.isAbsolute(x)))
+          for (const x of [path.resolve(r), (() => { try { return fs.realpathSync(r); } catch { return null; } })()])
+            if (x && !texRoots.includes(x)) texRoots.push(x);
+      } catch {}
+    }
+  }
+  return texRoots;
+}
+// Without kpsewhich: only whole folder names the installations use.
+const SYSTEM_TEX_NAME = /[\\/](texmf[\w-]*|texlive|TeX|MiKTeX[^\\/]*)[\\/]/;
+export function isSystemTex(p) {
+  const roots = systemTexRoots();
+  if (roots.length) return roots.some((r) => isInDir(r, p));
+  return SYSTEM_TEX_NAME.test(p);
+}
 const GENERATED = /\.(aux|out|toc|lof|lot|nav|snm|vrb|fls|log|synctex\.gz|bcf|run\.xml|fdb_latexmk|blg)$/;
 // Staged text files whose paths may point outside the document folder.
 const REWRITABLE = /\.(tex|ltx|sty|cls|cfg|def|tikz|pgf)$/i;
@@ -31,7 +58,7 @@ export function sourceFiles(doc) {
       const i = line.match(/^INPUT (.+)$/);
       if (!i) continue;
       const p = path.resolve(pwd, i[1]);
-      if (GENERATED.test(p) || SYSTEM_TEX.test(p) || p.startsWith('/dev/')) continue;
+      if (GENERATED.test(p) || isSystemTex(p) || p.startsWith('/dev/')) continue;
       files.add(p);
     }
   }
@@ -162,7 +189,7 @@ export async function checkZip(zip, mainRel, engine = 'pdflatex', origLog = null
       const i = line.match(/^INPUT (.+)$/);
       if (!i) continue;
       const p = path.resolve(cwd, i[1]);
-      if (isInDir(tmp, p) || SYSTEM_TEX.test(p) || p.startsWith('/dev/') || leaks.includes(p)) continue;
+      if (isInDir(tmp, p) || isSystemTex(p) || p.startsWith('/dev/') || leaks.includes(p)) continue;
       leaks.push(p);
     }
     const rel = (f) => (f && isInDir(tmp, f) ? path.relative(tmp, f) : f);

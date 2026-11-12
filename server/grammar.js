@@ -15,7 +15,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import net from 'node:net';
-import { toolEnv, which, sha1 } from './util.js';
+import { toolEnv, which, sha1, dataDir } from './util.js';
 import { ACADEMIC_WORDS } from './academic-words.js';
 import { killTree } from './platform.js';
 
@@ -130,6 +130,40 @@ export function offRules(bin, lang) {
   return [...ids].sort();
 }
 
+// The server we started is recorded here, so a session that ended without
+// cleaning up (crash, forced quit, interrupted npm run serve) does not leave
+// a JVM behind for good: the next start reuses it or ends it.
+const pidFile = () => path.join(dataDir(), 'languagetool.pid');
+const isAlive = (pid) => {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+};
+function readPid() {
+  try {
+    const { pid, port } = JSON.parse(fs.readFileSync(pidFile(), 'utf8'));
+    return pid ? { pid, port } : null;
+  } catch {
+    return null;
+  }
+}
+function endPid(pid) {
+  try {
+    process.kill(process.platform === 'win32' ? pid : -pid, 'SIGTERM');
+  } catch {
+    try {
+      process.kill(pid, 'SIGTERM');
+    } catch {}
+  }
+}
+const live = new Set();
+process.on('exit', () => {
+  for (const g of live) g.stop();
+});
+
 export class Grammar {
   constructor(broadcast = () => {}) {
     this.broadcast = broadcast;
@@ -199,6 +233,12 @@ export class Grammar {
     if (this.starting) return this.starting;
     this.starting = (async () => {
       if (await alive('http://127.0.0.1:8081')) return (this.base = 'http://127.0.0.1:8081');
+      const prev = readPid();
+      if (prev && isAlive(prev.pid)) {
+        const b = `http://127.0.0.1:${prev.port}`;
+        if (prev.port && (await alive(b))) return (this.base = b);
+        endPid(prev.pid);
+      }
       const bin = await findServer();
       if (!bin) {
         const err = new Error('O LanguageTool não está instalado.');
@@ -211,6 +251,10 @@ export class Grammar {
       if (conf) args.unshift('--config', conf);
       const child = spawn(bin, args, { env: toolEnv(), stdio: 'ignore', detached: true });
       this.child = child;
+      live.add(this);
+      try {
+        fs.writeFileSync(pidFile(), JSON.stringify({ pid: child.pid, port }));
+      } catch {}
       child.on('close', () => {
         if (this.child === child) {
           this.child = null;
@@ -236,6 +280,10 @@ export class Grammar {
 
   stop() {
     if (!this.child) return;
+    live.delete(this);
+    try {
+      if (readPid()?.pid === this.child.pid) fs.rmSync(pidFile());
+    } catch {}
     killTree(this.child);
     this.child = null;
     this.base = null;

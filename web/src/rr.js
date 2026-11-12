@@ -62,7 +62,7 @@ export function responseDialog(app, S) {
     const start = Date.now();
     const tick = setInterval(() => {
       const s = Math.round((Date.now() - start) / 1000);
-      clear(status, h('p', { class: 'faint' }, h('span', { class: 'status-dot building' }), ` O Claude está lendo os pareceres e as mudanças… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}. Pode fechar esta janela; o arquivo abre quando ficar pronto. `, h('a', { href: '#', onclick: (e) => (e.preventDefault(), call('aiCancel')) }, 'Cancelar')));
+      clear(status, h('p', { class: 'faint' }, h('span', { class: 'status-dot building' }), ` O Claude está lendo os pareceres e as mudanças… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}. Pode fechar esta janela; o arquivo abre quando ficar pronto. `, h('a', { href: '#', onclick: (e) => (e.preventDefault(), call('aiCancel', { root: S.project && S.project.root })) }, 'Cancelar')));
     }, 1000);
     running = call('respondReferees', { root: S.project.root, doc, reports: reports.value, source, lang: lang.value, ...choice });
     try {

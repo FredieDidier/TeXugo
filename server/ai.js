@@ -28,17 +28,21 @@ underscore, landscape, tapestry, robust as praise, genuinely, quietly). In Portu
 final "e" of a list, no Title Case in headings, no "vale ressaltar", "desempenha um papel crucial", "Além disso,"
 at every sentence, no calques from English (endereçar, assumir que). Keep the author's terms and numbers.`;
 
-let current = null;
+// One action at a time per project (the 30-minute response to referees in
+// one paper does not block a quick revision in another window).
+const current = new Map(); // project root -> child
 
-export function cancelAi() {
-  if (current) {
+export function cancelAi(root) {
+  let any = false;
+  for (const [r, child] of current) {
+    if (root && r !== root) continue;
     try {
-      current.kill('SIGTERM');
+      child.kill('SIGTERM');
     } catch {}
-    current = null;
-    return true;
+    current.delete(r);
+    any = true;
   }
-  return false;
+  return any;
 }
 
 function styleFile(root, file) {
@@ -83,11 +87,12 @@ export function buildPrompt({ action, text, before = '', after = '', file, root,
 export async function runClaude(prompt, opts) {
   const claude = await which('claude');
   if (!claude) throw new Error('Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash (e entre na sua conta com "claude" no Terminal).');
-  if (current) throw new Error('Já há uma ação de IA em andamento.');
+  const key = opts.root || '';
+  if (current.has(key)) throw new Error('Já há uma ação de IA em andamento neste projeto.');
   const out = await new Promise((resolve) => {
     const [cmd, cargs, copts] = winSpawn(claude, ['-p', '--output-format', 'json', '--tools', opts.tools || 'Skill,Read', '--no-session-persistence', ...claudeFlags(opts)], toolEnv());
     const child = spawn(cmd, cargs, { cwd: opts.root, env: toolEnv(), ...copts });
-    current = child;
+    current.set(key, child);
     let stdout = '';
     let stderr = '';
     const timer = setTimeout(() => child.kill('SIGTERM'), opts.timeout || 300000);
@@ -96,7 +101,7 @@ export async function runClaude(prompt, opts) {
     child.on('error', (err) => resolve({ code: -1, stdout, stderr: String(err) }));
     child.on('close', (code, signal) => {
       clearTimeout(timer);
-      if (current === child) current = null;
+      if (current.get(key) === child) current.delete(key);
       resolve({ code, signal, stdout, stderr });
     });
     child.stdin.end(prompt);
