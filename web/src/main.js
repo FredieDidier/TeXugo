@@ -21,6 +21,7 @@ import { TerminalPanel } from './terminal.js';
 import { setupIde, mentionInClaude } from './ide.js';
 import { AgentPanel, setClaudeModels } from './agent.js';
 import { setBaseline } from './changes.js';
+import { installFocusTips } from './focustip.js';
 import { addReference } from './refs.js';
 import { compareDialog } from './compare.js';
 import { shortcutsDialog } from './shortcuts.js';
@@ -1570,17 +1571,33 @@ app.confirmLeave = confirmLeave;
 // I8: the first time a folder that brings a latexmkrc or a .claude/ folder
 // is opened, say that it runs commands and ask whether to go on. The answer
 // is kept per folder; saying no leaves the folder closed.
-async function trustFolder(root) {
+let trustAsking = false;
+async function recheckTrust() {
+  if (trustAsking || !S.project) return;
+  trustAsking = true;
+  try {
+    const root = S.project.root;
+    if (await trustFolder(root, { during: true })) return;
+    // Not trusted: close the project, asking about unsaved work first.
+    if (S.project && S.project.root === root && (await confirmLeave())) location.search = '?t=' + encodeURIComponent(new URLSearchParams(location.search).get('t') || '') + '&welcome=1';
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    trustAsking = false;
+  }
+}
+
+async function trustFolder(root, { during = false } = {}) {
   const r = await call('projectRisk', { root });
   if (!r.risky.length || r.trusted) return true;
   const body = h(
     'div',
     {},
-    h('p', {}, 'Este projeto traz configurações que executam comandos no seu computador ao compilar ou ao usar a IA:'),
+    h('p', {}, during ? 'Chegaram ao projeto configurações que executam comandos no seu computador ao compilar ou ao usar a IA:' : 'Este projeto traz configurações que executam comandos no seu computador ao compilar ou ao usar a IA:'),
     h('ul', {}, r.risky.map((x) => h('li', {}, h('code', {}, x)))),
     h('p', {}, 'Abra só se confia em quem o fez. A resposta fica guardada para esta pasta.'),
   );
-  const ok = await confirmBox('Confia neste projeto?', body, { ok: 'Confio, abrir' });
+  const ok = await confirmBox('Confia neste projeto?', body, { ok: during ? 'Confio, continuar' : 'Confio, abrir' });
   if (!ok) return false;
   await call('trustProject', { root });
   return true;
@@ -1752,6 +1769,9 @@ function wireFsEvents() {
     await checkDisk();
     // A pull (or a coauthor's sync) brought comments.
     if (e.files.some((f) => f.includes('/.texugo-comments/'))) app.comments.load();
+    // A pull (or any change) brought a latexmkrc or Claude Code settings into
+    // a folder the user has not trusted: ask now, not at the next opening.
+    if (e.files.some((f) => /(^|[\\/])\.?latexmkrc$/.test(f) || /[\\/]\.claude([\\/]|$)/.test(f))) recheckTrust();
     for (const f of e.files) {
       // A PDF rebuilt outside the app (terminal, build.sh).
       if (f.endsWith('.pdf') && !S.building) {
@@ -1938,6 +1958,7 @@ async function boot() {
   wireFsEvents();
   wireKeys();
   wireWindowEvents();
+  installFocusTips();
   connect();
   on('ws:open', () => S.project && (refreshGit(), checkDiskSoon(), call('broadcast', { msg: { type: 'pdfwin:ping' } }).catch(() => {})));
   window.addEventListener('focus', () => checkDiskSoon());

@@ -38,12 +38,12 @@ Feita no app Electron real, com perfil e projeto temporários (modelo *Artigo + 
 
 **O que ainda pede trabalho de design** (não corrigido aqui):
 
-- Barra do PDF e barra de atividades só com ícones; a explicação vem da dica ao passar o mouse, que no teclado não aparece.
+- ✅ **FEITO (12/11).** Barra do PDF e barra de atividades: quando um botão só de ícone recebe foco pelo teclado, um rótulo com o nome dele aparece ao lado (web/src/focustip.js). Com o mouse, continua a dica de sempre.
 - ✅ **FEITO (12/11).** O botão "Ir ao trecho no código" da barra do PDF, que só mostrava um aviso, saiu (dois cliques no PDF já levam ao código).
 - ✅ **FEITO (12/11).** A paleta vazia mostra os comandos usados por último e depois nove grupos: Compilar, Editar, Escrita, Projeto e arquivos, Referências, Coautores, Revisão e submissão, Claude, Janela e ajuda. Com texto digitado, a busca continua numa lista só, por relevância.
 - Preferências numa coluna longa (930 px de conteúdo em 600 visíveis); pedir abas ou busca.
 - ✅ **FEITO (12/11).** As três seções da aba Revisão (Coautores, Pareceristas, Antes de enviar) recolhem. O estado fica guardado por seção, e o cabeçalho mostra quantas linhas pedem atenção.
-- `Commit de tudo` inclui os PDFs e o `.bbl` gerados; decidir se o `.gitignore` criado pelo app deve cobri-los.
+- ✅ **FEITO (12/11).** O bloco do `.gitignore` agora cobre `*.bbl`, o PDF de cada documento (`/paper.pdf`, `/slides/talk.pdf`) e a pasta de saída do `latexmkrc`. PDFs de figuras continuam no repositório (nada de `*.pdf`). O que já estava no Git continua lá. Teste em test/gitignore.test.js.
 - ✅ **FEITO (12/11).** Os modelos de artigo e de projeto agora citam Card e Krueger (1994) e Imbens e Lemieux (2008), com frases neutras, no lugar das referências sobre horário de verão.
 - ✅ **FEITO (12/11).** Nenhum texto de lista ou rótulo fica abaixo de 12 px. Os 37 usos de 11 e 11,5 px do CSS e 6 do JavaScript passaram para 12 px, e a etiqueta de documento na árvore foi para 11 px. Ficam menores só os selos numéricos da barra de atividades e o ponto de aba suja.
 - ✅ **FEITO (12/11).** "Mostrar no Finder", "Abrir no Preview", "Lixo do macOS" e "Instale o MacTeX" viram "Mostrar na pasta", "Abrir no leitor de PDF", "lixeira do sistema" e "TeX Live" fora do Mac (`IS_MAC`, `OPEN_PDF`, `TRASH_NOTE` em web/src/dom.js). Não visto em Windows nem Linux.
@@ -282,7 +282,7 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
   2. `server/trust.js`: as pastas confiáveis ficam em `state.json` (`trusted`). Na primeira execução desta versão, as pastas que já estavam nos recentes entram como suas, e os projetos criados por modelo do TeXugo também. A primeira abertura de uma pasta que traz `latexmkrc`, `.latexmkrc` ou `.claude/` com configurações mostra o aviso "Confia neste projeto?". *Cancelar* deixa a pasta fechada e pergunta de novo na próxima vez; *Confio, abrir* grava a resposta. Isso foi conferido na tela: o aviso aparece, *Cancelar* volta à tela inicial, e depois de *Confio* ele não aparece mais.
   3. Em pasta sem confiança, as ações de IA, o parecer, o R&R e o painel do Claude rodam com `--setting-sources user`, e o latexmk não é chamado para calcular `$out_dir` em Perl fora de uma compilação.
   4. O cartão de permissão mostra os campos inteiros, com rolagem, para toda ferramenta que não é de edição.
-  - Testes em test/trust.test.js. Ficou de fora: um `latexmkrc` que chegue por `git pull` com o projeto já aberto não dispara o aviso até a próxima abertura.
+  - Testes em test/trust.test.js. Também com o projeto aberto: um `latexmkrc` ou `.claude/` que chegue por pull, Sincronizar ou terminal dispara o aviso na hora. *Cancelar* fecha o projeto, perguntando antes pelo que não foi salvo. Conferido na tela.
 
 - **Classificação:** risco potencial (inerente às ferramentas; não testei exploração). **Gravidade:** média. **Esforço:** P a M.
 - **Evidência:**

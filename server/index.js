@@ -957,15 +957,25 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
 
 // Like Lattice: in a Git repository, keep LaTeX build files out of commits
 // by adding the missing patterns to .gitignore, once, in a marked block.
-// .bbl is left out on purpose: arXiv submissions often keep it.
-const GENERATED = ['*.aux', '*.log', '*.fls', '*.fdb_latexmk', '*.out', '*.toc', '*.lof', '*.lot', '*.blg', '*.bcf', '*.run.xml', '*.synctex.gz', '*.synctex(busy)', '*.nav', '*.snm', '*.vrb', '*.xdv', '*.texugo-tmp', '.texugo/'];
+// The .bbl and each document's own PDF are generated too: the submission
+// ZIP takes the .bbl from disk, not from Git, and coauthors compile their
+// own PDF. Figures in PDF stay tracked: only <document>.pdf is ignored.
+const GENERATED = ['*.bbl', '*.aux', '*.log', '*.fls', '*.fdb_latexmk', '*.out', '*.toc', '*.lof', '*.lot', '*.blg', '*.bcf', '*.run.xml', '*.synctex.gz', '*.synctex(busy)', '*.nav', '*.snm', '*.vrb', '*.xdv', '*.texugo-tmp', '.texugo/'];
 function ensureGitignore(root) {
   try {
     if (!fs.existsSync(path.join(root, '.git'))) return;
     const file = path.join(root, '.gitignore');
     const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
     const have = new Set(text.split('\n').map((l) => l.trim()));
-    const missing = GENERATED.filter((g) => !have.has(g));
+    const posix = (p) => '/' + path.relative(root, p).split(path.sep).join('/');
+    const docs = project.listDocuments(root);
+    const wanted = [...GENERATED, ...docs.map((d) => posix(d).replace(/\.tex$/, '.pdf'))];
+    // A latexmkrc output folder inside the project holds only build files.
+    for (const d of docs) {
+      const o = outputs(d);
+      for (const dir of [o.outDir, o.auxDir]) if (o.moved && dir !== o.dir && dir !== root && isInside(root, dir)) wanted.push(posix(dir) + '/');
+    }
+    const missing = [...new Set(wanted)].filter((g) => !have.has(g));
     if (!missing.length) return;
     const block = (text && !text.endsWith('\n') ? '\n' : '') + (text ? '\n' : '') + '# TeXugo: arquivos gerados pelo LaTeX\n' + missing.join('\n') + '\n';
     fs.appendFileSync(file, block);
