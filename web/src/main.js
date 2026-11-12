@@ -22,6 +22,7 @@ import { setupIde, mentionInClaude } from './ide.js';
 import { AgentPanel, setClaudeModels } from './agent.js';
 import { setBaseline } from './changes.js';
 import { installFocusTips } from './focustip.js';
+import { installRecovery } from './recovery.js';
 import { addReference } from './refs.js';
 import { compareDialog } from './compare.js';
 import { shortcutsDialog } from './shortcuts.js';
@@ -1564,6 +1565,7 @@ async function confirmLeave() {
   if (choice === 'cancel') return false;
   if (choice === 'save') return saveAll();
   for (const t of dirty) t.dirty = false;
+  await app.recovery?.clear();
   return true;
 }
 app.confirmLeave = confirmLeave;
@@ -1676,6 +1678,8 @@ async function openProject(root) {
     res.forEach((r) => r && S.docState.set(r.doc, { status: r.status, result: r, steps: [] }));
     refreshBuildUi();
   } catch {}
+  // Unsaved tabs of a session that ended without saving (crash, forced quit).
+  await app.recovery.offer();
 }
 app.openProject = openProject;
 
@@ -1959,6 +1963,7 @@ async function boot() {
   wireKeys();
   wireWindowEvents();
   installFocusTips();
+  app.recovery = installRecovery(app, S);
   connect();
   on('ws:open', () => S.project && (refreshGit(), checkDiskSoon(), call('broadcast', { msg: { type: 'pdfwin:ping' } }).catch(() => {})));
   window.addEventListener('focus', () => checkDiskSoon());

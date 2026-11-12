@@ -74,12 +74,11 @@ export function openSettings(app, S) {
   );
   const row = (...items) => h('div', { style: { display: 'flex', gap: '14px', alignItems: 'flex-end', flexWrap: 'wrap' } }, ...items);
   const field = (label, el) => h('div', { class: 'field', style: { marginBottom: '10px' } }, h('label', {}, label), el);
-  const preview = h('pre', { class: 'font-preview' }, '\\section{Introdução}\\label{sec:intro}\n$\\hat\\beta = 0{,}12$ ~ \\cite{smith2016spring} 0O1lI');
-  modal({
-    title: [icon('gear'), ' Preferências'],
-    body: h(
-      'div',
-      {},
+  const preview = h('pre', { class: 'font-preview' }, '\\section{Introdução}\\label{sec:intro}\n$\\hat\\beta = 0{,}12$ ~ \\cite{card1994minimum} 0O1lI');
+  // Five tabs instead of one long column, and a search that looks in all of
+  // them at once (PRE-LAUNCH-AUDIT.md, design pass).
+  const TABS = [
+    ['aparencia', 'Aparência', [
       h(
         'div',
         { style: { display: 'flex', gap: '14px' } },
@@ -112,7 +111,18 @@ export function openSettings(app, S) {
         field('Tamanho', num('mdSize', { min: 11, max: 24, step: 0.5, def: 15 })),
         field('Espaçamento entre linhas', num('mdLineHeight', { min: 1.1, max: 2.4, step: 0.05, def: 1.65 })),
       ),
-      h('h4', { class: 'set-h' }, 'Corretor gramatical'),
+    ]],
+    ['escrita', 'Escrita', [
+      check('vicios', 'Sublinhar vícios de escrita (tiques de IA), em português e inglês', () => {
+        viciosConfig.enabled = st.vicios !== false;
+        [app.view, app.split.view].forEach(refreshVicios);
+        app.renderStatus();
+      }),
+      check('mathPreview', 'Mostrar a equação desenhada acima da fórmula enquanto você edita', () => (mathPreview.on = st.mathPreview !== false)),
+      check('changeMarks', 'Marcar na margem as linhas alteradas desde a última compilação', () => document.body.classList.toggle('no-change-marks', !st.changeMarks)),
+      check('wrap', 'Quebrar linhas longas no editor', () => [app.view, app.split.view].forEach((v) => v.dispatch({ effects: app.wrapCompartment.reconfigure(st.wrap ? EditorView.lineWrapping : []) }))),
+    ]],
+    ['corretor', 'Corretor', [
       check('grammar', 'Sublinhar erros de ortografia (vermelho) e de gramática (azul) com o LanguageTool', () => app.grammarChanged()),
       row(
         field('Rigor', h('select', { onchange: (e) => ((st.grammarLevel = e.target.value), save(), app.grammarChanged()) }, [['picky', 'Rigoroso: aponta o máximo possível (padrão)'], ['default', 'Normal: só o que o LanguageTool tem certeza']].map(([v, l]) => h('option', { value: v, selected: (st.grammarLevel || 'picky') === v }, l)))),
@@ -126,22 +136,86 @@ export function openSettings(app, S) {
           ? h('button', { class: 'link', onclick: (e) => ((st.grammarWords = []), (st.grammarRules = []), save(), app.grammarChanged(), (e.target.parentElement.textContent = 'Dicionário e regras zerados.')) }, 'Zerar')
           : null,
       ),
-      h('h4', { class: 'set-h' }, 'Geral'),
-      check('vicios', 'Sublinhar vícios de escrita (tiques de IA), em português e inglês', () => {
-        viciosConfig.enabled = st.vicios !== false;
-        [app.view, app.split.view].forEach(refreshVicios);
-        app.renderStatus();
-      }),
-      check('mathPreview', 'Mostrar a equação desenhada acima da fórmula enquanto você edita', () => (mathPreview.on = st.mathPreview !== false)),
-      check('changeMarks', 'Marcar na margem as linhas alteradas desde a última compilação', () => document.body.classList.toggle('no-change-marks', !st.changeMarks)),
-      check('wrap', 'Quebrar linhas longas no editor', () => [app.view, app.split.view].forEach((v) => v.dispatch({ effects: app.wrapCompartment.reconfigure(st.wrap ? EditorView.lineWrapping : []) }))),
+    ]],
+    ['compilacao', 'Compilação', [
       check('autoCompile', 'Abas novas já vêm com "compilar ao salvar" ligado'),
       check('livePreview', 'Abas novas já vêm com a prévia ao vivo ligada (o PDF segue o que você digita)'),
       check('invertPdf', 'PDF escuro no tema escuro (só na tela; o arquivo não muda)'),
       row(field('Parar uma compilação que fica sem progresso por (segundos)', num('stallSeconds', { min: 30, max: 3600, step: 30, def: 180, width: '90px' }))),
       check('showUnderfull', 'Mostrar caixas "underfull" em Problemas'),
+    ]],
+    ['geral', 'Geral', [
       check('reopenLast', 'Reabrir o último projeto ao iniciar'),
       h('p', { class: 'faint', style: { marginTop: '14px', fontSize: '12px' } }, `TeXugo ${S.hello.version} · ${S.hello.tex || 'TeX não encontrado'}`),
-    ),
+    ]],
+  ];
+  let current = 'aparencia';
+  try {
+    current = localStorage.getItem('texugo-settings-tab') || current;
+  } catch {}
+  if (!TABS.some((t) => t[0] === current)) current = 'aparencia';
+  const panes = TABS.map(([id, , kids]) => h('div', { class: 'set-pane', role: 'tabpanel', id: 'set-pane-' + id, 'aria-labelledby': 'set-tab-' + id }, ...kids));
+  const tabs = TABS.map(([id, label], i) =>
+    h('button', { class: 'set-tab', role: 'tab', id: 'set-tab-' + id, 'aria-controls': 'set-pane-' + id, onclick: () => show(id), onkeydown: (e) => {
+      const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+      if (!d) return;
+      e.preventDefault();
+      const next = TABS[(i + d + TABS.length) % TABS.length][0];
+      show(next);
+      tabs.find((t) => t.id === 'set-tab-' + next).focus();
+    } }, label),
+  );
+  const empty = h('p', { class: 'faint set-empty', hidden: true }, 'Nenhuma preferência com esse nome.');
+  const fold = (x) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const search = h('input', { class: 'set-search', type: 'search', placeholder: 'Buscar preferência…', 'aria-label': 'Buscar preferência', oninput: () => filter() });
+  function show(id) {
+    current = id;
+    try {
+      localStorage.setItem('texugo-settings-tab', id);
+    } catch {}
+    search.value = '';
+    filter();
+  }
+  function filter() {
+    const q = fold(search.value.trim());
+    let any = false;
+    tabs.forEach((t, i) => {
+      const on = !q && TABS[i][0] === current;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      t.tabIndex = on || (q && i === 0) ? 0 : -1;
+      t.classList.toggle('on', on);
+    });
+    panes.forEach((p, i) => {
+      if (!q) {
+        p.hidden = TABS[i][0] !== current;
+        for (const c of p.children) c.hidden = false;
+        return;
+      }
+      // Searching: every tab at once, each row shown when its text (labels
+      // and option names) matches; a heading stays when a row under it does.
+      let shown = 0;
+      let heading = null;
+      for (const c of p.children) {
+        if (c.matches('h4')) {
+          heading = c;
+          c.hidden = true;
+          continue;
+        }
+        const hit = fold(c.textContent + ' ' + [...c.querySelectorAll('option')].map((o) => o.textContent).join(' ')).includes(q);
+        c.hidden = !hit;
+        if (hit) {
+          shown++;
+          if (heading) heading.hidden = false;
+        }
+      }
+      p.hidden = !shown;
+      if (shown) any = true;
+    });
+    empty.hidden = !q || any;
+  }
+  filter();
+  modal({
+    title: [icon('gear'), ' Preferências'],
+    body: h('div', { class: 'settings' }, h('div', { class: 'set-top' }, h('div', { class: 'set-tabs', role: 'tablist', 'aria-label': 'Seções das preferências' }, ...tabs), search), ...panes, empty),
   });
 }

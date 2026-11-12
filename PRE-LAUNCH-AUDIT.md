@@ -41,9 +41,9 @@ Feita no app Electron real, com perfil e projeto temporários (modelo *Artigo + 
 - ✅ **FEITO (12/11).** Barra do PDF e barra de atividades: quando um botão só de ícone recebe foco pelo teclado, um rótulo com o nome dele aparece ao lado (web/src/focustip.js). Com o mouse, continua a dica de sempre.
 - ✅ **FEITO (12/11).** O botão "Ir ao trecho no código" da barra do PDF, que só mostrava um aviso, saiu (dois cliques no PDF já levam ao código).
 - ✅ **FEITO (12/11).** A paleta vazia mostra os comandos usados por último e depois nove grupos: Compilar, Editar, Escrita, Projeto e arquivos, Referências, Coautores, Revisão e submissão, Claude, Janela e ajuda. Com texto digitado, a busca continua numa lista só, por relevância.
-- Preferências numa coluna longa (930 px de conteúdo em 600 visíveis); pedir abas ou busca.
+- ✅ **FEITO (12/11).** As Preferências ganharam cinco abas (Aparência, Escrita, Corretor, Compilação, Geral), com setas para trocar de aba e uma busca que procura em todas, nos rótulos e nos nomes das opções. A aba aberta fica guardada.
 - ✅ **FEITO (12/11).** As três seções da aba Revisão (Coautores, Pareceristas, Antes de enviar) recolhem. O estado fica guardado por seção, e o cabeçalho mostra quantas linhas pedem atenção.
-- ✅ **FEITO (12/11).** O bloco do `.gitignore` agora cobre `*.bbl`, o PDF de cada documento (`/paper.pdf`, `/slides/talk.pdf`) e a pasta de saída do `latexmkrc`. PDFs de figuras continuam no repositório (nada de `*.pdf`). O que já estava no Git continua lá. Teste em test/gitignore.test.js.
+- ✅ **FEITO (12/11).** O bloco do `.gitignore` agora cobre `*.pdf` (documentos e figuras, por decisão do autor), `*.bbl` e a pasta de saída do `latexmkrc`. O que já estava no Git continua lá. Teste em test/gitignore.test.js.
 - ✅ **FEITO (12/11).** Os modelos de artigo e de projeto agora citam Card e Krueger (1994) e Imbens e Lemieux (2008), com frases neutras, no lugar das referências sobre horário de verão.
 - ✅ **FEITO (12/11).** Nenhum texto de lista ou rótulo fica abaixo de 12 px. Os 37 usos de 11 e 11,5 px do CSS e 6 do JavaScript passaram para 12 px, e a etiqueta de documento na árvore foi para 11 px. Ficam menores só os selos numéricos da barra de atividades e o ponto de aba suja.
 - ✅ **FEITO (12/11).** "Mostrar no Finder", "Abrir no Preview", "Lixo do macOS" e "Instale o MacTeX" viram "Mostrar na pasta", "Abrir no leitor de PDF", "lixeira do sistema" e "TeX Live" fora do Mac (`IS_MAC`, `OPEN_PDF`, `TRASH_NOTE` em web/src/dom.js). Não visto em Windows nem Linux.
@@ -215,7 +215,9 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Correção:** resolver `fs.realpathSync(p)` quando o arquivo existe e gravar o temporário ao lado do destino real; copiar o modo com `fs.chmodSync(tmp, st.mode)` antes de renomear.
 - **Aceite:** o teste acima passa a dar `stillLink: true`, `sharedHasB: true` e modo 755.
 
-## I2. Não há recuperação do que não foi salvo quando o app cai
+## ✅ I2. Não há recuperação do que não foi salvo quando o app cai — **CORRIGIDO**
+
+- **Estado (12/11/2026):** a cada 20 s, e quando a janela perde o foco, as abas sujas são copiadas para `<dados do app>/recovery/<hash do projeto>/` (server/recovery.js, web/src/recovery.js), nunca para dentro do projeto. Ao abrir um projeto com cópias diferentes do disco, aparece *Recuperar alterações não salvas*, com o diff de cada arquivo, e os botões *Recuperar*, *Depois* e *Descartar as cópias*. Recuperar põe o texto na aba como alteração não salva. As cópias somem ao salvar ou ao descartar no diálogo de saída, e uma cópia igual ao disco é apagada sozinha. Testado no navegador: depois de digitar, derrubar o servidor e reabrir, a oferta veio com o texto certo; recuperar e salvar apagou a cópia. Teste em test/recovery.test.js. Não testado: matar o app Electron de verdade.
 
 - **Classificação:** risco potencial (não observei queda). **Gravidade:** média a alta. **Esforço:** M.
 - **Evidência:** o texto não salvo vive só na memória da janela. Não há salvamento automático nem cópia de recuperação. A prévia ao vivo ([web/src/live.js](web/src/live.js)) atualiza o PDF sem salvar, o que convida a ficar muito tempo sem ⌘S.
@@ -583,8 +585,8 @@ Esta auditoria cobre a primeira passada. O que fica de cada subitem:
 
 | Subitem | Feito aqui | Falta |
 |---|---|---|
-| Segurança: servidor local | Token e guardas de caminho verificados; lacunas em I7 e D7 | Aplicar I7; `test/api.test.js` |
-| Segurança: acesso a arquivos | I1, D7 | Resolver links na guarda de caminho |
+| Segurança: servidor local | Token e guardas de caminho verificados; lacunas em I7 e D7 | ✅ Feito em 12/11: I7 aplicado; `test/api.test.js` cobre token, Host, guardas de caminho, link para fora, conflito de escrita e salvar por link |
+| Segurança: acesso a arquivos | I1, D7 | ✅ A guarda já resolve links (`linkTargetOk`); coberto por `test/api.test.js` |
 | Segurança: comandos executados | Todos os `spawn` e `run` lidos: argumentos em lista, sem shell, com `--` no Git. O único shell é o do Médico do TeX, com pacotes validados por expressão regular | I8 (latexmkrc) |
 | Segurança: agentes | I8 | Teste do hook de projeto; cartão sem corte; item 4 |
 | Bugs | B1 a B4, I1 a I6, I14 | Corrigir |
@@ -592,7 +594,7 @@ Esta auditoria cobre a primeira passada. O que fica de cada subitem:
 | Interface em inglês | I9 | Teste de cobertura e passada manual |
 | Desempenho com papers grandes | I10, D2, D4, D8 e medições | Medir no app aberto: paper de 100 páginas com 40 arquivos, `.bib` de 1.500 entradas, 30 minutos de edição com prévia ao vivo, olhando memória e CPU |
 | Licenças | B7 | Gerar os avisos |
-| Página de privacidade | Apêndice B tem o conteúdo | Escrever e publicar; corrigir o README (I11) |
+| Página de privacidade | Apêndice B tem o conteúdo | ✅ Feito em 12/11: PRIVACIDADE.md e PRIVACY.md, com link nos dois READMEs. Falta publicar no site (item 9) |
 
 ## Item 9. Instaladores finais e site
 

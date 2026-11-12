@@ -973,3 +973,20 @@ button.chip:hover { filter: brightness(0.96); }
 
 /* Keyboard focus on an icon-only button shows its name (focustip.js). */
 .focus-tip { position: fixed; z-index: 3000; max-width: 280px; padding: 4px 8px; border-radius: 6px; background: var(--text); color: var(--bg); font-size: 12px; line-height: 1.35; pointer-events: none; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
+
+/* Preferências: tabs plus a search over every tab. */
+.settings { min-height: 380px; }
+.set-top { display: flex; align-items: center; gap: 10px; margin: -4px 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+.set-tabs { display: flex; gap: 2px; flex-wrap: wrap; }
+.set-tab { border: 0; background: transparent; color: var(--muted); padding: 5px 10px; border-radius: 6px; font: inherit; font-size: 13px; cursor: pointer; }
+.set-tab:hover { background: var(--sunken); color: var(--text); }
+.set-tab.on { background: var(--accent-soft); color: var(--accent-text); font-weight: 600; }
+.set-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.set-search { margin-left: auto; width: 190px; max-width: 100%; }
+.set-pane[hidden], .set-pane [hidden], .set-empty[hidden] { display: none !important; }
+.set-pane + .set-pane:not([hidden]) { margin-top: 10px; }
+
+/* Crash recovery offer. */
+.recovery-file { margin: 6px 0; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
+.recovery-file > summary { cursor: pointer; }
+.recovery-file > :not(summary) { margin-top: 6px; max-height: 240px; overflow: auto; }

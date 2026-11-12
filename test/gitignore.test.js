@@ -1,5 +1,5 @@
 // The .gitignore block TeXugo adds in a Git project: build files, the .bbl,
-// each document's own PDF and a latexmkrc output folder, never figure PDFs.
+// every PDF (documents and figures) and a latexmkrc output folder.
 import { test, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -16,7 +16,7 @@ const api = async (method, args) => {
   return r.json();
 };
 
-test('gitignore: .bbl, document PDFs and the latexmkrc out_dir', async () => {
+test('gitignore: .bbl, every PDF and the latexmkrc out_dir', async () => {
   const proj = path.join(TMP, 'proj');
   fs.mkdirSync(path.join(proj, '.git'), { recursive: true });
   fs.mkdirSync(path.join(proj, 'slides'));
@@ -28,8 +28,7 @@ test('gitignore: .bbl, document PDFs and the latexmkrc out_dir', async () => {
   fs.writeFileSync(path.join(proj, '.gitignore'), 'data/\n');
   await api('openProject', { root: proj });
   const lines = fs.readFileSync(path.join(proj, '.gitignore'), 'utf8').split('\n');
-  for (const want of ['data/', '*.bbl', '*.aux', '/paper.pdf', '/slides/talk.pdf', '/slides/build/']) assert.ok(lines.includes(want), want + ' in ' + JSON.stringify(lines));
-  assert.ok(!lines.some((l) => l === '*.pdf' || l.includes('map.pdf')), 'figures stay tracked');
+  for (const want of ['data/', '*.pdf', '*.bbl', '*.aux', '/slides/build/']) assert.ok(lines.includes(want), want + ' in ' + JSON.stringify(lines));
   // Opening again adds nothing.
   const before = fs.readFileSync(path.join(proj, '.gitignore'), 'utf8');
   await api('openProject', { root: proj });

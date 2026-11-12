@@ -4,7 +4,7 @@
 <p align="center"><i>Fierce with errors, gentle with you.</i></p>
 <p align="center"><a href="README.md">Português</a> · <b>English</b></p>
 
-TeXugo is a local LaTeX editor for the Mac. Your files stay on your disk and compiling is local, with your own TeX Live. Some optional features reach external services: the AI actions and the Claude panel (through your Claude Code, to Anthropic), reference search and checking (Crossref, OpenAlex, arXiv), your Git remote when syncing, the TeX Doctor when installing packages and, only if you choose it, the online LanguageTool. It is made for papers, research proposals, responses to referees, referee reports, Beamer slides, syllabi, exams, problem sets, reports and letters. It also opens Markdown files, with a side-by-side preview.
+TeXugo is a local LaTeX editor for the Mac. Your files stay on your disk and compiling is local, with your own TeX Live. Some optional features reach external services: the AI actions and the Claude panel (through your Claude Code, to Anthropic), reference search and checking (Crossref, OpenAlex, arXiv), your Git remote when syncing, the TeX Doctor when installing packages and, only if you choose it, the online LanguageTool. The full list, with what each one sends, is in [PRIVACY.md](PRIVACY.md). It is made for papers, research proposals, responses to referees, referee reports, Beamer slides, syllabi, exams, problem sets, reports and letters. It also opens Markdown files, with a side-by-side preview.
 
 The interface is in Portuguese by default; switch it to English in Preferências → Idioma (Preferences → Language). With the English interface, the templates come out in English too.
 

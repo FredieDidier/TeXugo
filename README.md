@@ -4,7 +4,7 @@
 <p align="center"><i>Bravo com os erros, manso com você.</i></p>
 <p align="center"><b>Português</b> · <a href="README.en.md">English</a></p>
 
-TeXugo é um editor LaTeX local para Mac. Os arquivos ficam no seu disco e a compilação é local, com o seu TeX Live. Alguns recursos opcionais consultam serviços externos: as ações de IA e o painel Claude (pelo seu Claude Code, para a Anthropic), a busca e a verificação de referências (Crossref, OpenAlex, arXiv), o remoto do Git ao sincronizar, o Médico do TeX ao instalar pacotes e, só se você escolher, o LanguageTool online. Serve para artigos, projetos de pesquisa, respostas aos pareceristas, pareceres, slides em Beamer, ementas, provas, listas de exercícios, relatórios e cartas. Também abre arquivos Markdown, com visualização ao lado.
+TeXugo é um editor LaTeX local para Mac. Os arquivos ficam no seu disco e a compilação é local, com o seu TeX Live. Alguns recursos opcionais consultam serviços externos: as ações de IA e o painel Claude (pelo seu Claude Code, para a Anthropic), a busca e a verificação de referências (Crossref, OpenAlex, arXiv), o remoto do Git ao sincronizar, o Médico do TeX ao instalar pacotes e, só se você escolher, o LanguageTool online. A lista completa, com o que vai em cada caso, está em [PRIVACIDADE.md](PRIVACIDADE.md). Serve para artigos, projetos de pesquisa, respostas aos pareceristas, pareceres, slides em Beamer, ementas, provas, listas de exercícios, relatórios e cartas. Também abre arquivos Markdown, com visualização ao lado.
 
 ## O que ele faz melhor
 
