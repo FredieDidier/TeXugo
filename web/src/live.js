@@ -4,6 +4,8 @@
 // See server/live.js for how the pass works.
 import { call, on } from './api.js';
 
+// Pause after the last key: 700 ms, or half the last pass when the paper is
+// slow, so a 10 s document is not recompiled nonstop while you type.
 const PAUSE_MS = 700;
 
 export function setupLive(app, S) {
@@ -33,7 +35,7 @@ export function setupLive(app, S) {
     if (!t || !t.livePreview || !t.root) return;
     const doc = t.root;
     clearTimeout(timers.get(doc));
-    timers.set(doc, setTimeout(() => run(doc), PAUSE_MS));
+    timers.set(doc, setTimeout(() => run(doc), Math.max(PAUSE_MS, ((S.live.get(doc) || {}).ms || 0) / 2)));
   }
 
   function setOn(t, val) {

@@ -215,7 +215,12 @@ export async function news(root, { since = 'visit', base = null } = {}) {
   }
   const localCommits = revs ? await commitsIn(root, revs, me) : [];
   const remote = upstream ? await commitsIn(root, ['HEAD..@{u}'], me) : [];
-  await Promise.all([...localCommits, ...remote].map((c) => addSections(root, c)));
+  // Each commit costs about three git processes: at most six commits at once,
+  // so 120 commits do not start 360 processes together (slow on Windows).
+  const queue = [...localCommits, ...remote];
+  await Promise.all(Array.from({ length: Math.min(6, queue.length) }, async () => {
+    while (queue.length) await addSections(root, queue.shift());
+  }));
   // Git paths are relative to the top of the repository; the app knows the
   // project by the path it opened (maybe a subfolder, maybe via a symlink).
   let prefix = '';
