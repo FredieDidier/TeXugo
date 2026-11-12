@@ -55,7 +55,8 @@ async function sourceReader(doc, source, tmp) {
   if (source.kind === 'git') {
     const root = await gitRoot(docDir);
     if (!root) throw new Error('Esta pasta não é um repositório Git.');
-    if (!/^[\w./~^@{}-]+$/.test(source.rev || '')) throw new Error('Versão do Git inválida.');
+    // No leading '-': git would read it as an option.
+    if (!/^[\w./~^@{}-]+$/.test(source.rev || '') || source.rev.startsWith('-')) throw new Error('Versão do Git inválida.');
     const prefix = path.relative(fs.realpathSync(root), fs.realpathSync(docDir));
     const read = async (rel) => {
       const p = path.posix.normalize(path.join(prefix, rel).split(path.sep).join('/'));

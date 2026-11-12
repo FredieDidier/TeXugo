@@ -21,8 +21,9 @@ const when = (iso) => {
   if (m < 60 * 24) return `há ${Math.round(m / 60)} h`;
   return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
-const isMine = (me, x) => !!me && ((me.email && x.email === me.email) || (!me.email && x.author === me.name));
-const avatar = (me, x) => h('span', { class: 'cm-avatar', style: { '--c': authorColor({ author: x.author, email: x.email, me: isMine(me, x) }) }, title: x.author }, initials(x.author));
+// By name: comment files carry no e-mail (PRE-LAUNCH-AUDIT.md, item 7).
+const isMine = (me, x) => !!me && !!me.name && x.author === me.name;
+const avatar = (me, x) => h('span', { class: 'cm-avatar', style: { '--c': authorColor({ author: x.author, me: isMine(me, x) }) }, title: x.author }, initials(x.author));
 
 // Decorations: the open threads of this file, and where each one is.
 export const commentsField = StateField.define({

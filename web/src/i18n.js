@@ -326,7 +326,7 @@ const EN = {
   'Com serifa (como um livro)': 'Serif (like a book)', 'Monoespaçada': 'Monospaced', 'Geral': 'General', 'Padrão (SF Mono)': 'Default (SF Mono)',
   'Quebrar linhas longas no editor': 'Wrap long lines in the editor', 'Abas novas já vêm com "compilar ao salvar" ligado': 'New tabs start with "compile on save" on',
   'PDF escuro no tema escuro (só na tela; o arquivo não muda)': 'Dark PDF in the dark theme (screen only; the file does not change)',
-  'Mostrar caixas "underfull" em Problemas': 'Show "underfull" boxes in Problems', 'Reabrir o último projeto ao iniciar': 'Reopen the last project at startup', 'Arquivo grande no commit': 'Large file in the commit', 'Este arquivo novo é grande:': 'This new file is large:', 'Estes arquivos novos são grandes:': 'These new files are large:', 'O GitHub recusa arquivos acima de 100 MB. Se for dado ou saída gerada, ponha no .gitignore.': 'GitHub refuses files over 100 MB. If it is data or generated output, add it to .gitignore.', 'Incluir mesmo assim': 'Include anyway', 'Parar uma compilação que fica sem progresso por (segundos)': 'Stop a build that makes no progress for (seconds)',
+  'Mostrar caixas "underfull" em Problemas': 'Show "underfull" boxes in Problems', 'Reabrir o último projeto ao iniciar': 'Reopen the last project at startup', 'Remover e-mails dos comentários': 'Remove e-mails from comments', 'Nenhum comentário tinha e-mail.': 'No comment had an e-mail.', 'Nome de pasta inválido.': 'Invalid folder name.', 'Arquivo grande no commit': 'Large file in the commit', 'Este arquivo novo é grande:': 'This new file is large:', 'Estes arquivos novos são grandes:': 'These new files are large:', 'O GitHub recusa arquivos acima de 100 MB. Se for dado ou saída gerada, ponha no .gitignore.': 'GitHub refuses files over 100 MB. If it is data or generated output, add it to .gitignore.', 'Incluir mesmo assim': 'Include anyway', 'Parar uma compilação que fica sem progresso por (segundos)': 'Stop a build that makes no progress for (seconds)',
   'Idioma': 'Language',
   'Falta instalar: ': 'Missing: ', 'O TeX Live não foi encontrado. ': 'TeX Live was not found. ', 'Instale o MacTeX: ': 'Install MacTeX: ', '. O Médico do TeX mostra os detalhes.': '. The TeX doctor shows the details.',
   'Tela inicial: modelos, abrir pasta e recentes': 'Start screen: templates, open folder and recent projects',
@@ -451,6 +451,7 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  [/^E-mail removido de (\d+) comentários?\. Faça um commit para levar a limpeza ao repositório\.$/, (_, n) => `E-mail removed from ${n} comment${n === '1' ? '' : 's'}. Commit to take the cleanup to the repository.`],
   [/^Arquivo novo grande: (.*)\.$/s, 'Large new file: $1.'],
   [/^Já há uma ação de IA em andamento neste projeto\.$/, 'An AI action is already running in this project.'],
   [/^O pull achou mudanças que conflitam com as suas; nada foi perdido \(o commit está feito\)\. Resolva pelo GitHub Desktop ou pelo terminal\. (.*)$/s, 'The pull found changes that conflict with yours; nothing was lost (the commit is done). Resolve it in GitHub Desktop or the terminal. $1'],

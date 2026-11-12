@@ -158,6 +158,16 @@ app.whenReady().then(async () => {
     await sleep(6500);
     check('D6: the error is still there after 6 s, and its × closes it', (await js(`const t = document.querySelector('.toast.error'); if (!t) return false; t.querySelector('.toast-x').click(); return !document.querySelector('.toast.error');`)) === true);
 
+    // ---- I7: raw HTML in a Markdown file renders as text only
+    fs.writeFileSync(path.join(PROJ, 'evil.md'), '# Notes\n\n<script>window.__pwned = 1</script>\n<img src="x" onerror="window.__pwned = 2">\n<base href="https://example.org/">\n<style>body { display: none }</style>\n<form action="https://example.org"><input name="q"></form>\n<a href="javascript:window.__pwned=3">link</a> <details><summary>More</summary>kept</details>\n');
+    await sleep(1200);
+    await js(`[...document.querySelectorAll('.tree-row')].find((r) => r.innerText.trim() === 'evil.md').click(); return true;`);
+    check('I7: the Markdown preview opens', await until(`return document.querySelector('.markdown-body')?.innerText.includes('Notes');`, 5000));
+    await sleep(500);
+    check('I7: no script, handler, base, style or form survives', await js(`const b = document.querySelector('.markdown-body'); return !window.__pwned && !b.querySelector('script, style, base, form, [onerror]') && !b.querySelector('a[href^="javascript"]') && !!b.querySelector('details summary');`));
+    await js(`[...document.querySelectorAll('.tab')].find((t) => t.innerText.includes('body.tex')).click(); return true;`);
+    await sleep(400);
+
     // ---- B3: the file changes on disk under unsaved edits
     await focusEditor();
     await type(' MINE');

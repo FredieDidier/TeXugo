@@ -141,10 +141,10 @@ function autoItems(d, j, hasDoc) {
   );
   add(
     data,
-    d.big.length ? 'warn' : 'info',
+    d.big.length || d.comments ? 'warn' : 'info',
     'README',
     L('Tamanho do pacote', 'Package size'),
-    L(`A pasta tem ${size(d.total)} (faixa do README: ${d.bucket}), ${plural(d.fileCount, 'arquivo', 'arquivos')}${d.truncated ? ', parei de contar' : ''}.${d.big.length ? ` ${plural(d.big.length, 'arquivo passa', 'arquivos passam')} de 2 GB.` : ''}${d.junk.length ? ` Tire do ZIP ${plural(d.junk.length, 'arquivo', 'arquivos')} de sistema (.DS_Store, .Rhistory…).` : ''}`, `The folder holds ${size(d.total)} (README range: ${d.bucket}), ${plural(d.fileCount, 'file', 'files')}${d.truncated ? ', stopped counting' : ''}.${d.big.length ? ` ${plural(d.big.length, 'file is', 'files are')} over 2 GB.` : ''}${d.junk.length ? ` Leave out of the ZIP ${plural(d.junk.length, 'system file', 'system files')} (.DS_Store, .Rhistory…).` : ''}`),
+    L(`A pasta tem ${size(d.total)} (faixa do README: ${d.bucket}), ${plural(d.fileCount, 'arquivo', 'arquivos')}${d.truncated ? ', parei de contar' : ''}.${d.big.length ? ` ${plural(d.big.length, 'arquivo passa', 'arquivos passam')} de 2 GB.` : ''}${d.junk.length ? ` Tire do ZIP ${plural(d.junk.length, 'arquivo', 'arquivos')} de sistema (.DS_Store, .Rhistory…).` : ''}${d.comments ? ' Tire do pacote a pasta .texugo-comments (os comentários entre os autores).' : ''}`, `The folder holds ${size(d.total)} (README range: ${d.bucket}), ${plural(d.fileCount, 'file', 'files')}${d.truncated ? ', stopped counting' : ''}.${d.big.length ? ` ${plural(d.big.length, 'file is', 'files are')} over 2 GB.` : ''}${d.junk.length ? ` Leave out of the ZIP ${plural(d.junk.length, 'system file', 'system files')} (.DS_Store, .Rhistory…).` : ''}${d.comments ? ' Leave the .texugo-comments folder (the authors’ comments) out of the package.' : ''}`),
     [...d.big, ...d.junk.map((rel) => ({ rel }))].map((x) => ({ rel: x.rel, abs: `${d.root}/${x.rel}` })),
   );
 

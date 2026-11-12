@@ -3,6 +3,7 @@
 import { marked } from 'marked';
 import { fileUrl, call } from './api.js';
 import { dirname, joinPath } from './dom.js';
+import { sanitizeHtml } from './sanitize.js';
 
 marked.setOptions({ gfm: true, breaks: false });
 
@@ -26,7 +27,7 @@ export function renderMarkdown(el, text, filePath, app) {
       .join('');
     if (rows) front = `<table class="front-matter">${rows}</table>`;
   }
-  el.innerHTML = front + marked.parse(text);
+  el.innerHTML = front + sanitizeHtml(marked.parse(text));
   el.querySelectorAll('img').forEach((img) => {
     const p = resolve(baseDir, img.getAttribute('src') || '');
     if (p) img.src = fileUrl(p);

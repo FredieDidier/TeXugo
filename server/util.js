@@ -112,6 +112,35 @@ export async function which(bin) {
   return found;
 }
 
+// Where a path really points: symbolic links resolved, for a path that does
+// not exist yet through its nearest existing folder.
+export function realPath(p) {
+  let cur = path.resolve(p);
+  const rest = [];
+  for (;;) {
+    try {
+      return path.join(fs.realpathSync(cur), ...rest.reverse());
+    } catch {
+      const up = path.dirname(cur);
+      if (up === cur) return path.resolve(p);
+      rest.push(path.basename(cur));
+      cur = up;
+    }
+  }
+}
+
+// A symbolic link inside a project may point outside it: a shared .bib in
+// ~/Dropbox is common and stays allowed. What it may not reach is outside
+// the home folder or a hidden folder of it (~/.ssh, ~/.aws, ~/.config):
+// a cloned repository can carry such a link.
+export function linkTargetOk(roots, p) {
+  const real = realPath(p);
+  if (roots.some((r) => isInside(realPath(r), real))) return true;
+  const home = os.homedir();
+  if (!isInside(home, real)) return false;
+  return !path.relative(home, real).split(path.sep).some((seg) => seg.startsWith('.'));
+}
+
 // True when `child` is `parent` or lies inside it (after resolving ..).
 export function isInside(parent, child) {
   const rel = path.relative(path.resolve(parent), path.resolve(child));

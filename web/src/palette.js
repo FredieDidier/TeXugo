@@ -2,7 +2,7 @@
 import { AI_ACTIONS, runAiAction } from './ai.js';
 import { call } from './api.js';
 import { tr } from './i18n.js';
-import { h, clear, icon, fileIcon, relPath, basename, REVEAL } from './dom.js';
+import { h, clear, icon, fileIcon, relPath, basename, REVEAL, toast } from './dom.js';
 import { openSettings } from './settings.js';
 import { newProjectDialog, showWelcome, cloneDialog } from './welcome.js';
 import { markDialog, feedbackDialog } from './sent.js';
@@ -31,6 +31,16 @@ function commands(app, S) {
     { t: 'Buscar no projeto', k: '⌘⇧F', i: 'search', run: () => app.sidebar.show('search') },
     { t: 'Referências do projeto (.bib, verificar no Crossref)', kw: 'bib bibtex citar crossref doi papers bibliografia verificar checar', i: 'book', run: () => app.sidebar.show('refs') },
     { t: 'Comentar o trecho selecionado', kw: 'comentário comentar nota coautor anotação discussão', i: 'comment', run: () => app.comments.add(app.view, app.activeTab()) },
+    {
+      t: 'Remover e-mails dos comentários',
+      kw: 'comentários email e-mail privacidade limpar autor',
+      i: 'comment',
+      run: async () => {
+        const n = await call('commentsStripEmails', { root: S.project.root });
+        toast(n ? `E-mail removido de ${n} comentário${n === 1 ? '' : 's'}. Faça um commit para levar a limpeza ao repositório.` : 'Nenhum comentário tinha e-mail.', 'ok', 6000);
+        app.comments.load();
+      },
+    },
     { t: 'Comentários no texto (seus e dos coautores)', kw: 'comentários comentário coautor discussão responder resolver', i: 'comment', run: () => app.bottom.show('comentarios') },
     { t: 'Marcar a versão enviada (para ler o retorno contra ela)', kw: 'enviar enviada versão marcar coautor amigo leitor retorno sugestões', i: 'papers', run: () => markDialog(app, S) },
     { t: 'Recebi um retorno: ler as sugestões contra a versão enviada', kw: 'retorno sugestões recebi versão enviada comparar coautor amigo leitor pdf anotado', i: 'down', run: () => feedbackDialog(app, S) },

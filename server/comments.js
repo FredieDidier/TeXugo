@@ -9,6 +9,7 @@ import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { whoami } from './coauthors.js';
 import { locate } from './anchor.js';
+import { isInside, linkTargetOk } from './util.js';
 
 export const DIR = '.texugo-comments';
 const ID = /^[0-9]{8}-[0-9]{6}-[0-9a-f]{6}$/;
@@ -32,7 +33,44 @@ export async function me(root) {
 function read(root, id) {
   return JSON.parse(fs.readFileSync(fileOf(root, id), 'utf8'));
 }
+// Comment files travel with the repository, and from there to places where
+// nobody expects an e-mail address (a ZIP to a coauthor, a replication
+// package, a repository made public). The name is enough to tell authors
+// apart; older files that still carry `email` lose it when rewritten.
+export function withoutEmail(c) {
+  const strip = (x) => {
+    if (!x || typeof x !== 'object') return x;
+    const { email, ...rest } = x;
+    return rest;
+  };
+  return { ...strip(c), replies: (c.replies || []).map(strip), resolved: c.resolved ? strip(c.resolved) : c.resolved };
+}
+const hasEmail = (c) => 'email' in c || (c.replies || []).some((r) => r && 'email' in r) || !!(c.resolved && 'email' in c.resolved);
+
+// "Remover e-mails dos comentários": rewrites the files that still have one.
+export function stripEmails(root) {
+  let n = 0;
+  let names = [];
+  try {
+    names = fs.readdirSync(dirOf(root)).filter((f) => f.endsWith('.json'));
+  } catch {
+    return 0;
+  }
+  for (const f of names) {
+    const id = f.slice(0, -5);
+    if (!ID.test(id)) continue;
+    try {
+      const c = read(root, id);
+      if (!hasEmail(c)) continue;
+      write(root, c);
+      n++;
+    } catch {}
+  }
+  return n;
+}
+
 function write(root, c) {
+  c = withoutEmail(c);
   fs.mkdirSync(dirOf(root), { recursive: true });
   // One key per line and a final newline: readable diffs in Git.
   fs.writeFileSync(fileOf(root, c.id), JSON.stringify(c, null, 2) + '\n');
@@ -61,6 +99,8 @@ export async function list(root) {
     }
     if (!c || !ID.test(c.id) || !c.file) continue;
     const abs = path.join(root, c.file);
+    // The JSON comes with the repository: a "file" of ../../x is not ours to read.
+    if (!isInside(root, abs) || !linkTargetOk([root], abs)) continue;
     if (!texts.has(abs)) {
       try {
         texts.set(abs, fs.readFileSync(abs, 'utf8'));
@@ -70,10 +110,10 @@ export async function list(root) {
     }
     const text = texts.get(abs);
     const at = text == null ? null : locate(text, c.anchor);
-    out.push({ ...c, path: abs, at });
+    out.push({ ...withoutEmail(c), path: abs, at });
   }
   out.sort((a, b) => a.file.localeCompare(b.file) || (a.at ? a.at.from : 1e12) - (b.at ? b.at.from : 1e12) || a.date.localeCompare(b.date));
-  return { me: await me(root), items: out };
+  return { me: { name: (await me(root)).name }, items: out };
 }
 
 export async function create(root, { file, anchor, text }) {
@@ -85,7 +125,6 @@ export async function create(root, { file, anchor, text }) {
     file: path.relative(root, file).split(path.sep).join('/'),
     anchor: { quote: anchor.quote.slice(0, 2000), before: anchor.before || '', after: anchor.after || '', line: anchor.line || 1 },
     author: who.name,
-    email: who.email,
     date: new Date().toISOString(),
     text: text.trim(),
     replies: [],
@@ -98,14 +137,14 @@ export async function reply(root, id, text) {
   if (!text || !text.trim()) throw new Error('Escreva a resposta.');
   const c = read(root, id);
   const who = await me(root);
-  c.replies = [...(c.replies || []), { author: who.name, email: who.email, date: new Date().toISOString(), text: text.trim() }];
+  c.replies = [...(c.replies || []), { author: who.name, date: new Date().toISOString(), text: text.trim() }];
   return write(root, c);
 }
 
 export async function resolve(root, id, done) {
   const c = read(root, id);
   const who = await me(root);
-  c.resolved = done ? { author: who.name, email: who.email, date: new Date().toISOString() } : null;
+  c.resolved = done ? { author: who.name, date: new Date().toISOString() } : null;
   return write(root, c);
 }
 

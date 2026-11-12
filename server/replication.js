@@ -310,6 +310,8 @@ export async function scan(root, { doc = null } = {}) {
     exhibits,
     dataCites: dataCitations(bibs),
     junk: cap(files.filter((f) => JUNK.test(f.rel)).map((f) => f.rel), 50),
+    // The authors' own discussion (TeXugo comments) is not part of the package.
+    comments: fs.existsSync(path.join(root, '.texugo-comments')),
     big,
   };
 }

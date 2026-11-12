@@ -18,7 +18,7 @@ import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
 import { LiveManager, overlayPath, realPath } from './live.js';
 import { Grammar } from './grammar.js';
-import { isInside, dataDir, run, which, toolEnv, writeKeepingLink, refreshTools } from './util.js';
+import { isInside, dataDir, run, which, toolEnv, writeKeepingLink, refreshTools, linkTargetOk } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
 import * as replication from './replication.js';
@@ -93,7 +93,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
   live.on('event', broadcast);
   const grammar = new Grammar(broadcast);
 
-  const allowed = (p) => typeof p === 'string' && [...openProjects].some((r) => isInside(r, p));
+  const allowed = (p) => typeof p === 'string' && [...openProjects].some((r) => isInside(r, p)) && linkTargetOk([...openProjects], p);
   // The paper library lives in the app's data folder: readable (PDF views,
   // Preview) though it is in no project.
   const readable = (p) => allowed(p) || (typeof p === 'string' && isInside(library.libDir(), path.resolve(p)));
@@ -472,6 +472,10 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       mustAllow(root);
       return comments.resolve(root, id, !!done);
     },
+    async commentsStripEmails({ root }) {
+      mustAllow(root);
+      return comments.stripEmails(root);
+    },
     async commentReanchor({ root, id, anchor }) {
       mustAllow(root);
       return comments.reanchor(root, id, anchor);
@@ -504,6 +508,8 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       return api.openProject({ root: target });
     },
     async createProject({ template, parent, name, fields, lang }) {
+      // A folder name, not a path: "../x" would create it outside `parent`.
+      if (typeof name !== 'string' || !name.trim() || name === '.' || name === '..' || /[\\/\0]/.test(name)) throw httpError(400, 'Nome de pasta inválido.');
       const target = path.join(path.resolve(parent), name);
       if (fs.existsSync(target) && fs.readdirSync(target).length) throw httpError(409, 'A pasta já existe e não está vazia.');
       createFromTemplate(template, target, fields || {}, lang);
@@ -822,6 +828,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       // DNS-rebinding guard: only accept our own host names.
       const host = (req.headers.host || '').split(':')[0];
       if (!['127.0.0.1', 'localhost'].includes(host)) return send(res, 403, 'forbidden');
+      res.setHeader('X-Content-Type-Options', 'nosniff');
 
       if (url.pathname.startsWith('/api/')) {
         if (req.method !== 'POST') return send(res, 405, 'POST only');
@@ -841,6 +848,8 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
         res.writeHead(200, {
           'content-type': MIME[path.extname(p).toLowerCase()] || 'application/octet-stream',
           'cache-control': 'no-store',
+          // A project's own .html or .svg opened by URL runs nothing here.
+          'content-security-policy': 'sandbox',
         });
         return fs.createReadStream(p).pipe(res);
       }
@@ -849,7 +858,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       if (rel === '/') rel = '/index.html';
       const file = path.join(DIST, path.normalize(rel));
       if (!isInside(DIST, file) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) return send(res, 404, 'not found');
-      res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' });
+      res.writeHead(200, { 'content-type': MIME[path.extname(file)] || 'application/octet-stream', 'cache-control': 'no-store', ...(file.endsWith('.html') ? { 'content-security-policy': CSP } : {}) });
       fs.createReadStream(file).pipe(res);
     } catch (err) {
       const status = err.status || 500;
@@ -862,7 +871,11 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
   server.on('upgrade', (req, socket, head) => {
     const url = new URL(req.url, 'http://127.0.0.1');
     const host = (req.headers.host || '').split(':')[0];
-    if (url.pathname !== '/ws' || url.searchParams.get('t') !== token || !['127.0.0.1', 'localhost'].includes(host)) {
+    // Only our own page: a browser tab elsewhere sends its own Origin (this
+    // also guards --dev, whose token is the fixed "dev").
+    const origin = req.headers.origin;
+    const ownOrigin = !origin || /^http:\/\/(127\.0\.0\.1|localhost):(\d+)$/.test(origin) && Number(origin.split(':')[2]) === server.address().port;
+    if (url.pathname !== '/ws' || url.searchParams.get('t') !== token || !['127.0.0.1', 'localhost'].includes(host) || !ownOrigin) {
       socket.destroy();
       return;
     }
@@ -967,6 +980,10 @@ function send(res, status, text) {
   res.end(text);
 }
 
+// The page's policy, also sent as a header (the <meta> copy cannot carry
+// frame-ancestors and is the only barrier if a page ever loses it).
+export const CSP = "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:; connect-src 'self' ws://127.0.0.1:* ws://localhost:*; font-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'";
+
 function sendJson(res, status, obj) {
   res.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
   res.end(JSON.stringify(obj));
@@ -977,7 +994,12 @@ function readBody(req) {
     let data = '';
     req.on('data', (c) => {
       data += c;
-      if (data.length > 50 * 1024 * 1024) reject(httpError(413, 'too large'));
+      if (data.length > 50 * 1024 * 1024) {
+        // Stop reading: otherwise the rest still arrives and piles up.
+        data = '';
+        reject(httpError(413, 'too large'));
+        req.destroy();
+      }
     });
     req.on('end', () => resolve(data));
     req.on('error', reject);
