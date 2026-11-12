@@ -1,0 +1,47 @@
+# Portuguese literals the i18n test lets through, one per line, written as the
+# test prints them (without the file:line). Each group says why.
+
+# Pieces of sentences built in code: the whole sentence is translated by a
+# pattern in web/src/i18n.js and checked in RUNTIME (test/i18n.test.js).
+"linhas ${…}–${…}"
+" · sem SyncTeX: linhas aproximadas pelo texto"
+"${…} referência${…} como ?? no PDF."
+" (último commit)"
+"vai para o Lixo do macOS (dá para recuperar de lá)."
+"vai para a lixeira do sistema (dá para recuperar de lá)."
+"${…} linhas coladas na tabela"
+" Falta \\usepackage{booktabs} no preâmbulo."
+". O PDF mostra a última versão boa."
+" na linha ${…}"
+"${…} no remoto, ainda não baixado${…}."
+"${…} no remoto, ainda não baixado${…}"
+"Não instalado. Download de ${…}; ocupa ${…} depois de descompactado."
+" · o arquivo não existe mais no disco"
+"${…} correç${…} gravada${…} em ${…}. ⌘Z não desfaz: use o Git ou edite o .bib."
+" O Claude está lendo ${…} e escrevendo o parecer… ${…}:${…}  "
+"${…} em aberto · último: ${…} ${…}"
+" O Claude está lendo os pareceres e as mudanças… ${…}:${…}. Pode fechar esta janela; o arquivo abre quando ficar pronto. "
+", ${…} ainda a fazer (em vermelho)"
+" Compile o paper pelo TeXugo para as mudanças ganharem a página."
+" Atenção: ${…} páginas no teste, ${…} no PDF original."
+" (${…} página${…})"
+"${…} arquivo${…} de fora da pasta do documento entr${…} no ZIP, e os caminhos foram ajustados só nas cópias (seus arquivos não mudaram):"
+"; ${…} já estava${…} lá"
+"; ${…} já estava${…} lá (mesma chave, DOI ou título)"
+" (código ${…})"
+"código ${…}"
+"Falta espaço em disco: são precisos ${…} livres e há ${…}."
+"O DOI é de ${…}, não do artigo publicado."
+"Sem permissão para clonar. Repositório privado? Entre na conta pelo GitHub Desktop ou use o endereço SSH. ("
+
+# The Portuguese branch of a getLang() choice (web/src/review.js, the font
+# sample in web/src/settings.js): the English branch sits next to it.
+"Um parecerista apontou, em ${…}:\n“${…}”${…}\n\nComo você resolveria? Proponha a mudança no texto."
+"\nSugestão: ${…}"
+"Introdução"
+
+# Never on screen: a LanguageTool rule id, a comment written into
+# .gitignore, the User-Agent sent to Crossref, OpenAlex and arXiv.
+"EM_QUE_ONDE_NO_QUAL"
+"# TeXugo: arquivos gerados pelo LaTeX\n"
+"TeXugo (LaTeX editor; https://github.com/FredieDidier/TeXugo)"

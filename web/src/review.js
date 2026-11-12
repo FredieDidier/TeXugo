@@ -4,7 +4,7 @@
 import { call } from './api.js';
 import { h, clear, icon, basename, relPath, toast, modal } from './dom.js';
 import { claudeChoice, CLAUDE_MODELS, CLAUDE_EFFORTS } from './agent.js';
-import { getLang } from './i18n.js';
+import { getLang, locale } from './i18n.js';
 
 const REC = { reject: 'rejeitar', 'major revision': 'revisão maior', 'minor revision': 'revisão menor', accept: 'aceitar' };
 const KIND = { major: { label: 'Principal', cls: 'err' }, minor: { label: 'Menor', cls: 'warn' }, typo: { label: 'Redação', cls: 'muted' } };
@@ -97,7 +97,12 @@ export function renderReviewPanel(app, S, body) {
     app.sidebar.show('claude');
     const a = app.agent;
     if (!a) return;
-    a.input.value = `Um parecerista apontou, em ${relPath(S.project.root, p.file)}:${p.line}:\n“${p.comment}”${p.suggestion ? `\nSugestão: ${p.suggestion}` : ''}\n\nComo você resolveria? Proponha a mudança no texto.`;
+    // A message to Claude, typed for the user in the UI language.
+    const where = `${relPath(S.project.root, p.file)}:${p.line}`;
+    a.input.value =
+      getLang() === 'en'
+        ? `A referee pointed out, at ${where}:\n“${p.comment}”${p.suggestion ? `\nSuggestion: ${p.suggestion}` : ''}\n\nHow would you address it? Propose the change in the text.`
+        : `Um parecerista apontou, em ${where}:\n“${p.comment}”${p.suggestion ? `\nSugestão: ${p.suggestion}` : ''}\n\nComo você resolveria? Proponha a mudança no texto.`;
     a.input.focus();
   };
   clear(
@@ -110,7 +115,7 @@ export function renderReviewPanel(app, S, body) {
         { class: 'review-head' },
         h('b', {}, `Parecer de ${basename(rep.doc)}`),
         h('span', { class: 'chip' }, REC[String(rep.recommendation).toLowerCase()] || rep.recommendation || '—'),
-        h('span', { class: 'faint' }, `${open} de ${rep.points.length} em aberto · ${new Date(rep.date).toLocaleString('pt-BR').slice(0, 16)}${rep.journal ? ' · ' + rep.journal : ''}`),
+        h('span', { class: 'faint' }, `${open} de ${rep.points.length} em aberto · ${new Date(rep.date).toLocaleString(locale()).slice(0, 16)}${rep.journal ? ' · ' + rep.journal : ''}`),
         h('span', { style: { flex: 1 } }),
         h('button', { class: 'btn sm', onclick: async () => toast('Salvo: ' + relPath(S.project.root, await call('reviewSaveMd', { root: S.project.root, doc: rep.doc })), 'ok') }, 'Salvar .md'),
         h('button', { class: 'btn sm', onclick: () => reviewDialog(app, S) }, 'Novo parecer'),

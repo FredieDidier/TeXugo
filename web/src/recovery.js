@@ -3,6 +3,7 @@
 // (server/recovery.js). When a project opens with copies that differ from
 // the disk, the app offers them back with the differences. Nothing is ever
 // written to the user's file until they save.
+import { locale } from './i18n.js';
 import { call } from './api.js';
 import { h, toast, modal, relPath } from './dom.js';
 import { fileDiff } from './ide.js';
@@ -50,7 +51,7 @@ export function installRecovery(app, S) {
     }
     if (!copies.length) return;
     const root = S.project.root;
-    const when = (ms) => new Date(ms).toLocaleString(S.settings.lang === 'en' ? 'en-GB' : 'pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    const when = (ms) => new Date(ms).toLocaleString(locale(), { dateStyle: 'short', timeStyle: 'short' });
     const body = h(
       'div',
       { class: 'recovery' },

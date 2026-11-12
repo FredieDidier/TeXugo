@@ -1,6 +1,7 @@
 // Git panel backend: status, diff, stage/commit, pull/push, history. Uses
 // the system git, so credentials come from the macOS keychain helper or
 // GitHub Desktop's configuration, as in the terminal.
+import { L } from './lang.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { run } from './util.js';
@@ -109,13 +110,16 @@ export async function autoMessage(root) {
     const file = st === 'R' || st === 'C' ? (i += 2, parts[i]) : parts[++i];
     (groups[st] || groups.M).push(path.basename(file || ''));
   }
-  const list = (names) => (names.length === 1 ? names[0] : names.length === 2 ? `${names[0]} e ${names[1]}` : `${names[0]}, ${names[1]} e mais ${names.length - 2}`);
+  // In the UI language: the message goes to the shared history.
+  const and = L('e', 'and');
+  const list = (names) => (names.length === 1 ? names[0] : names.length === 2 ? `${names[0]} ${and} ${names[1]}` : `${names[0]}, ${names[1]} ${L('e mais', 'and')} ${names.length - 2}${L('', ' more')}`);
+  const verb = (pt, en, first) => (first ? L(pt, en) : L(pt, en).toLowerCase());
   const out = [];
-  if (groups.M.length) out.push(`Atualiza ${list(groups.M)}`);
-  if (groups.A.length) out.push(`${out.length ? 'adiciona' : 'Adiciona'} ${list(groups.A)}`);
-  if (groups.D.length) out.push(`${out.length ? 'remove' : 'Remove'} ${list(groups.D)}`);
-  if (groups.R.length) out.push(`${out.length ? 'renomeia' : 'Renomeia'} ${list(groups.R)}`);
-  return out.join('; ') || 'Atualiza o projeto';
+  if (groups.M.length) out.push(`${verb('Atualiza', 'Update', !out.length)} ${list(groups.M)}`);
+  if (groups.A.length) out.push(`${verb('Adiciona', 'Add', !out.length)} ${list(groups.A)}`);
+  if (groups.D.length) out.push(`${verb('Remove', 'Remove', !out.length)} ${list(groups.D)}`);
+  if (groups.R.length) out.push(`${verb('Renomeia', 'Rename', !out.length)} ${list(groups.R)}`);
+  return out.join('; ') || L('Atualiza o projeto', 'Update the project');
 }
 
 // One click: commit what changed (if anything), bring the remote's commits

@@ -3,6 +3,7 @@
 // referee report as JSON. Each point quotes the passage it is about; the
 // quote, not the line Claude reports, places the point in the source, so a
 // click lands on the right line. Saved in .texugo/review for later.
+import { L, locale } from './lang.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText } from './util.js';
@@ -115,14 +116,16 @@ export function lastReview(doc) {
 // The report as Markdown, to keep or send.
 export function toMarkdown(r, root) {
   const rel = (f) => path.relative(root, f);
-  const kinds = { major: 'Comentários principais', minor: 'Comentários menores', typo: 'Erros de digitação e redação' };
-  const out = [`# Parecer: ${path.basename(r.doc)}`, '', `${new Date(r.date).toLocaleString('pt-BR')}${r.journal ? ` · ${r.journal}` : ''} · recomendação: **${{ reject: 'rejeitar', 'major revision': 'revisão maior', 'minor revision': 'revisão menor', accept: 'aceitar' }[String(r.recommendation).toLowerCase()] || r.recommendation}**`, '', '## Resumo', '', r.summary, ''];
+  // In the UI language: the file is kept or sent as it is.
+  const kinds = { major: L('Comentários principais', 'Major comments'), minor: L('Comentários menores', 'Minor comments'), typo: L('Erros de digitação e redação', 'Typos and wording') };
+  const recs = L({ reject: 'rejeitar', 'major revision': 'revisão maior', 'minor revision': 'revisão menor', accept: 'aceitar' }, { reject: 'reject', 'major revision': 'major revision', 'minor revision': 'minor revision', accept: 'accept' });
+  const out = [`# ${L('Parecer', 'Referee report')}: ${path.basename(r.doc)}`, '', `${new Date(r.date).toLocaleString(locale())}${r.journal ? ` · ${r.journal}` : ''} · ${L('recomendação', 'recommendation')}: **${recs[String(r.recommendation).toLowerCase()] || r.recommendation}**`, '', `## ${L('Resumo', 'Summary')}`, '', r.summary, ''];
   for (const k of ['major', 'minor', 'typo']) {
     const ps = r.points.filter((p) => p.kind === k);
     if (!ps.length) continue;
     out.push(`## ${kinds[k]}`, '');
     ps.forEach((p, i) => {
-      out.push(`${i + 1}. **${p.title}** (${rel(p.file)}:${p.line}) ${p.comment}${p.suggestion ? `\n   *Sugestão:* ${p.suggestion}` : ''}`);
+      out.push(`${i + 1}. **${p.title}** (${rel(p.file)}:${p.line}) ${p.comment}${p.suggestion ? `\n   *${L('Sugestão', 'Suggestion')}:* ${p.suggestion}` : ''}`);
     });
     out.push('');
   }

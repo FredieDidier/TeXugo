@@ -1,6 +1,7 @@
 // Sidebar view "Referências": every entry of the project's .bib files, with
 // search, how often each is cited, one click to cite at the cursor, links
 // to the paper, and "Verificar no Crossref" with suggestions to accept.
+import { locale } from './i18n.js';
 import { call } from './api.js';
 import { h, clear, icon, basename, relPath, toast } from './dom.js';
 import { symbols } from './editor.js';
@@ -191,6 +192,6 @@ export function renderRefs(app, S, el) {
           ? list.map(item)
           : h('div', { class: 'faint', style: { padding: '12px' } }, 'Nada com esse filtro.'),
     ),
-    st.checkedAt ? h('div', { class: 'refs-foot faint' }, `Verificado às ${st.checkedAt.toLocaleTimeString().slice(0, 5)}. Clique numa referência para ver e aplicar.`) : h('div', { class: 'refs-foot faint' }, 'Clique para detalhes; duplo clique cita no cursor.'),
+    st.checkedAt ? h('div', { class: 'refs-foot faint' }, `Verificado às ${st.checkedAt.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })}. Clique numa referência para ver e aplicar.`) : h('div', { class: 'refs-foot faint' }, 'Clique para detalhes; duplo clique cita no cursor.'),
   );
 }

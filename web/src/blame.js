@@ -2,6 +2,7 @@
 // blame of the editor's own text, so it follows unsaved edits). The first
 // line of each run carries the author's initials; the rest of the run a bar
 // in the author's colour. Hover: name, date and commit; click: the commit.
+import { locale } from './i18n.js';
 import { StateEffect, StateField, RangeSet, Compartment } from '@codemirror/state';
 import { gutter, GutterMarker, EditorView } from '@codemirror/view';
 import { call } from './api.js';
@@ -28,7 +29,7 @@ export function initials(name) {
 }
 
 export const who = (c) => (c.local ? 'Você (ainda sem commit)' : c.me ? `Você (${c.author})` : c.author);
-const when = (c) => (c.time ? new Date(c.time).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
+const when = (c) => (c.time ? new Date(c.time).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' }) : '');
 
 class AuthorMarker extends GutterMarker {
   constructor(c, first) {

@@ -5,13 +5,13 @@
 // or, in a conflict, merged by hand or by Claude.
 import { call, native } from './api.js';
 import { h, clear, icon, toast, modal, basename, relPath } from './dom.js';
-import { getLang } from './i18n.js';
+import { getLang, locale } from './i18n.js';
 import { locate } from '../../server/anchor.js';
 import { pieces } from '../../server/textdiff.js';
 import { fromSent } from './annotations.js';
 
 const L = (pt, en) => (getLang() === 'en' ? en : pt);
-const day = (iso) => new Date(iso).toLocaleDateString(getLang() === 'en' ? 'en-US' : 'pt-BR', { day: '2-digit', month: '2-digit' });
+const day = (iso) => new Date(iso).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' });
 const STATUS = {
   aplica: () => L('aplica direto', 'applies as is'),
   feita: () => L('já está no texto', 'already in the text'),

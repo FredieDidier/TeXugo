@@ -13,7 +13,7 @@ import * as tools from './tools.js';
 import { renderMarkdown } from './markdown.js';
 import { bootPdfWindow } from './pdfwin.js';
 import { TOKEN } from './api.js';
-import { setLang, tr, getLang } from './i18n.js';
+import { setLang, tr, getLang, locale } from './i18n.js';
 import { SplitEditor } from './split.js';
 import { viciosConfig, viciosOf } from './vicios/cm.js';
 import { AI_ACTIONS, runAiAction, focusedTarget, replaceFlagged } from './ai.js';
@@ -1436,7 +1436,7 @@ function renderStatus() {
     h('span', { class: 'grow' }),
     t && !t.binary && viciosConfig.enabled && /\.(tex|ltx|md|markdown|qmd|rmd|txt)$/i.test(t.path) ? viciosItem() : null,
     t && !t.binary && /\.(tex|ltx|md|markdown|qmd|rmd|txt)$/i.test(t.path) ? grammarItem(app, S) : null,
-    t && !t.binary ? h('span', { class: 'item' }, `${S.cursor.words.toLocaleString(getLang() === 'en' ? 'en-US' : 'pt-BR')} palavra${S.cursor.words === 1 ? '' : 's'}`) : null,
+    t && !t.binary ? h('span', { class: 'item' }, `${S.cursor.words.toLocaleString(locale())} palavra${S.cursor.words === 1 ? '' : 's'}`) : null,
     t && !t.binary ? h('span', { class: 'item click', title: 'Ir para a linha… (⌃G)', onclick: () => openPalette(app, S, 'line') }, `Ln ${S.cursor.line}, Col ${S.cursor.col}`) : null,
     t ? h('span', { class: 'item' }, t.path.endsWith('.bib') ? 'BibTeX' : t.path.endsWith('.tex') ? 'LaTeX' : /\.md$/.test(t.path) ? 'Markdown' : 'Texto') : null,
     h('span', { class: 'item click', onclick: () => toggleBottom(), title: 'Mostrar ou esconder o painel inferior (⌘⇧Y)', 'aria-label': 'Painel inferior' }, icon('panel')),
@@ -1929,7 +1929,7 @@ async function boot() {
   try {
     S.hello = await call('hello');
   } catch (err) {
-    document.body.textContent = 'TeXugo: não consegui falar com o servidor local (' + err.message + ').';
+    document.body.textContent = tr(`TeXugo: não consegui falar com o servidor local (${err.message}).`);
     return;
   }
   Object.assign(S.settings, S.hello.settings || {});

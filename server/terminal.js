@@ -3,6 +3,8 @@
 // goes to every window over the event WebSocket; keystrokes come back over
 // it. Each terminal keeps its recent output, so a reloaded window gets its
 // screen back.
+import { execFileSync } from 'node:child_process';
+import { serverLang } from './lang.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -51,7 +53,7 @@ export class Terminals {
       cols,
       rows,
       cwd: dir,
-      env: { ...toolEnv(), TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'TeXugo', LANG: process.env.LANG || 'pt_BR.UTF-8', ...env },
+      env: { ...toolEnv(), TERM: 'xterm-256color', COLORTERM: 'truecolor', TERM_PROGRAM: 'TeXugo', LANG: process.env.LANG || termLang(), ...env },
     });
     const id = `t${++this.seq}`;
     const t = { id, p, kind, cwd: dir, title: title || (kind === 'claude' ? 'Claude Code' : path.basename(shell)), buf: '', exited: null };
@@ -108,5 +110,19 @@ export class Terminals {
 
   killAll() {
     for (const id of [...this.items.keys()]) this.kill(id);
+  }
+}
+
+// Apps started from the Dock get no LANG. Without one, Git and the shell
+// fall back to ASCII; pick UTF-8 in the UI language, falling back to
+// en_US.UTF-8 (present everywhere) when pt_BR is not installed.
+function termLang() {
+  if (serverLang() !== 'pt') return 'en_US.UTF-8';
+  if (process.platform === 'darwin') return 'pt_BR.UTF-8';
+  try {
+    const out = execFileSync('locale', ['-a'], { encoding: 'utf8', timeout: 2000 });
+    return /^pt_BR\.utf-?8$/im.test(out) ? 'pt_BR.UTF-8' : 'en_US.UTF-8';
+  } catch {
+    return 'en_US.UTF-8';
   }
 }

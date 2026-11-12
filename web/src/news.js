@@ -6,6 +6,7 @@
 //
 // Looking is what moves the mark: the panel pins the baseline it showed
 // (so refreshing it keeps the same news) and tells the server it was seen.
+import { locale } from './i18n.js';
 import { call } from './api.js';
 import { h, clear, icon, basename, relPath, toast } from './dom.js';
 import { authorColor, initials, diffModal } from './blame.js';
@@ -13,8 +14,8 @@ import { authorColor, initials, diffModal } from './blame.js';
 const dateBR = (iso, withTime) => {
   if (!iso) return '';
   const d = new Date(iso);
-  const day = d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-  return withTime ? `${day} ${d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}` : day;
+  const day = d.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' });
+  return withTime ? `${day} ${d.toLocaleTimeString(locale(), { hour: '2-digit', minute: '2-digit' })}` : day;
 };
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const sectionName = (s) => s || 'início do arquivo';

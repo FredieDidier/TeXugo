@@ -1,4 +1,5 @@
 // Sidebar views: files, outline, project search, git.
+import { locale } from './i18n.js';
 import { call } from './api.js';
 import { h, clear, icon, fileIcon, fileKind, basename, relPath, debounce, toast, menu, prompt, confirmBox, modal, dirname, joinPath, isUnder, REVEAL, TRASH_NOTE } from './dom.js';
 import { renderRefs } from './references.js';
@@ -526,7 +527,7 @@ export class Sidebar {
     );
     try {
       const log = await call('gitLog', { root: S.project.root });
-      clear(this.historyEl, log.slice(0, 25).map((c) => h('div', { class: 'list-row', title: `${c.hash} · ${c.author} · ${new Date(c.date).toLocaleString(document.documentElement.lang || 'pt-BR')}` }, h('span', { class: 'k hash' }, c.hash.slice(0, 7)), h('span', { class: 't' }, c.subject))));
+      clear(this.historyEl, log.slice(0, 25).map((c) => h('div', { class: 'list-row', title: `${c.hash} · ${c.author} · ${new Date(c.date).toLocaleString(locale())}` }, h('span', { class: 'k hash' }, c.hash.slice(0, 7)), h('span', { class: 't' }, c.subject))));
     } catch {}
   }
 

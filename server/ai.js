@@ -3,6 +3,7 @@
 // installed skills and project settings apply. Claude only gets the Read and
 // Skill tools: it can read the project and load a writing skill, never edit a
 // file. The editor shows the result as a diff the user accepts or discards.
+import { serverLang } from './lang.js';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -71,7 +72,7 @@ export function buildPrompt({ action, text, before = '', after = '', file, root,
     task,
     `The passage is in ${lang === 'en' ? 'English' : lang === 'pt' ? 'Portuguese' : 'its own language'}; ${action === 'traduzir' ? 'the result must be in English' : 'keep that language'}.`,
     `Keep every LaTeX command, citation key, label, reference, math and comment exactly as they are, unless the action requires moving them.`,
-    `Do not edit any file. Reply with the rewritten passage only, between <texugo> and </texugo>, and then one or two short sentences, in Portuguese, between <nota> and </nota>, saying what you changed and why.`,
+    `Do not edit any file. Reply with the rewritten passage only, between <texugo> and </texugo>, and then one or two short sentences, in ${serverLang() === 'en' ? 'English' : 'Portuguese'} (the language of the user's interface), between <nota> and </nota>, saying what you changed and why.`,
     style ? `The project's style guide (${path.basename(style.path)}) has priority over everything else:\n<estilo>\n${style.text}\n</estilo>` : DEFAULT_STYLE,
     hints.length ? `Spans the TeXugo detector flagged in the passage (candidates, judge them in context):\n${hints.map((h) => `- "${h.text}": ${h.why}`).join('\n')}` : '',
     before ? `Context before the passage (read only, do not rewrite):\n<antes>\n${before}\n</antes>` : '',

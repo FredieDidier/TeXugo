@@ -18,6 +18,7 @@ import net from 'node:net';
 import { toolEnv, which, sha1, dataDir } from './util.js';
 import { ACADEMIC_WORDS } from './academic-words.js';
 import { killTree } from './platform.js';
+import { Ngrams } from './ngrams.js';
 
 const ONLINE = 'https://api.languagetool.org';
 const SEP = '\n\n';
@@ -144,8 +145,8 @@ const isAlive = (pid) => {
 };
 function readPid() {
   try {
-    const { pid, port } = JSON.parse(fs.readFileSync(pidFile(), 'utf8'));
-    return pid ? { pid, port } : null;
+    const { pid, port, lm } = JSON.parse(fs.readFileSync(pidFile(), 'utf8'));
+    return pid ? { pid, port, lm: lm || null } : null;
   } catch {
     return null;
   }
@@ -164,9 +165,20 @@ process.on('exit', () => {
   for (const g of live) g.stop();
 });
 
+// Arguments of the local server: the port, Homebrew's config file when there
+// is one, and the n-gram folder once the advanced English data is ready.
+export function serverArgs({ port, conf = null, lm = null }) {
+  const args = ['--port', String(port)];
+  if (conf) args.unshift('--config', conf);
+  if (lm) args.push('--languageModel', lm);
+  return args;
+}
+
 export class Grammar {
-  constructor(broadcast = () => {}) {
+  constructor(broadcast = () => {}, { ngrams } = {}) {
     this.broadcast = broadcast;
+    this.ngrams = ngrams || new Ngrams({ broadcast });
+    this.lm = null; // n-gram folder the running server was started with
     this.child = null;
     this.base = null; // URL of the local server once up
     this.starting = null;
@@ -229,14 +241,19 @@ export class Grammar {
 
   // Starts (or finds) the local server; resolves with its base URL.
   async local() {
+    const lm = this.ngrams.languageModelDir();
+    // The n-gram data came or went since the server started: restart it.
+    if (this.base && this.lm !== lm) this.stop(), (this.base = null);
     if (this.base && (await alive(this.base))) return this.base;
     if (this.starting) return this.starting;
     this.starting = (async () => {
-      if (await alive('http://127.0.0.1:8081')) return (this.base = 'http://127.0.0.1:8081');
+      // A LanguageTool already on 8081 (brew services) has no TeXugo n-grams:
+      // with them installed, TeXugo runs its own server.
+      if (!lm && (await alive('http://127.0.0.1:8081'))) return (this.lm = null), (this.base = 'http://127.0.0.1:8081');
       const prev = readPid();
       if (prev && isAlive(prev.pid)) {
         const b = `http://127.0.0.1:${prev.port}`;
-        if (prev.port && (await alive(b))) return (this.base = b);
+        if (prev.port && (prev.lm || null) === lm && (await alive(b))) return (this.lm = lm), (this.base = b);
         endPid(prev.pid);
       }
       const bin = await findServer();
@@ -246,14 +263,13 @@ export class Grammar {
         throw err;
       }
       const port = await freePort();
-      const args = ['--port', String(port)];
-      const conf = CONFIGS.find((c) => fs.existsSync(c));
-      if (conf) args.unshift('--config', conf);
+      const args = serverArgs({ port, conf: CONFIGS.find((c) => fs.existsSync(c)) || null, lm });
       const child = spawn(bin, args, { env: toolEnv(), stdio: 'ignore', detached: true });
       this.child = child;
+      this.lm = lm;
       live.add(this);
       try {
-        fs.writeFileSync(pidFile(), JSON.stringify({ pid: child.pid, port }));
+        fs.writeFileSync(pidFile(), JSON.stringify({ pid: child.pid, port, lm }));
       } catch {}
       child.on('close', () => {
         if (this.child === child) {
@@ -297,7 +313,9 @@ export class Grammar {
     const max = MAX_BATCH[server === 'online' ? 'online' : 'local'];
     const out = paras.map(() => null);
     const disabled = [...new Set([...DISABLED, ...AUDITED, ...disabledRules])];
-    const key = (p) => sha1(p.lang + '\u0000' + level + '\u0000' + disabled.join(',') + '\u0000' + p.text);
+    // Results with and without the n-gram data differ: the key says which.
+    const lmTag = server === 'online' ? 'online' : this.lm ? 'ngrams' : '';
+    const key = (p) => sha1(p.lang + '\u0000' + level + '\u0000' + lmTag + '\u0000' + disabled.join(',') + '\u0000' + p.text);
     // Batches of uncached paragraphs, one language each.
     const batches = [];
     const open = new Map();

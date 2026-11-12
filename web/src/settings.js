@@ -1,5 +1,7 @@
 // Preferences dialog and theme handling.
-import { h, icon, modal } from './dom.js';
+import { h, icon, modal, IS_MAC } from './dom.js';
+import { ngramsRow } from './ngrams.js';
+import { getLang } from './i18n.js';
 import { EditorView } from './editor.js';
 import { viciosConfig, refreshVicios } from './vicios/cm.js';
 import { mathPreview } from './mathpreview.js';
@@ -74,7 +76,9 @@ export function openSettings(app, S) {
   );
   const row = (...items) => h('div', { style: { display: 'flex', gap: '14px', alignItems: 'flex-end', flexWrap: 'wrap' } }, ...items);
   const field = (label, el) => h('div', { class: 'field', style: { marginBottom: '10px' } }, h('label', {}, label), el);
-  const preview = h('pre', { class: 'font-preview' }, '\\section{Introdução}\\label{sec:intro}\n$\\hat\\beta = 0{,}12$ ~ \\cite{card1994minimum} 0O1lI');
+  // A sample in the UI language (the decimal comma only in Portuguese).
+  const en = getLang() === 'en';
+  const preview = h('pre', { class: 'font-preview' }, `\\section{${en ? 'Introduction' : 'Introdução'}}\\label{sec:intro}\n$\\hat\\beta = ${en ? '0.12' : '0{,}12'}$ ~ \\cite{card1994minimum} 0O1lI`);
   // Five tabs instead of one long column, and a search that looks in all of
   // them at once (PRE-LAUNCH-AUDIT.md, design pass).
   const TABS = [
@@ -126,7 +130,7 @@ export function openSettings(app, S) {
       check('grammar', 'Sublinhar erros de ortografia (vermelho) e de gramática (azul) com o LanguageTool', () => app.grammarChanged()),
       row(
         field('Rigor', h('select', { onchange: (e) => ((st.grammarLevel = e.target.value), save(), app.grammarChanged()) }, [['picky', 'Rigoroso: aponta o máximo possível (padrão)'], ['default', 'Normal: só o que o LanguageTool tem certeza']].map(([v, l]) => h('option', { value: v, selected: (st.grammarLevel || 'picky') === v }, l)))),
-        field('Onde corrigir', h('select', { onchange: (e) => ((st.grammarServer = e.target.value), save(), app.grammarChanged()) }, [['local', 'No seu Mac (o texto não sai do computador)'], ['online', 'Servidor online do LanguageTool (envia o texto)']].map(([v, l]) => h('option', { value: v, selected: (st.grammarServer || 'local') === v }, l)))),
+        field('Onde corrigir', h('select', { onchange: (e) => ((st.grammarServer = e.target.value), save(), app.grammarChanged()) }, [['local', IS_MAC ? 'No seu Mac (o texto não sai do computador)' : 'No seu computador (o texto não sai dele)'], ['online', 'Servidor online do LanguageTool (envia o texto)']].map(([v, l]) => h('option', { value: v, selected: (st.grammarServer || 'local') === v }, l)))),
       ),
       h(
         'p',
@@ -136,6 +140,7 @@ export function openSettings(app, S) {
           ? h('button', { class: 'link', onclick: (e) => ((st.grammarWords = []), (st.grammarRules = []), save(), app.grammarChanged(), (e.target.parentElement.textContent = 'Dicionário e regras zerados.')) }, 'Zerar')
           : null,
       ),
+      ngramsRow(app),
     ]],
     ['compilacao', 'Compilação', [
       check('autoCompile', 'Abas novas já vêm com "compilar ao salvar" ligado'),

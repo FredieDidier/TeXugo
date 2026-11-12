@@ -17,6 +17,7 @@ Some features, all optional, talk to outside services. The table says which, whe
 | LanguageTool online (`api.languagetool.org`) | Only if you choose the online server in Settings | The paragraphs of the text | The default is the local server, on your computer |
 | Git remote (GitHub or another) | When the project opens (`fetch`), and on pull, push, Sync and clone | What Git normally sends | Use a project without a remote |
 | TeX Live mirrors | TeX doctor, when finding and installing a package | Package names | Do not use the TeX doctor |
+| LanguageTool (`languagetool.org`) | Only if you click *Download* on the advanced English checker (Settings → Checker) | The download request for the n-grams (9 GB). None of your text goes with it | Do not download |
 | Homebrew | Installing LanguageTool with the button | What `brew` normally sends | Install it by hand |
 | Google (Chromium dictionaries) | On Windows and Linux, the first time the system spell checker is used | The dictionary download request | Use it on a Mac, which uses the macOS dictionary |
 
@@ -28,6 +29,7 @@ The AI actions use the Claude Code that **you** installed, signed in with **your
 
 - **`state.json`**, in the app's data folder: recent projects, settings, personal dictionary and the folders you said you trust.
 - **The paper library**, also in the app's data folder: the PDFs and the text extracted from them.
+- **The advanced checker's n-grams**, if you download them, and the **copies of unsaved tabs** (to recover your work if the app crashes), also in the app's data folder. The copies go when you save or discard.
 - **`.texugo/`**, in each project. It stays out of Git and holds the live preview, difference PDFs, sent versions, generated referee reports, and the state of annotations and of the replication checklist.
 - **`.git/texugo-visit.json`**: the mark of your last visit to the coauthors' news.
 - **`~/.claude/ide/<port>.lock`**, only while a Claude Code is connected to the app.

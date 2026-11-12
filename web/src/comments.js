@@ -3,6 +3,7 @@
 // with Git. Open threads are marked in the editor (hover shows the thread),
 // listed in the "Comentários" tab of the bottom panel and counted in the
 // Revisão view.
+import { locale } from './i18n.js';
 import { StateEffect, StateField } from '@codemirror/state';
 import { EditorView, Decoration, hoverTooltip } from '@codemirror/view';
 import { call } from './api.js';
@@ -19,7 +20,7 @@ const when = (iso) => {
   if (m < 1) return 'agora';
   if (m < 60) return `há ${m} min`;
   if (m < 60 * 24) return `há ${Math.round(m / 60)} h`;
-  return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  return d.toLocaleDateString(locale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 // By name: comment files carry no e-mail (PRE-LAUNCH-AUDIT.md, item 7).
 const isMine = (me, x) => !!me && !!me.name && x.author === me.name;

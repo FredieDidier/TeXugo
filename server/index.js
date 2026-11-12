@@ -35,6 +35,7 @@ import * as zotero from './zotero.js';
 import { setTrustCheck, riskyItems, underTrusted } from './trust.js';
 import { outputs } from './outdirs.js';
 import * as recovery from './recovery.js';
+import { setServerLang } from './lang.js';
 import * as library from './library.js';
 import * as reviewer from './review.js';
 import * as rr from './rr.js';
@@ -80,6 +81,7 @@ function saveState(s) {
 
 export function createServer({ port = 0, token = randomBytes(24).toString('hex'), hooks = {} } = {}) {
   const state = loadState();
+  setServerLang((state.settings || {}).lang);
   // Folders trusted to run their own latexmkrc and .claude/ settings (I8).
   // On the first run of this version, the folders already in the recents
   // count as the user's own.
@@ -186,6 +188,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     },
     async saveSettings({ settings }) {
       state.settings = { ...(state.settings || {}), ...settings };
+      setServerLang(state.settings.lang);
       builds.stallSeconds = Number(state.settings.stallSeconds) || 0;
       saveState(state);
       return state.settings;
@@ -425,6 +428,23 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async grammarInstall() {
       await grammar.install();
       return grammar.status();
+    },
+    // Advanced English checking (n-gram data, ~9 GB): progress goes out as
+    // 'ngrams' events; start() returns at once.
+    async ngramsStatus() {
+      return grammar.ngrams.status();
+    },
+    async ngramsStart() {
+      grammar.ngrams.start();
+      return grammar.ngrams.status();
+    },
+    async ngramsPause() {
+      grammar.ngrams.pause();
+      return grammar.ngrams.status();
+    },
+    async ngramsRemove() {
+      await grammar.ngrams.remove();
+      return grammar.ngrams.status();
     },
     async liveStop({ doc }) {
       live.stop(mustAllow(doc));

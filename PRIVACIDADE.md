@@ -17,6 +17,7 @@ Alguns recursos, todos opcionais, falam com serviços de fora. A tabela diz quai
 | LanguageTool online (`api.languagetool.org`) | Só se você escolher o servidor online nas Preferências | Os parágrafos do texto | O padrão é o servidor local, no seu computador |
 | Remoto do Git (GitHub ou outro) | Ao abrir o projeto (`fetch`), e em pull, push, Sincronizar e clonar | O que o Git manda normalmente | Usar um projeto sem remoto |
 | Espelhos do TeX Live | Médico do TeX, ao procurar e instalar um pacote | O nome dos pacotes | Não usar o Médico do TeX |
+| LanguageTool (`languagetool.org`) | Só se você clicar em *Baixar* no corretor avançado de inglês (Preferências → Corretor) | O pedido de download dos n-gramas (9 GB). Nenhum texto seu vai junto | Não baixar |
 | Homebrew | Instalar o LanguageTool pelo botão | O que o `brew` manda normalmente | Instalar à mão |
 | Google (dicionários do Chromium) | No Windows e no Linux, na primeira vez que o corretor ortográfico do sistema é usado | O pedido de download do dicionário | Usar no Mac, que usa o dicionário do macOS |
 
@@ -28,6 +29,7 @@ As ações de IA usam o Claude Code que **você** instalou e com a **sua** conta
 
 - **`state.json`**, na pasta de dados do app: projetos recentes, preferências, dicionário pessoal e as pastas em que você disse confiar.
 - **A biblioteca de papers**, também na pasta de dados do app: os PDFs e o texto extraído deles.
+- **Os n-gramas do corretor avançado**, se você baixar, e as **cópias das abas não salvas** (para recuperar o trabalho se o app cair), também na pasta de dados do app. As cópias somem quando você salva ou descarta.
 - **`.texugo/`**, em cada projeto. Fica fora do Git e guarda a prévia ao vivo, os PDFs de diferenças, as versões enviadas, os pareceres gerados e o estado das anotações e do checklist de replicação.
 - **`.git/texugo-visit.json`**: a marca da sua última visita às novidades dos coautores.
 - **`~/.claude/ide/<porta>.lock`**, só enquanto um Claude Code está ligado ao app.

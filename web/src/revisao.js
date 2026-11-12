@@ -4,6 +4,7 @@
 // response letter) and the checks before sending. Each block says where
 // things stand ("3 notes open") and opens the tool; the long lists stay in
 // the bottom panel.
+import { locale } from './i18n.js';
 import { call } from './api.js';
 import { h, clear, icon, basename, relPath, toast, dirname, sepOf } from './dom.js';
 import { viciosOf } from './vicios/cm.js';
@@ -32,7 +33,7 @@ const ago = (ms) => {
   if (m < 60) return `há ${m} min`;
   const hrs = Math.round(m / 60);
   if (hrs < 24) return `há ${hrs} h`;
-  return new Date(ms).toLocaleDateString('pt-BR');
+  return new Date(ms).toLocaleDateString(locale());
 };
 
 // One tool: a title, a line saying where it stands, and its actions. A
@@ -90,7 +91,7 @@ export async function renderRevisao(app, S, el) {
     const open = sentCount(S);
     const marks = (S.sent.marks || []).filter((x) => x.doc === relPath(S.project.root, doc));
     const lastFb = (S.sent.feedback || []).find((f) => f.counts && f.counts.open);
-    const dm = (iso) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const dm = (iso) => new Date(iso).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' });
     coauthors.push(
       row(
         'papers',

@@ -1,5 +1,6 @@
 // "TeX doctor": what the TeX installation can do, which TeX Live package
 // provides a missing .sty/.cls, installing it, and latexindent formatting.
+import { L } from './lang.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -110,7 +111,7 @@ export async function installPackages(pkgs) {
     r = await run('pkexec', ['/bin/sh', '-c', script], { timeout: 15 * 60000 });
     if (r.code === 126) return { ok: false, cancelled: true, output: '' };
   } else {
-    const as = `do shell script "${script.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}" with administrator privileges with prompt "O TeXugo quer instalar pacotes do TeX Live: ${pkgs.join(', ')}"`;
+    const as = `do shell script "${script.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}" with administrator privileges with prompt "${L('O TeXugo quer instalar pacotes do TeX Live', 'TeXugo wants to install TeX Live packages')}: ${pkgs.join(', ')}"`;
     r = await run('osascript', ['-e', as], { timeout: 15 * 60000 });
   }
   const output = (r.stdout + r.stderr).trim();

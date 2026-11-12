@@ -990,3 +990,13 @@ button.chip:hover { filter: brightness(0.96); }
 .recovery-file { margin: 6px 0; border: 1px solid var(--border); border-radius: 6px; padding: 6px 10px; }
 .recovery-file > summary { cursor: pointer; }
 .recovery-file > :not(summary) { margin-top: 6px; max-height: 240px; overflow: auto; }
+
+/* Preferências → Corretor: advanced English checking (n-grams). */
+.ngrams { margin-top: 14px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); }
+.ngrams-head { display: flex; align-items: center; gap: 8px; }
+.ngrams-actions { margin-left: auto; display: flex; gap: 6px; }
+.ngrams-state { margin-top: 4px; }
+.ngrams-bar { height: 6px; margin-top: 6px; border-radius: 3px; background: var(--sunken); overflow: hidden; }
+.ngrams-bar > span { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }
+.ngrams-err { margin-top: 6px; color: var(--err-text, var(--err)); }
+.ngrams .faint { margin: 6px 0 0; font-size: 12px; }

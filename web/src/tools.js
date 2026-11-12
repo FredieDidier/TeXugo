@@ -3,7 +3,7 @@ import { call } from './api.js';
 import { h, clear, icon, basename, relPath, toast, modal, prompt, REVEAL } from './dom.js';
 import { detect, kindOf, CATEGORIES, SOURCES, VERSION } from './vicios/core.js';
 import { hitInfo } from './vicios/cm.js';
-import { getLang } from './i18n.js';
+import { getLang, locale } from './i18n.js';
 
 function docOf(app) {
   const t = app.activeTab();
@@ -139,7 +139,7 @@ export async function wordCount(app) {
           ['Texto', r.text],
           ['Títulos', r.headers],
           ['Legendas', r.captions],
-        ].map(([k, v]) => h('div', { class: 'tl-doc' }, h('div', { style: { fontSize: '24px', fontWeight: 700 } }, v.toLocaleString('pt-BR')), h('div', { class: 'muted' }, k))),
+        ].map(([k, v]) => h('div', { class: 'tl-doc' }, h('div', { style: { fontSize: '24px', fontWeight: 700 } }, v.toLocaleString(locale())), h('div', { class: 'muted' }, k))),
         h('p', { class: 'faint', style: { gridColumn: '1 / -1', fontSize: '12px' } }, 'Conta o documento inteiro, seguindo \\input e \\include (texcount). Não conta matemática nem comandos.'),
       ),
     });
@@ -331,7 +331,7 @@ export async function viciosReport(app, S) {
         'p',
         {},
         h('b', {}, `${all.length} trecho${all.length === 1 ? '' : 's'} para revisar`),
-        ` em ${words.toLocaleString('pt-BR')} palavras (${per1000.toFixed(1).replace('.', ',')} por mil palavras)`,
+        ` em ${words.toLocaleString(locale())} palavras (${per1000.toLocaleString(locale(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} por mil palavras)`,
         results.length > 1 ? `, ${results.length} arquivos do documento.` : '.',
       ),
       h('p', { class: 'muted' }, 'São candidatos a uma segunda leitura, não prova de que o texto foi escrito por IA: cada padrão também aparece em texto humano, e o que pesa é o acúmulo. Passe o mouse sobre um trecho sublinhado no editor para ver o motivo.'),
