@@ -113,10 +113,15 @@ const PREAMBLE = `% !TEX program = pdflatex
 \\setlength{\\parskip}{0.5em}
 `;
 
+// Text from the model goes inside a one-line macro argument: a bare % would
+// comment out the closing brace and break the build. LaTeX it writes on
+// purpose (\cite, \% already escaped) passes through.
+export const pct = (t) => String(t ?? '').replace(/(?<!\\)%/g, '\\%').replace(/\r?\n+/g, ' ');
+
 export function toLatex(data, { title }) {
   const out = [PREAMBLE, '\\begin{document}', '\\begin{center}', '{\\Large\\bfseries Response to the Editor and Referees}\\\\[4pt]', '``' + escapeTex(title) + "''\\\\[2pt]", '\\today', '\\end{center}', '', 'Dear Editor,', '', data.intro || '', ''];
   if (data.main_changes && data.main_changes.length) {
-    out.push('The main changes are:', '\\begin{enumerate}[nosep]', ...data.main_changes.map((c) => `  \\item ${c}`), '\\end{enumerate}', '');
+    out.push('The main changes are:', '\\begin{enumerate}[nosep]', ...data.main_changes.map((c) => `  \\item ${pct(c)}`), '\\end{enumerate}', '');
   }
   for (const sec of data.sections) {
     out.push(`\\section{${escapeTex(sec.who || 'Referee')}}`);
@@ -124,8 +129,8 @@ export function toLatex(data, { title }) {
       out.push(`\\referee{${escapeTex(c.comment)}}`);
       out.push(c.reply || '');
       for (const ch of c.changes || []) {
-        if (c.status === 'todo') out.push(`\\todo{${ch.what}${ch.where ? ` (${ch.where})` : ''}}${ch.loc ? ` % ${ch.loc}` : ''}`);
-        else out.push(`\\change{${ch.what}${ch.where ? ` (${ch.where})` : ''}}${ch.loc ? ` % ${ch.loc}` : ''}`);
+        if (c.status === 'todo') out.push(`\\todo{${pct(ch.what)}${ch.where ? ` (${pct(ch.where)})` : ''}}${ch.loc ? ` % ${ch.loc}` : ''}`);
+        else out.push(`\\change{${pct(ch.what)}${ch.where ? ` (${pct(ch.where)})` : ''}}${ch.loc ? ` % ${ch.loc}` : ''}`);
       }
       if (c.status === 'todo' && !(c.changes || []).length) out.push('\\todo{Revise the paper to address this comment.}');
       out.push('');

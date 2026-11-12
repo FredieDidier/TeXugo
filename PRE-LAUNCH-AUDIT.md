@@ -94,7 +94,7 @@ Os outros três são de distribuição: assinatura e notarização no Mac (B5), 
 
 A maior lacuna de QA é estrutural: `server/index.js` (toda a API), `git.js`, `terminal.js`, o Electron e cerca de 40 dos 50 módulos da interface não têm nenhum teste. Os quatro defeitos acima moram exatamente aí.
 
-Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/2026: 3 bloqueadores (B1, B2, B3), 3 importantes (I11, I12, I14), 2 desejáveis (D1, D6).
+Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/2026: 3 bloqueadores (B1, B2, B3), 4 importantes (I1, I11, I12, I14), 3 desejáveis (D1, D6, D10).
 
 ---
 
@@ -201,7 +201,9 @@ Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/
 
 Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 
-## I1. Salvar um arquivo que é link simbólico quebra o link; a permissão do arquivo se perde
+## ✅ I1. Salvar um arquivo que é link simbólico quebra o link; a permissão do arquivo se perde — **CORRIGIDO**
+
+- ✅ **Estado: corrigido em 12/11/2026.** `writeKeepingLink` em `server/util.js` resolve o link, grava o temporário ao lado do arquivo real e copia o modo; `write` usa ela. Teste em `test/writelink.test.js` (link mantido, arquivo compartilhado recebe o texto, 755 preservado). As gravações de `.bib` do servidor (I3) ainda não usam a função.
 
 - **Classificação:** confirmado (execução). **Gravidade:** média a alta. **Esforço:** P.
 - **Evidência:** [server/index.js:226](server/index.js:226) grava em `p + '.texugo-tmp'` e renomeia por cima de `p`. Teste: `refs.bib` como link para `shared/library.bib` → depois de um salvamento, `stillLink: false` e o arquivo compartilhado não recebeu a entrada nova. Um `run.sh` com modo 755 voltou com 644.
@@ -387,7 +389,7 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 | D7 | **Defesa em profundidade** (nada explorável sem o token): `createProject` aceita `name` com `../` (reproduzi a pasta criada fora do destino); `comments.list` lê `c.file` sem conferir se está no projeto ([comments.js:63](server/comments.js:63), reproduzido); a guarda de caminho não resolve links, então um link para fora do projeto é lido (reproduzido); `source.rev` de `compare.js:58` pode começar com `-`; `readBody` não interrompe a requisição acima de 50 MB; fusíveis do Electron no padrão (`RunAsNode` ligado). | [server/index.js:502](server/index.js:502), [util.js:110](server/util.js:110) | Confirmado, impacto baixo | P |
 | D8 | **O servidor roda no processo principal do Electron com E/S síncrona.** Num projeto de 6 mil arquivos: árvore 69 ms, documentos 89 ms, símbolos 277 ms, cada um travando menus e janelas. Aceitável hoje. Se crescer, mover para `utilityProcess`. Não recomendo mexer antes do lançamento. | medições do Apêndice A | Sugestão | G |
 | D9 | **Parada por 180 s sem saída.** Passos longos e silenciosos são raros, mas o limite só muda por variável de ambiente. Expor nas Preferências se alguém reclamar. | [server/build.js:271](server/build.js:271) | Risco potencial | P |
-| D10 | **`\todo{…}` e `\change{…}` da resposta aos pareceristas recebem o texto do modelo sem escape.** Um `%` vindo do Claude comenta o fecha-chave e quebra a compilação do `response.tex`. | [server/rr.js:127](server/rr.js:127) | Confirmado (leitura) | P |
+| ✅ D10 | **CORRIGIDO (12/11/2026).** `pct()` em `server/rr.js` escapa `%` solto (e quebra de linha) no texto do modelo dentro de `\todo`, `\change` e da lista de mudanças; teste em `test/writelink.test.js`. Texto original: **`\todo{…}` e `\change{…}` da resposta aos pareceristas recebem o texto do modelo sem escape.** Um `%` vindo do Claude comenta o fecha-chave e quebra a compilação do `response.tex`. | [server/rr.js:127](server/rr.js:127) | Confirmado (leitura) | P |
 
 ---
 

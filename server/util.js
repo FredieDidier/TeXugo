@@ -145,3 +145,20 @@ export function stripComment(line) {
 export function stripComments(text) {
   return text.split('\n').map(stripComment).join('\n');
 }
+
+// Atomic save that keeps what the user set up: when the path is a symbolic
+// link (a shared .bib), write the real file, next to it, and keep the link;
+// keep the file's mode (a 755 script stays executable).
+export function writeKeepingLink(p, text) {
+  let real = p;
+  let mode = null;
+  try {
+    real = fs.realpathSync(p);
+    mode = fs.statSync(real).mode & 0o7777;
+  } catch {}
+  const tmp = real + '.texugo-tmp';
+  fs.writeFileSync(tmp, text);
+  if (mode !== null) fs.chmodSync(tmp, mode);
+  fs.renameSync(tmp, real);
+  return real;
+}

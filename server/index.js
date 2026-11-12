@@ -18,7 +18,7 @@ import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
 import { LiveManager, overlayPath, realPath } from './live.js';
 import { Grammar } from './grammar.js';
-import { isInside, dataDir, run, which, toolEnv } from './util.js';
+import { isInside, dataDir, run, which, toolEnv, writeKeepingLink } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
 import * as replication from './replication.js';
@@ -227,9 +227,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
         if (Math.abs(now - expectMtime) > 1) return { conflict: true, mtime: now };
       }
       selfWrites.set(p, Date.now());
-      const tmp = p + '.texugo-tmp';
-      fs.writeFileSync(tmp, text);
-      fs.renameSync(tmp, p);
+      writeKeepingLink(p, text);
       return { mtime: fs.statSync(p).mtimeMs };
     },
     async createFile({ path: p, text = '', dir = false }) {
