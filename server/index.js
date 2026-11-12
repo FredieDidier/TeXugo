@@ -1,3 +1,4 @@
+import os from 'node:os';
 // Local server behind the TeXugo window. Serves the web UI, a JSON API for
 // files/builds/git/synctex, and a WebSocket that pushes build progress and
 // file changes. Binds to 127.0.0.1 only and requires a per-launch token, so
@@ -181,7 +182,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
         recents: (state.recents || []).filter((r) => fs.existsSync(r)),
         settings: state.settings || {},
         models: MODEL_LIST,
-        home: process.env.HOME,
+        home: os.homedir(),
         // Nothing chosen and nothing opened yet: the page picks the language.
         firstRun: !(state.recents || []).length && !state.projects && !(state.settings || {}).lang,
       };

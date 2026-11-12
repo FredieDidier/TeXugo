@@ -179,7 +179,7 @@ export class LiveManager extends EventEmitter {
 
   _spawn(job, cmd, args, cwd, env) {
     return new Promise((resolve) => {
-      const child = spawn(cmd, args, { cwd, env: toolEnv(env), detached: true, stdio: ['ignore', 'ignore', 'ignore'] });
+      const child = spawn(cmd, args, { cwd, env: toolEnv(env), detached: true, windowsHide: true, stdio: ['ignore', 'ignore', 'ignore'] });
       job.child = child;
       let stalled = false;
       const timer = setTimeout(() => {

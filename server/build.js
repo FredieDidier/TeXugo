@@ -290,7 +290,7 @@ export class BuildManager extends EventEmitter {
     const STALL_MSG = `compilação parada: ${Math.round(STALL_MS / 1000)} s sem nenhum progresso (laço infinito ou comando esperando resposta?)`;
     const FLOOD_MSG = 'compilação parada: o log passou de 50 MB, sinal de laço infinito';
     return new Promise((resolve) => {
-      const child = spawn(cmd, args, { cwd, env: toolEnv(extraEnv), detached: true });
+      const child = spawn(cmd, args, { cwd, env: toolEnv(extraEnv), detached: true, windowsHide: true });
       this.running.child = child;
       this.emit('event', { type: 'build:log', id, doc, text: `$ ${cmd} ${args.join(' ')}\n` });
       let buf = '';

@@ -393,14 +393,14 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 
 - **Classificação:** risco potencial (não testado nesses sistemas). **Gravidade:** média. **Esforço:** M.
 - **Evidência, por arquivo:**
-  - [server/build.js:276](server/build.js:276) e [server/live.js:178](server/live.js:178): `detached: true` sem `windowsHide: true` abre uma janela de console a cada compilação no Windows.
+  - [server/build.js:276](server/build.js:276) e [server/live.js:178](server/live.js:178): `detached: true` sem `windowsHide: true` abre uma janela de console a cada compilação no Windows. ✅ **FEITO (12/11):** `windowsHide: true` em build.js, live.js e grammar.js.
   - [server/build.js:233](server/build.js:233): `new Promise(async …)`; um `fs.rmSync` que falhe (arquivo travado, comum no Windows) deixa a promessa sem resolver, e a fila de compilação para até reiniciar.
   - [server/index.js:139](server/index.js:139): o filtro do observador usa `/`; no Windows os eventos de `.git\` não são filtrados. [web/src/main.js:1533](web/src/main.js:1533): `'/.texugo-comments/'`, mesmo problema.
   - [server/compare.js:190](server/compare.js:190): `BIBINPUTS: docDir + ':'` (no Windows o separador é `;`).
   - [server/refs.js:200](server/refs.js:200): `bibsOf` manipula caminhos como texto com `/`.
   - [server/submission.js:58](server/submission.js:58): `isInDir` com `path.sep` contra caminhos do `.fls`, que usam `/`; e `/dev/` fixo.
   - [server/git.js:59](server/git.js:59): `git diff --no-index -- /dev/null`.
-  - [server/index.js:171](server/index.js:171): `home: process.env.HOME`, indefinido no Windows.
+  - [server/index.js:171](server/index.js:171): `home: process.env.HOME`, indefinido no Windows. ✅ **FEITO (12/11):** `os.homedir()`.
   - [server/ai.js:36](server/ai.js:36) e [agent.js:184](server/agent.js:184): `kill('SIGTERM')` no `cmd.exe` que embrulha o `claude.cmd` não encerra o processo filho.
   - `node-pty` 1.1.0 traz binários prontos para macOS e Windows, não para Linux: o AppImage exige compilar na CI.
   - `latexdiff` e `latexindent` dependem de Perl; no MiKTeX ele não vem.

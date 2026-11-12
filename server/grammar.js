@@ -264,7 +264,7 @@ export class Grammar {
       }
       const port = await freePort();
       const args = serverArgs({ port, conf: CONFIGS.find((c) => fs.existsSync(c)) || null, lm });
-      const child = spawn(bin, args, { env: toolEnv(), stdio: 'ignore', detached: true });
+      const child = spawn(bin, args, { env: toolEnv(), stdio: 'ignore', detached: true, windowsHide: true });
       this.child = child;
       this.lm = lm;
       live.add(this);
