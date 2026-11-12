@@ -389,6 +389,8 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
   pkill -f 'languagetool.*--port'
   ```
 
+**Complemento de I16 (12/11/2026).** No Mac, fechar a última janela deixava o app no Dock com o LanguageTool (Java) rodando; e uma queda do app deixava o Java órfão até a próxima abertura. Agora: o LanguageTool para depois de 10 minutos sem checagem (`TEXUGO_LT_IDLE_MS`; o relógio pausa durante uma checagem) e volta sozinho em segundos na checagem seguinte; fechar a última janela no Mac encerra o LanguageTool e a prévia ao vivo (`idle()` em `server/index.js`); no Mac e no Linux, um vigia em `sh` encerra o Java quando o processo do app some. Verificado: `kill -9` no processo pai encerrou o Java em menos de 8 s; com 3 s de espera, o servidor parou e reabriu na checagem seguinte. No Windows a queda ainda deixa o Java órfão até a próxima abertura.
+
 ## I17. Riscos de Windows e Linux já visíveis no código
 
 - **Classificação:** risco potencial (não testado nesses sistemas). **Gravidade:** média. **Esforço:** M.
@@ -397,7 +399,7 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
   - [server/build.js:233](server/build.js:233): `new Promise(async …)`; um `fs.rmSync` que falhe (arquivo travado, comum no Windows) deixa a promessa sem resolver, e a fila de compilação para até reiniciar. ✅ **FEITO (12/11):** `_latexmk` virou `async`; o erro chega ao `_start`, que encerra a compilação com falha e segue a fila.
   - [server/index.js:139](server/index.js:139): o filtro do observador usa `/`; no Windows os eventos de `.git\` não são filtrados. [web/src/main.js:1533](web/src/main.js:1533): `'/.texugo-comments/'`, mesmo problema. ✅ **FEITO (12/11):** o servidor troca `\` por `/` antes do filtro; o cliente aceita os dois separadores.
   - [server/compare.js:190](server/compare.js:190): `BIBINPUTS: docDir + ':'` (no Windows o separador é `;`). ✅ **FEITO (12/11):** `path.delimiter`, também em `BSTINPUTS`.
-  - [server/refs.js:200](server/refs.js:200): `bibsOf` manipula caminhos como texto com `/`.
+  - [server/refs.js:200](server/refs.js:200): `bibsOf` manipula caminhos como texto com `/`. ✅ **FEITO (12/11):** `path.dirname` e `path.resolve`.
   - [server/submission.js:58](server/submission.js:58): `isInDir` com `path.sep` contra caminhos do `.fls`, que usam `/`; e `/dev/` fixo. ✅ **FEITO (12/11):** `isInDir` por `path.relative`; `/dev/` e `nul` checados no caminho original do `.fls`.
   - [server/git.js:59](server/git.js:59): `git diff --no-index -- /dev/null`.
   - [server/index.js:171](server/index.js:171): `home: process.env.HOME`, indefinido no Windows. ✅ **FEITO (12/11):** `os.homedir()`.

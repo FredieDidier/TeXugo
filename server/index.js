@@ -976,6 +976,12 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
           openProjects.add(path.resolve(root));
           watch(path.resolve(root));
         },
+        // Every window closed but the app still in the Dock (macOS): free the
+        // CPU and memory of the background helpers.
+        idle: () => {
+          live.stopAll();
+          grammar.stop();
+        },
         close: () => {
           terminals.killAll();
           agents.killAll();

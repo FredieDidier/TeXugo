@@ -269,6 +269,7 @@ app.on('open-file', (e, p) => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+  else if (server) server.idle();
 });
 // The server must outlive a cancelled quit: with unsaved edits the windows
 // may stay open, and saving needs it. will-quit fires only once they closed.

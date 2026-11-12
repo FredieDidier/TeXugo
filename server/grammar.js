@@ -160,6 +160,16 @@ function endPid(pid) {
     } catch {}
   }
 }
+const IDLE_MS = Number(process.env.TEXUGO_LT_IDLE_MS) || 10 * 60 * 1000;
+// A crash or a forced quit skips the 'exit' handler below. On macOS and Linux a
+// tiny shell watches the app and ends the JVM when the app is gone.
+function watchdog(childPid) {
+  if (process.platform === 'win32') return;
+  try {
+    const sh = `while kill -0 ${process.pid} 2>/dev/null && kill -0 ${childPid} 2>/dev/null; do sleep 5; done; kill -TERM -${childPid} 2>/dev/null || kill -TERM ${childPid} 2>/dev/null`;
+    spawn('/bin/sh', ['-c', sh], { stdio: 'ignore', detached: true }).unref();
+  } catch {}
+}
 const live = new Set();
 process.on('exit', () => {
   for (const g of live) g.stop();
@@ -268,6 +278,7 @@ export class Grammar {
       this.child = child;
       this.lm = lm;
       live.add(this);
+      watchdog(child.pid);
       try {
         fs.writeFileSync(pidFile(), JSON.stringify({ pid: child.pid, port, lm }));
       } catch {}
@@ -294,7 +305,16 @@ export class Grammar {
     }
   }
 
+  // The JVM uses CPU and about 1 GB even when idle: stop it after IDLE_MS
+  // without a check. The next check starts it again in a few seconds.
+  _touch() {
+    clearTimeout(this._idle);
+    this._idle = setTimeout(() => this.stop(), IDLE_MS);
+    this._idle.unref?.();
+  }
+
   stop() {
+    clearTimeout(this._idle);
     if (!this.child) return;
     live.delete(this);
     try {
@@ -308,7 +328,19 @@ export class Grammar {
   // paras: [{ text, lang }] with lang a LanguageTool code (pt-BR, en-US).
   // Returns, for each paragraph, [{ offset, length, message, short, rule,
   // category, type, replacements }].
-  async check(paras, { server = 'local', disabledRules = [], level = 'picky' } = {}) {
+  // The idle clock stops while a check runs and restarts when the last ends.
+  async check(paras, opts = {}) {
+    if (opts.server === 'online') return this._check(paras, opts);
+    clearTimeout(this._idle);
+    this._busy = (this._busy || 0) + 1;
+    try {
+      return await this._check(paras, opts);
+    } finally {
+      if (--this._busy === 0) this._touch();
+    }
+  }
+
+  async _check(paras, { server = 'local', disabledRules = [], level = 'picky' } = {}) {
     const base = server === 'online' ? ONLINE : await this.local();
     const max = MAX_BATCH[server === 'online' ? 'online' : 'local'];
     const out = paras.map(() => null);
