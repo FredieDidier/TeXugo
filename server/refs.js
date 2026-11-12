@@ -3,6 +3,7 @@
 // one-line BibTeX); arXiv ids through the arXiv API, switching to the
 // journal DOI when the preprint has one.
 import fs from 'node:fs';
+import path from 'node:path';
 import { writeKeepingLink } from './util.js';
 
 const UA = 'TeXugo (LaTeX editor; https://github.com/FredieDidier/TeXugo)';
@@ -198,14 +199,14 @@ export function bibsOf(doc) {
   } catch {
     return [];
   }
-  const dir = doc.replace(/\/[^/]*$/, '');
+  const dir = path.dirname(doc);
   const out = [];
   for (const m of text.matchAll(/\\(?:bibliography|addbibresource)\s*(?:\[[^\]]*\])?\s*\{([^}]+)\}/g)) {
     for (let n of m[1].split(',')) {
       n = n.trim();
       if (!n) continue;
       if (!n.endsWith('.bib')) n += '.bib';
-      out.push(n.startsWith('/') ? n : `${dir}/${n}`.replace(/\/\.\//g, '/'));
+      out.push(path.resolve(dir, n));
     }
   }
   return [...new Set(out)];
