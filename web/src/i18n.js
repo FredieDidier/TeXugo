@@ -296,7 +296,7 @@ const EN = {
   'Tela cheia, um slide por vez (setas, espaço, clique; Esc sai)': 'Full screen, one slide at a time (arrows, space, click; Esc exits)', 'Apresentar': 'Present',
   'O PDF acompanha o cursor do editor': 'The PDF follows the editor cursor', 'PDF escuro (só na tela)': 'Dark PDF (screen only)',
 
-  'Abrir este PDF numa janela separada (outro monitor)': 'Open this PDF in a separate window (another monitor)', 'Abrir no Preview': 'Open in Preview',
+  'Abrir este PDF numa janela separada (outro monitor)': 'Open this PDF in a separate window (another monitor)', 'Abrir no Preview': 'Open in Preview', 'Abrir no leitor de PDF': 'Open in the PDF viewer', 'Instale o TeX Live: ': 'Install TeX Live: ',
   'O navegador bloqueou a janela nova. Permita pop-ups para este endereço.': 'The browser blocked the new window. Allow pop-ups for this address.',
   'Sem posição no PDF para esta linha. Compile de novo.': 'No PDF position for this line. Compile again.', 'Este PDF não tem SyncTeX': 'This PDF has no SyncTeX', 'Compilar agora': 'Compile now',
   'Não achei a linha correspondente (o PDF foi compilado com SyncTeX?).': 'Could not find the matching line (was the PDF compiled with SyncTeX?).',
@@ -583,6 +583,7 @@ const PATTERNS = [
   [/^(.+) mudou no disco e você tem alterações não salvas\. Ao salvar, o TeXugo pergunta antes de sobrescrever\.$/, '$1 changed on disk and you have unsaved changes. When you save, TeXugo asks before overwriting.'],
   [/^TeXugo: não consegui falar com o servidor local \((.+)\)\.$/, 'TeXugo: could not reach the local server ($1).'],
   [/^(.+) vai para o Lixo do macOS \(dá para recuperar de lá\)\.$/, '$1 goes to the macOS Trash (it can be recovered from there).'],
+  [/^(.+) vai para a lixeira do sistema \(dá para recuperar de lá\)\.$/, '$1 goes to the system trash (it can be recovered from there).'],
   [/^Rótulos \((\d+)\)$/, 'Labels ($1)'],
   [/^(\d+) resultados? em (\d+) arquivos?$/, (m, a, b) => `${a} result${a > 1 ? 's' : ''} in ${b} file${b > 1 ? 's' : ''}`],
   [/^No commit \((\d+)\)$/, 'Staged ($1)'],

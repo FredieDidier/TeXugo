@@ -1,6 +1,6 @@
 // TeXugo UI entry point: layout, tabs, compile flow, PDF panes, problems.
 import { call, connect, on, fileUrl, native } from './api.js';
-import { h, clear, icon, wordmark, fileIcon, fileKind, basename, relPath, debounce, toast, menu, modal, prompt, confirmBox, gutter, isUnder, relParts, dirname, REVEAL, setFocusHome } from './dom.js';
+import { h, clear, icon, wordmark, fileIcon, fileKind, basename, relPath, debounce, toast, menu, modal, prompt, confirmBox, gutter, isUnder, relParts, dirname, REVEAL, setFocusHome, OPEN_PDF } from './dom.js';
 import { wordDiff } from './diff.js';
 import { createState, createView, jumpTo, showDiagnostics, symbols, EditorView, wrapCompartment } from './editor.js';
 import { PdfTab } from './pdfview.js';
@@ -1240,7 +1240,7 @@ function renderPdfTools() {
     h('button', { class: 'icon-btn' + (S.settings.followCursor ? ' on' : ''), title: 'O PDF acompanha o cursor do editor', 'data-k': 'follow', onclick: () => ((S.settings.followCursor = !S.settings.followCursor), saveSettingsSoon(), renderPdfTools()) }, icon('target')),
     h('button', { class: 'icon-btn' + (S.settings.invertPdf ? ' on' : ''), title: 'PDF escuro (só na tela)', 'data-k': 'invert', onclick: toggleInvert }, icon('invert')),
     h('button', { class: 'icon-btn', title: 'Abrir este PDF numa janela separada (outro monitor)', 'data-k': 'detach', onclick: () => detachPdf(p) }, icon('columns')),
-    h('button', { class: 'icon-btn', title: 'Abrir no Preview', 'data-k': 'external', onclick: () => call('openExternal', { path: p.path }) }, icon('external')),
+    h('button', { class: 'icon-btn', title: OPEN_PDF, 'data-k': 'external', onclick: () => call('openExternal', { path: p.path }) }, icon('external')),
   );
 }
 

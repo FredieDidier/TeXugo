@@ -1,6 +1,6 @@
 // Sidebar views: files, outline, project search, git.
 import { call } from './api.js';
-import { h, clear, icon, fileIcon, fileKind, basename, relPath, debounce, toast, menu, prompt, confirmBox, modal, dirname, joinPath, isUnder, REVEAL } from './dom.js';
+import { h, clear, icon, fileIcon, fileKind, basename, relPath, debounce, toast, menu, prompt, confirmBox, modal, dirname, joinPath, isUnder, REVEAL, TRASH_NOTE } from './dom.js';
 import { renderRefs } from './references.js';
 import { renderRevisao } from './revisao.js';
 
@@ -248,7 +248,7 @@ export class Sidebar {
   }
 
   async trash(n) {
-    const ok = await confirmBox('Mover para o Lixo?', `${n.name} vai para o Lixo do macOS (dá para recuperar de lá).`, { ok: 'Mover para o Lixo', danger: true });
+    const ok = await confirmBox('Mover para o Lixo?', `${n.name} ${TRASH_NOTE}`, { ok: 'Mover para o Lixo', danger: true });
     if (!ok) return;
     try {
       await call('trash', { path: n.path });

@@ -54,23 +54,40 @@ export function listTree(root, { showArtifacts = false, limit = 4000 } = {}) {
 }
 
 // All .tex files of the project (used to find documents and include graphs).
+// Breadth-first, so a shallow paper/ folder is always reached before the
+// thousands of generated tables deep in analysis/output/. The returned array
+// carries `truncated` when the limit cut the scan.
 export function listTexFiles(root, limit = 3000) {
   const out = [];
-  (function walk(dir, depth) {
-    if (depth > 10 || out.length >= limit) return;
-    let entries;
-    try {
-      entries = fs.readdirSync(dir, { withFileTypes: true });
-    } catch {
-      return;
+  let queue = [root];
+  let truncated = false;
+  for (let depth = 0; queue.length && depth <= 10 && !truncated; depth++) {
+    const next = [];
+    for (const dir of queue) {
+      let entries;
+      try {
+        entries = fs.readdirSync(dir, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+      entries.sort((x, y) => (x.name < y.name ? -1 : x.name > y.name ? 1 : 0));
+      for (const e of entries) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) {
+          if (!IGNORED_DIRS.has(e.name) && !e.name.startsWith('.')) next.push(full);
+        } else if (e.name.endsWith('.tex')) {
+          if (out.length >= limit) {
+            truncated = true;
+            break;
+          }
+          out.push(full);
+        }
+      }
+      if (truncated) break;
     }
-    for (const e of entries) {
-      const full = path.join(dir, e.name);
-      if (e.isDirectory()) {
-        if (!IGNORED_DIRS.has(e.name) && !e.name.startsWith('.')) walk(full, depth + 1);
-      } else if (e.name.endsWith('.tex')) out.push(full);
-    }
-  })(root, 0);
+    queue = next;
+  }
+  if (truncated) out.truncated = true;
   return out;
 }
 
@@ -219,7 +236,13 @@ export function projectSymbols(projectRoot) {
   const bibKeys = [];
   const cites = {}; // key -> number of \cite uses in the project
   const macros = {}; // \newcommand & co., for the equation preview
-  for (const f of listTexFiles(projectRoot)) {
+  // Files the documents pull in come first, so a scan cut by the file limit
+  // still sees every label of the papers themselves.
+  const scanned = listTexFiles(projectRoot);
+  const files = new Set();
+  if (scanned.truncated) for (const d of listDocuments(projectRoot)) for (const f of includeClosure(d)) files.add(f);
+  for (const f of scanned) files.add(f);
+  for (const f of files) {
     const src = readText(f) || '';
     if (/\\(?:newcommand|renewcommand|providecommand|DeclareMathOperator|def)\b/.test(src)) Object.assign(macros, macrosFrom(src));
     const lines = src.split('\n');

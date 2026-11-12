@@ -1,6 +1,6 @@
 // Document tools: submission ZIP, double-blind check, ChkTeX, word count.
 import { call } from './api.js';
-import { h, clear, icon, basename, relPath, toast, modal, prompt } from './dom.js';
+import { h, clear, icon, basename, relPath, toast, modal, prompt, REVEAL } from './dom.js';
 import { detect, kindOf, CATEGORIES, SOURCES, VERSION } from './vicios/core.js';
 import { hitInfo } from './vicios/cm.js';
 import { getLang } from './i18n.js';
@@ -63,7 +63,7 @@ export async function exportZip(app, S) {
           : null,
         h('details', {}, h('summary', { class: 'muted' }, 'Arquivos incluídos'), h('pre', { style: { fontSize: '11.5px' } }, r.files.join('\n'))),
       ),
-      footer: [h('button', { class: 'btn', onclick: () => call('reveal', { path: r.zip }) }, icon('folder'), 'Mostrar no Finder')],
+      footer: [h('button', { class: 'btn', onclick: () => call('reveal', { path: r.zip }) }, icon('folder'), REVEAL)],
     });
   } catch (err) {
     toast(err.message, 'error');

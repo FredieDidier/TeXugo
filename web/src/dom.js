@@ -167,7 +167,12 @@ export function icon(name, cls = '') {
 }
 
 // The system's file manager, by its name where it has one.
-export const REVEAL = typeof navigator === 'undefined' || /Mac/.test(navigator.platform || '') ? 'Mostrar no Finder' : 'Mostrar na pasta';
+export const IS_MAC = typeof navigator === 'undefined' || /Mac/.test(navigator.platform || '');
+export const REVEAL = IS_MAC ? 'Mostrar no Finder' : 'Mostrar na pasta';
+// The default PDF viewer, by its name on the Mac.
+export const OPEN_PDF = IS_MAC ? 'Abrir no Preview' : 'Abrir no leitor de PDF';
+// Where deleted files go.
+export const TRASH_NOTE = IS_MAC ? 'vai para o Lixo do macOS (dá para recuperar de lá).' : 'vai para a lixeira do sistema (dá para recuperar de lá).';
 
 export function wordmark() {
   return h('span', { class: 'wordmark' }, 'T', h('span', { class: 'e' }, 'e'), h('span', { class: 'x' }, 'X'), h('span', { class: 'ugo' }, 'ugo'));

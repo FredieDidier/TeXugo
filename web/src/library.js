@@ -4,7 +4,7 @@
 // through every paper and lands on the page, with the words highlighted.
 import pdfjsLib from './pdfjs-setup.js';
 import { call, fileUrl, native } from './api.js';
-import { h, clear, icon, toast, modal, prompt, confirmBox } from './dom.js';
+import { h, clear, icon, toast, modal, prompt, confirmBox, OPEN_PDF } from './dom.js';
 import { PdfTab } from './pdfview.js';
 
 // Same split as the server: "quoted phrases" stay whole.
@@ -357,7 +357,7 @@ export function openReader(app, S, p, { page = 1, terms = [], onBeside } = {}) {
             openBeside(app, S, p, n);
           },
         }, icon('columns')) : null,
-    h('button', { class: 'icon-btn', title: 'Abrir no Preview', onclick: () => call('openExternal', { path: p.path }).catch((e) => toast(e.message, 'error')) }, icon('external')),
+    h('button', { class: 'icon-btn', title: OPEN_PDF, onclick: () => call('openExternal', { path: p.path }).catch((e) => toast(e.message, 'error')) }, icon('external')),
     h('button', { class: 'icon-btn', title: 'Fechar (Esc)', onclick: close }, icon('x')),
   );
   renderTools();

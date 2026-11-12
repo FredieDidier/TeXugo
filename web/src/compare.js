@@ -2,7 +2,7 @@
 // folder) or a Git commit; TeXugo builds a PDF with the changes marked
 // (latexdiff) and opens it beside the paper.
 import { call, native } from './api.js';
-import { h, clear, icon, basename, relPath, toast, modal } from './dom.js';
+import { h, clear, icon, basename, relPath, toast, modal, REVEAL } from './dom.js';
 
 export async function compareDialog(app, S) {
   const t = app.activeTab();
@@ -100,7 +100,7 @@ function resultDialog(app, S, doc, r) {
       h('p', { class: 'faint', style: { fontSize: '12px' } }, 'Fica em .texugo/diff, fora do Git. Citações que só existem no texto apagado podem aparecer como (?).'),
     ),
     footer: [
-      h('button', { class: 'btn', onclick: () => call('reveal', { path: r.pdf }) }, 'Mostrar no Finder'),
+      h('button', { class: 'btn', onclick: () => call('reveal', { path: r.pdf }) }, REVEAL),
       h(
         'button',
         {

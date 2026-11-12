@@ -1,6 +1,6 @@
 // Welcome screen and the "new project from template" dialog.
 import { call, native } from './api.js';
-import { h, clear, icon, wordmark, toast, modal, basename, dirname, joinPath } from './dom.js';
+import { h, clear, icon, wordmark, toast, modal, basename, dirname, joinPath, IS_MAC } from './dom.js';
 import { shortcutsDialog } from './shortcuts.js';
 import { openSettings } from './settings.js';
 
@@ -305,8 +305,8 @@ function toolsLine(S) {
       {},
       h('b', {}, S.hello.tex ? 'Falta instalar: ' : 'O TeX Live não foi encontrado. '),
       S.hello.tex ? missing.map((k) => `${k} (${TOOL_ROLE[k]})`).join(', ') + '. ' : '',
-      'Instale o MacTeX: ',
-      h('a', { href: '#', onclick: (e) => (e.preventDefault(), call('openUrl', { url: 'https://tug.org/mactex/' })) }, 'tug.org/mactex'),
+      IS_MAC ? 'Instale o MacTeX: ' : 'Instale o TeX Live: ',
+      h('a', { href: '#', onclick: (e) => (e.preventDefault(), call('openUrl', { url: IS_MAC ? 'https://tug.org/mactex/' : 'https://tug.org/texlive/' })) }, IS_MAC ? 'tug.org/mactex' : 'tug.org/texlive'),
       '. O Médico do TeX mostra os detalhes.',
     ),
   );

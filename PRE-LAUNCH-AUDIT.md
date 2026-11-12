@@ -46,7 +46,7 @@ Feita no app Electron real, com perfil e projeto temporários (modelo *Artigo + 
 - `Commit de tudo` inclui os PDFs e o `.bbl` gerados; decidir se o `.gitignore` criado pelo app deve cobri-los.
 - ✅ **FEITO (12/11).** Os modelos de artigo e de projeto agora citam Card e Krueger (1994) e Imbens e Lemieux (2008), com frases neutras, no lugar das referências sobre horário de verão.
 - Fontes de 11 a 12 px em listas e rótulos (pendência de D1).
-- "Mostrar no Finder", "Abrir no Preview", "Lixo do macOS" e "Instale o MacTeX" em outros sistemas (I9, I17).
+- ✅ **FEITO (12/11).** "Mostrar no Finder", "Abrir no Preview", "Lixo do macOS" e "Instale o MacTeX" viram "Mostrar na pasta", "Abrir no leitor de PDF", "lixeira do sistema" e "TeX Live" fora do Mac (`IS_MAC`, `OPEN_PDF`, `TRASH_NOTE` em web/src/dom.js). Não visto em Windows nem Linux.
 
 ## Como ler
 
@@ -251,7 +251,9 @@ Corrigir antes do lançamento se couber; nenhum, sozinho, impede lançar.
 - **Correção:** decidir o que é do sistema pela raiz do TeX, não pelo nome: `kpsewhich -var-value TEXMFROOT` (e `TEXMFDIST`, `TEXMFLOCAL`, `TEXMFHOME`), com cache; um arquivo é do sistema se estiver dentro de uma dessas raízes.
 - **Aceite:** o teste de `test/submission.test.js` repetido dentro de uma pasta chamada `tex/`.
 
-## I6. O limite de 3.000 arquivos `.tex` esconde documentos
+## ✅ I6. O limite de 3.000 arquivos `.tex` esconde documentos — **CORRIGIDO**
+
+- **Estado (12/11/2026):** `listTexFiles` agora percorre em largura e marca `truncated`; quando corta, os rótulos e macros dos arquivos incluídos pelos documentos são lidos primeiro. O projeto de teste (3.100 tabelas) acha `writing/paper.tex` e `sec:intro`. Ainda não há aviso na interface quando o limite corta.
 
 - **Classificação:** confirmado (execução). **Gravidade:** média. **Esforço:** P a M.
 - **Evidência:** [server/project.js:57](server/project.js:57): `listTexFiles` percorre em profundidade, em ordem alfabética, e para em 3.000. Projeto de teste com 3.100 tabelas em `analysis/output/` e o paper em `writing/`: `documents found: []`, `rootsFor(sections/intro.tex): []`, `labels found: 0`.
