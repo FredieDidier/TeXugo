@@ -188,7 +188,7 @@ export async function compareBuild(doc, source, target = null) {
     // \externaldocument labels resolve as in the real build.
     const info = docInfo(doc);
     const engine = info.engine || 'pdflatex';
-    const env = { ...toolEnv(), BIBINPUTS: docDir + ':', BSTINPUTS: docDir + ':' };
+    const env = { ...toolEnv(), BIBINPUTS: docDir + path.delimiter, BSTINPUTS: docDir + path.delimiter };
     const tex = () => run(engine, ['-interaction=nonstopmode', '-file-line-error', `-output-directory=${outDir}`, diffTex], { cwd: docDir, env, timeout: 300000 });
     await tex();
     // Bibliography: BibTeX against the document's .bib (deleted text keeps
