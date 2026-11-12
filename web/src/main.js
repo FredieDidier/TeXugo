@@ -1772,7 +1772,7 @@ function wireFsEvents() {
     refreshGitSoon();
     await checkDisk();
     // A pull (or a coauthor's sync) brought comments.
-    if (e.files.some((f) => f.includes('/.texugo-comments/'))) app.comments.load();
+    if (e.files.some((f) => /[\\/]\.texugo-comments[\\/]/.test(f))) app.comments.load();
     // A pull (or any change) brought a latexmkrc or Claude Code settings into
     // a folder the user has not trusted: ask now, not at the next opening.
     if (e.files.some((f) => /(^|[\\/])\.?latexmkrc$/.test(f) || /[\\/]\.claude([\\/]|$)/.test(f))) recheckTrust();

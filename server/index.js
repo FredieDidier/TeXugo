@@ -148,6 +148,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     try {
       const w = fs.watch(root, { recursive: true }, (_ev, rel) => {
         if (!rel) return;
+        rel = rel.replace(/\\/g, '/'); // Windows reports backslashes
         if (/(^|\/)(\.git|node_modules)(\/|$)/.test(rel) || rel.endsWith('.texugo-tmp') || rel.startsWith('.texugo/live/')) return;
         const full = path.join(root, rel);
         pending.set(full, true);
