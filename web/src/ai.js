@@ -117,7 +117,7 @@ function showDiff(app, { view, tab, from, to, text, r, act }) {
       { class: 'ai-diff' },
       r.note ? h('p', {}, document.createTextNode(r.note)) : null,
       h('div', { class: 'ai-diff-text' }, diffNodes(text, r.text)),
-      h('p', { class: 'faint', style: { fontSize: '11.5px' } }, `${(r.ms / 1000).toFixed(0)} s${r.style ? ` · estilo: ${basename(r.style)}` : ''}`),
+      h('p', { class: 'faint', style: { fontSize: '12px' } }, `${(r.ms / 1000).toFixed(0)} s${r.style ? ` · estilo: ${basename(r.style)}` : ''}`),
     ),
     footer: [
       h('button', { class: 'btn', onclick: () => navigator.clipboard.writeText(r.text).then(() => toast('Copiado.', 'ok')) }, 'Copiar'),

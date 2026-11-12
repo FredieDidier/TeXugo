@@ -14,7 +14,7 @@ function docOf(app) {
   return t.root;
 }
 
-const mono = { fontFamily: 'var(--mono)', fontSize: '11.5px' };
+const mono = { fontFamily: 'var(--mono)', fontSize: '12px' };
 
 // What the test compile of the extracted ZIP found.
 function zipCheckView(c) {
@@ -61,7 +61,7 @@ export async function exportZip(app, S) {
               h('ul', {}, r.moved.slice(0, 12).map((m) => h('li', { style: mono }, `${relPath(S.project.root, m.from)} → ${m.to}`))),
             )
           : null,
-        h('details', {}, h('summary', { class: 'muted' }, 'Arquivos incluídos'), h('pre', { style: { fontSize: '11.5px' } }, r.files.join('\n'))),
+        h('details', {}, h('summary', { class: 'muted' }, 'Arquivos incluídos'), h('pre', { style: { fontSize: '12px' } }, r.files.join('\n'))),
       ),
       footer: [h('button', { class: 'btn', onclick: () => call('reveal', { path: r.zip }) }, icon('folder'), REVEAL)],
     });
@@ -215,7 +215,7 @@ export async function texDoctor(app, S, { files = [] } = {}) {
         r.ok
           ? h('p', { style: { color: 'var(--ok)', fontWeight: 600 } }, icon('checkCircle'), ` Instalado: ${pkgs.join(', ')}. Compile de novo.`)
           : h('p', { style: { color: 'var(--err)' } }, 'A instalação não terminou bem. Veja a saída abaixo.'),
-        h('details', { open: !r.ok }, h('summary', { class: 'muted' }, 'Saída do tlmgr'), h('pre', { style: { fontSize: '11px', whiteSpace: 'pre-wrap' } }, r.output || '')),
+        h('details', { open: !r.ok }, h('summary', { class: 'muted' }, 'Saída do tlmgr'), h('pre', { style: { fontSize: '12px', whiteSpace: 'pre-wrap' } }, r.output || '')),
         r.ok ? h('button', { class: 'btn', onclick: () => (m.close(), app.compileAll()) }, icon('playAll'), 'Compilar tudo agora') : null,
       );
     };

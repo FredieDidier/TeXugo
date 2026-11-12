@@ -68,7 +68,7 @@ export async function addReference(app, S) {
               { class: 'ref-meta' },
               h('div', { class: 'ref-title' }, r.title),
               h('div', { class: 'faint' }, [authorsLine(r), r.year, r.venue || (r.eprint ? `arXiv:${r.eprint}` : '')].filter(Boolean).join(' · ')),
-              r.doi ? h('div', { class: 'faint', style: { fontSize: '11px' } }, 'doi:' + r.doi) : null,
+              r.doi ? h('div', { class: 'faint', style: { fontSize: '12px' } }, 'doi:' + r.doi) : null,
             ),
             h('div', { class: 'ref-actions' }, view ? h('button', { class: 'btn primary', onclick: () => add(r, true) }, 'Adicionar e citar') : null, h('button', { class: 'btn', onclick: () => add(r, false) }, 'Só adicionar')),
           ),

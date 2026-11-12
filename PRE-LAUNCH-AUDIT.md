@@ -42,10 +42,10 @@ Feita no app Electron real, com perfil e projeto temporários (modelo *Artigo + 
 - ✅ **FEITO (12/11).** O botão "Ir ao trecho no código" da barra do PDF, que só mostrava um aviso, saiu (dois cliques no PDF já levam ao código).
 - ✅ **FEITO (12/11).** A paleta vazia mostra os comandos usados por último e depois nove grupos: Compilar, Editar, Escrita, Projeto e arquivos, Referências, Coautores, Revisão e submissão, Claude, Janela e ajuda. Com texto digitado, a busca continua numa lista só, por relevância.
 - Preferências numa coluna longa (930 px de conteúdo em 600 visíveis); pedir abas ou busca.
-- Aba Revisão com 12 linhas sem recolher seções.
+- ✅ **FEITO (12/11).** As três seções da aba Revisão (Coautores, Pareceristas, Antes de enviar) recolhem. O estado fica guardado por seção, e o cabeçalho mostra quantas linhas pedem atenção.
 - `Commit de tudo` inclui os PDFs e o `.bbl` gerados; decidir se o `.gitignore` criado pelo app deve cobri-los.
 - ✅ **FEITO (12/11).** Os modelos de artigo e de projeto agora citam Card e Krueger (1994) e Imbens e Lemieux (2008), com frases neutras, no lugar das referências sobre horário de verão.
-- Fontes de 11 a 12 px em listas e rótulos (pendência de D1).
+- ✅ **FEITO (12/11).** Nenhum texto de lista ou rótulo fica abaixo de 12 px. Os 37 usos de 11 e 11,5 px do CSS e 6 do JavaScript passaram para 12 px, e a etiqueta de documento na árvore foi para 11 px. Ficam menores só os selos numéricos da barra de atividades e o ponto de aba suja.
 - ✅ **FEITO (12/11).** "Mostrar no Finder", "Abrir no Preview", "Lixo do macOS" e "Instale o MacTeX" viram "Mostrar na pasta", "Abrir no leitor de PDF", "lixeira do sistema" e "TeX Live" fora do Mac (`IS_MAC`, `OPEN_PDF`, `TRASH_NOTE` em web/src/dom.js). Não visto em Windows nem Linux.
 
 ## Como ler

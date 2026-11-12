@@ -211,12 +211,35 @@ export async function renderRevisao(app, S, el) {
       'div',
       { class: 'sidebar-body rev' },
       h('div', { class: 'rev-doc faint' }, relPath(S.project.root, doc)),
-      h('div', { class: 'section-label' }, 'Coautores'),
-      coauthors,
-      h('div', { class: 'section-label' }, 'Pareceristas'),
-      referees,
-      h('div', { class: 'section-label' }, 'Antes de enviar'),
-      before,
+      section('coautores', 'Coautores', coauthors),
+      section('pareceristas', 'Pareceristas', referees),
+      section('enviar', 'Antes de enviar', before),
     ),
   );
+}
+
+// A section of the tab that folds; the fold is remembered per section. The
+// header counts the rows that ask for attention, so a folded section still
+// says whether something is waiting.
+const FOLD_KEY = 'texugo-revisao-folded';
+function folded() {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(FOLD_KEY) || '[]'));
+  } catch {
+    return new Set();
+  }
+}
+function section(id, label, rows) {
+  const list = [rows].flat(Infinity).filter(Boolean);
+  const open = list.filter((r) => r.classList && r.classList.contains('open')).length;
+  const d = h('details', { class: 'rev-sec', open: !folded().has(id) }, h('summary', { class: 'section-label' }, label, open ? h('span', { class: 'badge' }, String(open)) : null), ...list);
+  d.addEventListener('toggle', () => {
+    const f = folded();
+    if (d.open) f.delete(id);
+    else f.add(id);
+    try {
+      localStorage.setItem(FOLD_KEY, JSON.stringify([...f]));
+    } catch {}
+  });
+  return d;
 }

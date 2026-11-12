@@ -99,7 +99,7 @@ export function setupIde(app, S) {
         fileDiff(e.oldText, e.newText),
       ),
       footer: [
-        h('span', { class: 'faint', style: { fontSize: '11.5px' } }, e.tabName || ''),
+        h('span', { class: 'faint', style: { fontSize: '12px' } }, e.tabName || ''),
         h('span', { style: { flex: 1 } }),
         h('button', { class: 'btn', onclick: () => (answer(false), m.close()) }, 'Recusar'),
         h('button', { class: 'btn primary', onclick: () => (answer(true), m.close()) }, icon('check'), 'Aceitar'),
