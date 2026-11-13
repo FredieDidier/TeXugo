@@ -19,9 +19,20 @@ async function gitDir(root) {
   return r.code === 0 ? r.stdout.trim() : null;
 }
 
+// A path as the system knows it: symlinks resolved and, on Windows, short
+// 8.3 names (C:\Users\RUNNER~1) expanded, with native separators. Git
+// reports its top as C:/Users/runneradmin/..., so both sides go through this.
+function canon(p) {
+  try {
+    return path.resolve(fs.realpathSync.native(p));
+  } catch {
+    return path.resolve(p);
+  }
+}
+
 async function top(root) {
   const r = await git(root, ['rev-parse', '--show-toplevel']);
-  return r.code === 0 ? r.stdout.trim() : null;
+  return r.code === 0 ? canon(r.stdout.trim()) : null;
 }
 
 export async function whoami(root) {
@@ -225,7 +236,7 @@ export async function news(root, { since = 'visit', base = null } = {}) {
   // project by the path it opened (maybe a subfolder, maybe via a symlink).
   let prefix = '';
   try {
-    prefix = path.relative(topDir, fs.realpathSync(root));
+    prefix = path.relative(topDir, canon(root));
   } catch {}
   const toLocal = (rel) => path.join(root, path.relative(prefix, rel));
   const authors = byAuthor(localCommits, toLocal);
@@ -276,7 +287,7 @@ export async function blame(root, { file, text }) {
   // Through symlinks (/var -> /private/var), as git reports the top.
   let real = file;
   try {
-    real = path.join(fs.realpathSync(path.dirname(file)), path.basename(file));
+    real = path.join(canon(path.dirname(file)), path.basename(file));
   } catch {}
   const rel = path.relative(topDir, real);
   const tracked = await git(root, ['ls-files', '--error-unmatch', '--', rel], { cwd: topDir });

@@ -70,6 +70,14 @@ app.whenReady().then(async () => {
       return false;
     };
     const key = async (keyCode, modifiers = []) => {
+      // On Linux, Electron drops synthetic key events with Ctrl before they
+      // reach the page; there the shortcut goes in as a DOM event, which is
+      // what the page's own handler reads.
+      if (modifiers.length && (process.platform === 'linux' || process.env.TEXUGO_DOM_KEYS)) {
+        const init = { key: keyCode, code: keyCode.length === 1 ? 'Key' + keyCode.toUpperCase() : keyCode, ctrlKey: modifiers.includes('control'), metaKey: modifiers.includes('meta'), shiftKey: modifiers.includes('shift'), altKey: modifiers.includes('alt'), bubbles: true, cancelable: true };
+        await js(`(document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', ${JSON.stringify(init)})); return true;`);
+        return sleep(120);
+      }
       wc.focus();
       wc.sendInputEvent({ type: 'keyDown', keyCode, modifiers });
       if (keyCode.length === 1 && !modifiers.length) wc.sendInputEvent({ type: 'char', keyCode, modifiers });

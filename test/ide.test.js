@@ -11,7 +11,9 @@ import { IdeBridge } from '../server/ide.js';
 test('bridge: auth, initialize, selection, diagnostics, openDiff', async () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-home-'));
   const realHome = process.env.HOME;
+  const realProfile = process.env.USERPROFILE;
   process.env.HOME = home; // keep the lock file out of the real ~/.claude
+  process.env.USERPROFILE = home; // os.homedir() on Windows
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-proj-'));
   const file = path.join(root, 'paper.tex');
   fs.writeFileSync(file, 'It is worth noting that we use logs.\n');
@@ -82,5 +84,7 @@ test('bridge: auth, initialize, selection, diagnostics, openDiff', async () => {
     ide.wss && ide.wss.close();
     ide.removeLock();
     process.env.HOME = realHome;
+    if (realProfile === undefined) delete process.env.USERPROFILE;
+    else process.env.USERPROFILE = realProfile;
   }
 });

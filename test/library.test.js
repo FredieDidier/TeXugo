@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
+import { writeSqlite } from './sqlite-helper.js';
 
 process.env.TEXUGO_DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-lib-'));
 const lib = await import('../server/library.js');
@@ -46,8 +46,7 @@ test('adds a PDF once, keeps its text and finds words across pages', () => {
 test('lists Zotero PDF attachments with the parent item data', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-zot-'));
   const db = path.join(dir, 'zotero.sqlite');
-  execFileSync('sqlite3', [db], {
-    input: `
+  writeSqlite(db, `
 CREATE TABLE itemTypes (itemTypeID INTEGER PRIMARY KEY, typeName TEXT);
 CREATE TABLE items (itemID INTEGER PRIMARY KEY, itemTypeID INT, libraryID INT, key TEXT);
 CREATE TABLE fields (fieldID INTEGER PRIMARY KEY, fieldName TEXT);
@@ -66,8 +65,7 @@ INSERT INTO itemData VALUES (1,1,1),(1,2,2);
 INSERT INTO creators VALUES (1,'Ana','Lee',0);
 INSERT INTO creatorTypes VALUES (1,'author');
 INSERT INTO itemCreators VALUES (1,1,1,0);
-INSERT INTO itemAttachments VALUES (2,1,0,'application/pdf','storage:Lee 2021.pdf'),(3,1,0,'application/pdf','storage:gone.pdf');`,
-  });
+INSERT INTO itemAttachments VALUES (2,1,0,'application/pdf','storage:Lee 2021.pdf'),(3,1,0,'application/pdf','storage:gone.pdf');`);
   fs.mkdirSync(path.join(dir, 'storage', 'ATTACH01'), { recursive: true });
   fs.writeFileSync(path.join(dir, 'storage', 'ATTACH01', 'Lee 2021.pdf'), pdf('z'));
   const items = await pdfAttachments({ db });

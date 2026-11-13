@@ -3,10 +3,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 import { library, addItems, importBib } from '../server/zotero.js';
-
-const sqlite = await import('node:sqlite').catch(() => null);
+import { writeSqlite } from './sqlite-helper.js';
 
 // A tiny library with Zotero's own schema (the tables TeXugo reads).
 function fakeZotero() {
@@ -32,12 +30,7 @@ INSERT INTO creators VALUES (1,'Ria','Ivandić',0),(2,'Tom','Kirchmaier',0),(3,'
 INSERT INTO creatorTypes VALUES (1,'author'),(2,'editor'),(3,'contributor');
 INSERT INTO itemCreators VALUES (1,1,1,0),(1,2,1,1),(3,3,1,0),(3,4,1,1);
 INSERT INTO deletedItems VALUES (4);`;
-  // Windows has no sqlite3 program; Node's own SQLite writes the same file.
-  if (sqlite) {
-    const d = new sqlite.DatabaseSync(db);
-    d.exec(sql);
-    d.close();
-  } else execFileSync('sqlite3', [db], { input: sql });
+  writeSqlite(db, sql);
   return { dir, db };
 }
 
