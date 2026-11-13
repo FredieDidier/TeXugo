@@ -35,7 +35,7 @@ jobs:
         uses: r-lib/actions/setup-tinytex@v2
       - name: Pacotes do modelo (Mac e Windows)
         if: runner.os != 'Linux'
-        run: tlmgr install latexmk lm babel-english booktabs setspace microtype natbib xr geometry hyperref amsmath amsfonts
+        run: tlmgr install latexmk lm babel-english booktabs setspace microtype natbib tools geometry hyperref amsmath amsfonts
       - name: Fumaça (Linux, com tela virtual)
         if: runner.os == 'Linux'
         env:

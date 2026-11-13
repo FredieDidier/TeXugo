@@ -16,6 +16,8 @@ const B = path.join(TMP, 'b');
 const ID = ['-c', 'user.name=A. Author', '-c', 'user.email=author@example.org'];
 const sh = (cwd, ...args) => execFileSync('git', args, { cwd, stdio: 'pipe' }).toString();
 const w = (dir, file, text) => fs.writeFileSync(path.join(dir, file), text);
+// Git for Windows checks files out with CRLF (core.autocrlf): compare the text.
+const read = (dir, file) => fs.readFileSync(path.join(dir, file), 'utf8').replace(/\r\n/g, '\n');
 
 before(() => {
   // Identity for the commits git.js makes, without touching the user's config.
@@ -68,7 +70,7 @@ test('sync sends the commit; the coauthor receives it', async () => {
   assert.deepEqual(r.steps, ['pull', 'push']);
   const p = await git.pull(B);
   assert.equal(p.code, 0, p.stderr);
-  assert.match(fs.readFileSync(path.join(B, 'paper.tex'), 'utf8'), /two changed/);
+  assert.match(read(B, 'paper.tex'), /two changed/);
 });
 
 test('sync rebases over a coauthor change in another line', async () => {
@@ -78,7 +80,7 @@ test('sync rebases over a coauthor change in another line', async () => {
   const r = await git.sync(A, 'From A again');
   assert.equal(r.code, 0, r.stderr);
   assert.deepEqual(r.steps, ['commit “From A again”', 'pull', 'push']);
-  assert.equal(fs.readFileSync(path.join(A, 'paper.tex'), 'utf8'), 'one by A\ntwo changed\nthree by B\n');
+  assert.equal(read(A, 'paper.tex'), 'one by A\ntwo changed\nthree by B\n');
   const log = await git.log(A);
   assert.equal(log[0].subject, 'From A again');
   assert.equal(log.filter((c) => /^Merge/.test(c.subject)).length, 0);
