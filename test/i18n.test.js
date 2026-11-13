@@ -277,6 +277,14 @@ const RUNTIME = [
   'Sem permissão para clonar. Repositório privado? Entre na conta pelo GitHub Desktop ou use o endereço SSH. (fatal: denied)',
   'latexmk não encontrado. Instale o MacTeX (https://tug.org/mactex/) ou adicione /Library/TeX/texbin ao PATH.',
   'Não verificada: Sem conexão com a internet',
+  'Sem conexão com a internet: o servidor online do LanguageTool não responde. O servidor local, em Preferências, funciona sem rede.\nClique para tentar de novo.',
+  'Sincronizar', 'Sincronizando…', 'Sincronizado: commit “Update paper.tex”, pull, push.', 'Enviar', 'Permitir', 'Resolvido', 'Parecer', 'Adicionar', 'Aplicar',
+  'Buscar', 'Buscando…', 'Adicionar e citar', 'Conferir', 'Gerar parecer', 'Novo parecer', 'Escrever a resposta', 'Verificar de novo', 'Instalar', 'Instalando…',
+  'Achar qualquer coisa', 'Escrever', 'Revisar e submeter', 'Importar',
+  'Todas 12', 'Sugestões 3', 'citada 2×',
+  'Você e a outra versão mudaram os mesmos trechos (3 lugares), e juntar sozinho não resolve. Veja as diferenças e escolha uma versão.',
+  'paper.tex mudou de novo no disco enquanto as versões eram juntadas. Salve outra vez.', 'paper.tex: as suas alterações e as que chegaram de fora foram juntadas e salvas.',
+  'Clonar', 'Clonando…', 'Tentar de novo', 'Montando o PDF…', 'Procurando os PDFs anexados no Zotero…', 'Instalar amsmath, booktabs', 'Lendo o texto: paper.pdf (faltam 3)', 'Dicionário e regras zerados.',
   'Leu', 'Buscou', 'Listou', 'Listou arquivos', 'Editou', 'Escreveu', 'Rodou', 'Abriu', 'Carregou a skill',
 ];
 

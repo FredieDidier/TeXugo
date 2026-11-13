@@ -1,5 +1,6 @@
 // Preferences dialog and theme handling.
 import { h, icon, modal, IS_MAC } from './dom.js';
+import { tr } from './i18n.js';
 import { ngramsRow } from './ngrams.js';
 import { getLang } from './i18n.js';
 import { EditorView } from './editor.js';
@@ -137,7 +138,7 @@ export function openSettings(app, S) {
         { class: 'faint', style: { fontSize: '12px', margin: '2px 0 0' } },
         `Seu dicionário: ${(st.grammarWords || []).length} palavra(s). Regras que você mandou não apontar: ${(st.grammarRules || []).length}. `,
         (st.grammarWords || []).length || (st.grammarRules || []).length
-          ? h('button', { class: 'link', onclick: (e) => ((st.grammarWords = []), (st.grammarRules = []), save(), app.grammarChanged(), (e.target.parentElement.textContent = 'Dicionário e regras zerados.')) }, 'Zerar')
+          ? h('button', { class: 'link', onclick: (e) => ((st.grammarWords = []), (st.grammarRules = []), save(), app.grammarChanged(), (e.target.parentElement.textContent = tr('Dicionário e regras zerados.'))) }, 'Zerar')
           : null,
       ),
       ngramsRow(app),

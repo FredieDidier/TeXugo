@@ -1,5 +1,6 @@
 // Welcome screen and the "new project from template" dialog.
 import { call, native } from './api.js';
+import { tr } from './i18n.js';
 import { h, clear, icon, wordmark, toast, modal, basename, dirname, joinPath, IS_MAC } from './dom.js';
 import { shortcutsDialog } from './shortcuts.js';
 import { openSettings } from './settings.js';
@@ -222,7 +223,7 @@ export function cloneDialog(app, S) {
     if (!url.value.trim()) return toast('Cole o endereço do repositório.', 'warn');
     if (S.project && !(await app.confirmLeave())) return;
     btn.disabled = true;
-    btn.textContent = 'Clonando…';
+    btn.textContent = tr('Clonando…');
     S.settings.lastCloneParent = parent.value;
     app.saveSettingsSoon();
     try {
@@ -234,7 +235,7 @@ export function cloneDialog(app, S) {
     } catch (err) {
       toast(err.message, 'error', 9000);
       btn.disabled = false;
-      btn.textContent = 'Clonar';
+      btn.textContent = tr('Clonar');
     }
   };
   const m = modal({

@@ -3,10 +3,27 @@
 // GitHub Desktop's configuration, as in the terminal.
 import { L } from './lang.js';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { run } from './util.js';
 
 const git = (root, args, opts = {}) => run('git', ['-C', root, ...args], { timeout: 120000, ...opts });
+
+// Git could not reach the remote at all (no network, DNS, firewall). Git's
+// own text names URLs and curl errors; this says it in one plain sentence.
+const NO_NET = /Could not resolve host|Failed to connect to|Network is unreachable|Connection timed out|Operation timed out|Couldn't connect to server|Connection refused/i;
+// `after` gives the second sentence, in the UI language.
+export function offlineText(out, after) {
+  if (!NO_NET.test(out || '')) return null;
+  const host = ((out.match(/(?:resolve host(?:name)?:?|connect to) ([\w.-]+)/i) || [])[1] || '').replace(/\.$/, '');
+  return (host ? L('Sem conexão com ', 'No connection to ') + host + '. ' : L('Sem conexão com o remoto. ', 'No connection to the remote. ')) + after();
+}
+const NOTHING = () => L('Nada mudou aqui; tente de novo quando a internet voltar.', 'Nothing changed here; try again when the internet is back.');
+const KEPT = () => L('Os seus commits ficam aqui e sobem no próximo Push ou Sincronizar.', 'Your commits stay here and go up with the next Push or Sync.');
+const plain = (r, what) => {
+  const said = r.code !== 0 && offlineText(r.stderr || r.stdout, what);
+  return said ? { ...r, offline: true, stderr: said } : r;
+};
 
 export async function status(root) {
   const inside = await git(root, ['rev-parse', '--is-inside-work-tree']);
@@ -146,12 +163,15 @@ export async function sync(root, message, { force = false } = {}) {
           await git(root, ['rebase', '--abort']);
           return { code: p.code, conflict: true, stderr: 'O pull achou mudanças que conflitam com as suas; nada foi perdido (o commit está feito). Resolva pelo GitHub Desktop ou pelo terminal. ' + tail, steps };
         }
+        const committed = steps.length ? () => L('O commit está feito aqui e sobe no próximo Sincronizar.', 'The commit is made here and goes up with the next Sync.') : NOTHING;
+        const said = offlineText(p.stderr || p.stdout, committed);
+        if (said) return { code: p.code, offline: true, stderr: said, steps };
         return { code: p.code, stderr: 'O pull falhou (não foi conflito): ' + tail, steps };
       }
       steps.push('pull');
     }
     const u = await push(root);
-    if (u.code !== 0) return { code: u.code, stderr: u.stderr || u.stdout, steps };
+    if (u.code !== 0) return { code: u.code, offline: u.offline, stderr: u.stderr || u.stdout, steps };
     steps.push('push');
   }
   return { code: 0, steps };
@@ -159,17 +179,17 @@ export async function sync(root, message, { force = false } = {}) {
 
 // Asks the remote what is new without changing anything here.
 export async function fetch(root) {
-  return git(root, ['fetch', '--quiet'], { timeout: 60000 });
+  return plain(await git(root, ['fetch', '--quiet'], { timeout: 60000 }), NOTHING);
 }
 
 export async function pull(root) {
-  return git(root, ['pull', '--ff-only']);
+  return plain(await git(root, ['pull', '--ff-only']), NOTHING);
 }
 
 export async function push(root) {
   const st = await status(root);
-  if (!st.upstream && st.branch) return git(root, ['push', '-u', 'origin', st.branch]);
-  return git(root, ['push']);
+  if (!st.upstream && st.branch) return plain(await git(root, ['push', '-u', 'origin', st.branch]), KEPT);
+  return plain(await git(root, ['push']), KEPT);
 }
 
 export async function log(root, file) {
@@ -187,4 +207,20 @@ export async function log(root, file) {
 
 export async function init(root) {
   return git(root, ['init']);
+}
+
+// "Juntar" in the save-conflict dialog: a three-way merge of whole texts.
+// base is what the tab loaded from disk, mine is the tab now, theirs is the
+// disk now. git merge-file exits with the number of passages both sides
+// changed; with none, the result keeps every change of both.
+export async function mergeText(base, mine, theirs) {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-merge-'));
+  try {
+    const file = (name, text) => (fs.writeFileSync(path.join(dir, name), text), path.join(dir, name));
+    const r = await run('git', ['merge-file', '-p', file('mine', mine), file('base', base), file('theirs', theirs)], { timeout: 30000 });
+    if (r.code < 0 || r.code > 127) throw new Error(L('Não deu para juntar: o Git não respondeu.', 'Could not merge: Git did not answer.'));
+    return { text: r.stdout, conflicts: r.code };
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
 }

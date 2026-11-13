@@ -1,5 +1,6 @@
 // Document tools: submission ZIP, double-blind check, ChkTeX, word count.
 import { call } from './api.js';
+import { tr } from './i18n.js';
 import { h, clear, icon, basename, relPath, toast, modal, prompt, REVEAL } from './dom.js';
 import { detect, kindOf, CATEGORIES, SOURCES, VERSION } from './vicios/core.js';
 import { hitInfo } from './vicios/cm.js';
@@ -207,7 +208,7 @@ export async function texDoctor(app, S, { files = [] } = {}) {
       const r = await call('installPackages', { pkgs }).catch((err) => ({ ok: false, output: err.message }));
       if (r.cancelled) {
         btn.disabled = false;
-        btn.textContent = `Instalar ${pkgs.join(', ')}`;
+        btn.textContent = tr(`Instalar ${pkgs.join(', ')}`);
         return toast('Instalação cancelada.', 'warn');
       }
       clear(

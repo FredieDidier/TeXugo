@@ -3,6 +3,7 @@
 // is read here with pdf.js and kept by the server, so one search goes
 // through every paper and lands on the page, with the words highlighted.
 import pdfjsLib from './pdfjs-setup.js';
+import { tr } from './i18n.js';
 import { call, fileUrl, native } from './api.js';
 import { h, clear, icon, toast, modal, prompt, confirmBox, OPEN_PDF } from './dom.js';
 import { PdfTab } from './pdfview.js';
@@ -143,7 +144,7 @@ export function libraryDialog(app, S, { query = '' } = {}) {
         const todo = papers.filter((p) => !p.indexed && !p.failed);
         if (!todo.length) break;
         const p = todo[0];
-        status.textContent = `Lendo o texto: ${label(p)} (faltam ${todo.length})`;
+        status.textContent = tr(`Lendo o texto: ${label(p)} (faltam ${todo.length})`);
         try {
           const { pages, guess } = await extractText(p.path);
           Object.assign(p, await call('libSetText', { id: p.id, pages, guess }));
@@ -194,7 +195,7 @@ export function libraryDialog(app, S, { query = '' } = {}) {
   }
 
   async function fromZotero() {
-    status.textContent = 'Procurando os PDFs anexados no Zotero…';
+    status.textContent = tr('Procurando os PDFs anexados no Zotero…');
     try {
       const items = await call('libZotero');
       const have = new Set(papers.map((p) => p.zkey).filter(Boolean));

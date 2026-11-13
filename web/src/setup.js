@@ -4,6 +4,7 @@
 // Ajuda → Verificar instalação. Never runs an installer or sudo by itself:
 // every action is a click, and "Continuar" is always there.
 import { call } from './api.js';
+import { tr } from './i18n.js';
 import { h, clear, icon, modal, toast } from './dom.js';
 
 const link = (url, text) => h('a', { href: '#', onclick: (e) => (e.preventDefault(), call('openUrl', { url })) }, text || url.replace(/^https:\/\//, '').replace(/\/$/, ''));
@@ -125,14 +126,14 @@ function grammarRow(st, done) {
       class: 'btn sm',
       onclick: async () => {
         b.disabled = true;
-        b.textContent = 'Instalando…';
+        b.textContent = tr('Instalando…');
         try {
           await call('grammarInstall');
           done();
         } catch (err) {
           toast(String(err.message || err), 'error');
           b.disabled = false;
-          b.textContent = 'Instalar';
+          b.textContent = tr('Instalar');
         }
       },
     }, 'Instalar');

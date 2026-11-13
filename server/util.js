@@ -23,6 +23,18 @@ export function cleanEnv(env = process.env) {
   return out;
 }
 
+// A fetch() that never reached a server: no network, DNS down, host
+// unreachable or refusing. Node puts the system error code on err.cause
+// (or on each attempt of an AggregateError when it tried several addresses).
+const OFFLINE = /^(ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ENETUNREACH|ENETDOWN|EHOSTUNREACH|EHOSTDOWN|ETIMEDOUT|UND_ERR_CONNECT_TIMEOUT|UND_ERR_SOCKET)$/;
+export function isOffline(err) {
+  for (let e = err, i = 0; e && i < 5; e = e.cause, i++) {
+    if (OFFLINE.test(e.code || '')) return true;
+    if (Array.isArray(e.errors) && e.errors.some((x) => x && OFFLINE.test(x.code || ''))) return true;
+  }
+  return false;
+}
+
 export function toolEnv(extra = {}) {
   const env = cleanEnv();
   // Windows spells it Path; keep the one key it already has.
@@ -57,6 +69,10 @@ export function run(cmd, args, { cwd, input, timeout = 60000, env } = {}) {
     let stdout = '';
     let stderr = '';
     const timer = timeout ? setTimeout(() => child.kill('SIGKILL'), timeout) : null;
+    // Decode as a stream: a chunk may end in the middle of an accented
+    // letter, and decoding each chunk alone would break it.
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
     child.stdout.on('data', (d) => (stdout += d));
     child.stderr.on('data', (d) => (stderr += d));
     child.on('error', (err) => {

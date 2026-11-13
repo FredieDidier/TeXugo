@@ -323,7 +323,7 @@ export async function openFile(path, { line, col, focus = true, preview = false 
       toast(err.message, 'error');
       return;
     }
-    t = { path, name: basename(path), kind, dirty: false, mtime: data.mtime, binary: data.binary || kind === 'image', roots: [], root: null, autoCompile: S.settings.autoCompile, livePreview: !!S.settings.livePreview };
+    t = { path, name: basename(path), kind, dirty: false, mtime: data.mtime, base: data.text, binary: data.binary || kind === 'image', roots: [], root: null, autoCompile: S.settings.autoCompile, livePreview: !!S.settings.livePreview };
     t.hooks = editorHooks(t);
     if (!t.binary) t.state = createState(data.text, path, t.hooks, S.settings);
     const idx = S.tabs.findIndex((x) => x.path === S.active);
@@ -796,10 +796,24 @@ async function saveTab(t, { quiet = false } = {}) {
       if (!t.dirty) return (await reloadFromDisk(t)) && (toast(`${t.name} mudou no disco e foi recarregado.`, 'info'), true);
       const choice = await conflictDialog(t, text);
       if (choice === 'disk') return (await reloadFromDisk(t)), false;
-      if (choice !== 'mine') return false;
-      const r2 = await call('write', { path: t.path, text });
-      t.mtime = r2.mtime;
-    } else t.mtime = r.mtime;
+      if (choice && choice.merged != null) {
+        // Both sides kept: the merged text goes into the tab (⌘Z undoes it)
+        // and onto the disk, checked against the version that was merged.
+        replaceText(t, choice.merged);
+        const r2 = await call('write', { path: t.path, text: choice.merged, expectMtime: choice.mtime });
+        if (r2.conflict) return toast(`${t.name} mudou de novo no disco enquanto as versões eram juntadas. Salve outra vez.`, 'warn'), false;
+        t.mtime = r2.mtime;
+        t.base = choice.merged;
+        t.dirty = false;
+        if (app.comments.items.length) app.comments.load();
+        toast(`${t.name}: as suas alterações e as que chegaram de fora foram juntadas e salvas.`, 'ok');
+      } else if (choice !== 'mine') return false;
+      else {
+        const r2 = await call('write', { path: t.path, text });
+        t.mtime = r2.mtime;
+        t.base = text;
+      }
+    } else (t.mtime = r.mtime), (t.base = text);
     if (t.version === version) t.dirty = false;
     app.comments.saved(t);
     renderTabs();
@@ -836,6 +850,7 @@ async function reloadFromDisk(t, data) {
   app.split.resync(t);
   t.dirty = false;
   t.mtime = data.mtime;
+  t.base = data.text;
   renderTabs();
   app.sidebar.renderIfFiles();
   // Replacing the whole text drops the comment marks: find the passages
@@ -844,12 +859,32 @@ async function reloadFromDisk(t, data) {
   return true;
 }
 
-// The file changed on disk while the tab had unsaved edits. Three ways
-// out, and the differences on request, so nobody overwrites a coauthor blind.
+// Puts `text` in the tab as one edit over the stretch that differs, so the
+// cursor and the marks outside it stay where they are.
+function replaceText(t, text) {
+  const est = t.path === S.active ? app.view.state : t.state;
+  const old = est.doc.toString();
+  let a = 0;
+  while (a < old.length && a < text.length && old[a] === text[a]) a++;
+  let b = 0;
+  while (b < old.length - a && b < text.length - a && old[old.length - 1 - b] === text[text.length - 1 - b]) b++;
+  const spec = { changes: { from: a, to: old.length - b, insert: text.slice(a, text.length - b) } };
+  if (t.path === S.active) app.view.dispatch(spec);
+  else t.state = est.update(spec).state;
+  app.split.resync(t);
+}
+
+// The file changed on disk while the tab had unsaved edits. Four ways out,
+// and the differences on request, so nobody overwrites a coauthor blind.
+// Juntar merges both when they changed different passages; it needs the
+// text the tab last had in common with the disk (t.base).
 async function conflictDialog(t, mine) {
   let disk = null;
+  let diskMtime = null;
   try {
-    disk = (await call('read', { path: t.path })).text;
+    const d = await call('read', { path: t.path });
+    disk = d.text;
+    diskMtime = d.mtime;
   } catch {}
   return new Promise((resolve) => {
     let done = false;
@@ -878,6 +913,20 @@ async function conflictDialog(t, mine) {
       );
       diffBox.classList.remove('hidden');
     };
+    const mergeNote = h('p', { class: 'muted hidden' });
+    const merge = async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      try {
+        const r = await call('mergeText', { base: t.base, mine, theirs: disk });
+        if (!r.conflicts) return pick({ merged: r.text, mtime: diskMtime });
+        mergeNote.textContent = tr(r.conflicts === 1 ? 'Você e a outra versão mudaram o mesmo trecho, e juntar sozinho não resolve. Veja as diferenças e escolha uma versão.' : `Você e a outra versão mudaram os mesmos trechos (${r.conflicts} lugares), e juntar sozinho não resolve. Veja as diferenças e escolha uma versão.`);
+      } catch (err) {
+        mergeNote.textContent = tr(err.message);
+      }
+      mergeNote.classList.remove('hidden');
+    };
+    const canMerge = disk != null && typeof t.base === 'string' && t.base !== disk && t.base !== mine;
     const m = modal({
       title: 'O arquivo mudou no disco',
       wide: true,
@@ -885,8 +934,9 @@ async function conflictDialog(t, mine) {
         'div',
         {},
         h('p', { style: { marginTop: 0 } }, `${t.name} foi alterado fora do TeXugo (pull do Git, outro editor ou um agente) depois que você o abriu, e a aba tem alterações suas que ainda não foram salvas.`),
-        h('p', { class: 'muted' }, 'Sobrescrever apaga do arquivo o que chegou de fora. Ficar com a do disco descarta o que você digitou nesta aba.'),
+        h('p', { class: 'muted' }, canMerge ? 'Juntar as duas mantém o que você digitou e o que chegou de fora, quando cada lado mudou um trecho diferente. Sobrescrever apaga do arquivo o que chegou de fora. Ficar com a do disco descarta o que você digitou nesta aba.' : 'Sobrescrever apaga do arquivo o que chegou de fora. Ficar com a do disco descarta o que você digitou nesta aba.'),
         disk != null ? h('button', { class: 'btn', onclick: showDiff }, icon('columns'), 'Ver diferenças') : null,
+        mergeNote,
         diffBox,
       ),
       footer: [
@@ -894,6 +944,7 @@ async function conflictDialog(t, mine) {
         h('span', { style: { flex: 1 } }),
         h('button', { class: 'btn', onclick: () => pick('cancel') }, 'Cancelar'),
         h('button', { class: 'btn', onclick: () => pick('disk') }, 'Ficar com a do disco'),
+        canMerge ? h('button', { class: 'btn primary', onclick: merge }, 'Juntar as duas') : null,
       ],
       onClose: () => pick('cancel'),
     });
@@ -1754,6 +1805,7 @@ async function checkDisk() {
     const current = t.path === S.active ? app.view.state.doc.toString() : t.state.doc.toString();
     if (current === data.text) {
       t.mtime = data.mtime;
+      t.base = data.text;
       continue;
     }
     if (!t.dirty) {

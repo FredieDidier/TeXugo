@@ -36,7 +36,7 @@ import * as zotero from './zotero.js';
 import { setTrustCheck, riskyItems, underTrusted } from './trust.js';
 import { outputs } from './outdirs.js';
 import * as recovery from './recovery.js';
-import { setServerLang } from './lang.js';
+import { setServerLang, L } from './lang.js';
 import * as library from './library.js';
 import * as reviewer from './review.js';
 import * as rr from './rr.js';
@@ -515,6 +515,10 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       mustAllow(root);
       return gitOps.sync(root, message, { force });
     },
+    async mergeText({ base, mine, theirs }) {
+      if (![base, mine, theirs].every((x) => typeof x === 'string')) throw httpError(400, L('Faltam as três versões.', 'The three versions are missing.'));
+      return gitOps.mergeText(base, mine, theirs);
+    },
     async gitFetch({ root }) {
       mustAllow(root);
       return gitOps.fetch(root);
@@ -601,6 +605,8 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       const r = await run('git', ['clone', '--', url, target], { timeout: 10 * 60 * 1000, env: { ...toolEnv(), GIT_TERMINAL_PROMPT: '0' } });
       if (r.code !== 0) {
         const msg = (r.stderr || r.stdout).trim().split('\n').slice(-3).join(' ');
+        const said = gitOps.offlineText(msg, () => L('Confira a internet e tente de novo.', 'Check the internet and try again.'));
+        if (said) throw httpError(503, said);
         throw httpError(500, /Authentication|could not read Username|Permission denied/i.test(msg) ? 'Sem permissão para clonar. Repositório privado? Entre na conta pelo GitHub Desktop ou use o endereço SSH. (' + msg + ')' : msg);
       }
       return api.openProject({ root: target });

@@ -1,6 +1,7 @@
 // Grammar checker around the editor: the status bar item, the list of the
 // open file's flags, the one-click install and the settings plumbing.
 import { call, on } from '../api.js';
+import { tr } from '../i18n.js';
 import { h, modal, toast, icon } from '../dom.js';
 import { jumpTo } from '../editor.js';
 import { grammarConfig, grammarOf, refreshGrammar, resetGrammarCache } from './cm.js';
@@ -116,7 +117,7 @@ function installDialog(app, S, refreshAll) {
   });
   async function run() {
     btn.disabled = true;
-    btn.textContent = 'Instalando…';
+    btn.textContent = tr('Instalando…');
     out.classList.remove('hidden');
     off = on('grammar:install', (e) => {
       out.textContent += e.text;
@@ -131,7 +132,7 @@ function installDialog(app, S, refreshAll) {
     } catch (err) {
       toast(err.message, 'error', 8000);
       btn.disabled = false;
-      btn.textContent = 'Tentar de novo';
+      btn.textContent = tr('Tentar de novo');
     } finally {
       off && off();
       off = null;

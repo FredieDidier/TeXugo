@@ -5,7 +5,7 @@
 // value, and a missing DOI is offered; nothing changes until the user
 // accepts a suggestion.
 import fs from 'node:fs';
-import { writeKeepingLink } from './util.js';
+import { writeKeepingLink, isOffline } from './util.js';
 import { parseBib, texToText, setField } from './bibparse.js';
 import { openAlexDois } from './refs.js';
 
@@ -34,7 +34,7 @@ async function get1(url) {
     return r.json();
   } catch (err) {
     if (err.name === 'AbortError') throw new Error('Crossref não respondeu a tempo');
-    if (err.cause && /ENOTFOUND|ECONNREFUSED|EAI_AGAIN/.test(err.cause.code || '')) throw new Error('Sem conexão com a internet');
+    if (isOffline(err)) throw new Error('Sem conexão com a internet');
     throw err;
   } finally {
     clearTimeout(timer);

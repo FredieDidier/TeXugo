@@ -7,6 +7,7 @@
 // Looking is what moves the mark: the panel pins the baseline it showed
 // (so refreshing it keeps the same news) and tells the server it was seen.
 import { locale } from './i18n.js';
+import { tr } from './i18n.js';
 import { call } from './api.js';
 import { h, clear, icon, basename, relPath, toast } from './dom.js';
 import { authorColor, initials, diffModal } from './blame.js';
@@ -28,7 +29,7 @@ async function pdfDiff(app, S, from, to, btn) {
   if (!doc) return toast('Abra um arquivo do paper para ver as mudanças no PDF.', 'warn');
   const label = btn.textContent;
   btn.disabled = true;
-  btn.textContent = 'Montando o PDF…';
+  btn.textContent = tr('Montando o PDF…');
   try {
     const r = await call('compareBuild', { doc, source: { kind: 'git', rev: from, label: from }, target: { kind: 'git', rev: to } });
     if (r.same) toast('Nenhuma mudança no texto deste documento.', 'info');

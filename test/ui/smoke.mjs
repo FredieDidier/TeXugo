@@ -2,9 +2,12 @@
 // Opens a project made from a template in a temporary folder, with its own
 // profile, and checks the interactions that have no unit test: nothing cut
 // off at any window size, the palette, the outline, renaming a folder, and
-// the three ways of not losing work (B1, B2, B3 of PRE-LAUNCH-AUDIT.md).
-// Native dialogs are answered by code. Needs a display; compiling is
-// skipped when latexmk is missing (unless TEXUGO_NEED_TEX is set).
+// the three ways of not losing work (B1, B2, B3 of PRE-LAUNCH-AUDIT.md,
+// merging a save conflict included),
+// and a latexmkrc with its own output folder (B4). Native dialogs are
+// answered by code. The last step quits the app through "Salvar tudo e
+// fechar". Needs a display; compiling is skipped when latexmk is missing
+// (unless TEXUGO_NEED_TEX is set).
 import { app, BrowserWindow, dialog, shell } from 'electron';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -64,7 +67,6 @@ const MOD = process.platform === 'darwin' ? 'meta' : 'control';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 app.whenReady().then(async () => {
-  let code = 1;
   try {
     await sleep(1500);
     const win = BrowserWindow.getAllWindows()[0];
@@ -134,6 +136,22 @@ app.whenReady().then(async () => {
     }
     win.setContentSize(1480, 870);
     await sleep(500);
+
+    // ---- B4: a latexmkrc that sends the output to another folder and sets
+    // no PDF mode. I8: an rc that arrives in the open project asks first.
+    if (hasTex) {
+      fs.writeFileSync(path.join(PROJ, 'latexmkrc'), "$out_dir = 'build';\n");
+      check('I8: a latexmkrc arriving in the open project asks for trust', await until(`return document.querySelector('.modal-title')?.innerText === 'Confia neste projeto?';`, 6000));
+      await clickBtn('.modal footer', 'Confio, continuar');
+      await sleep(400);
+      fs.appendFileSync(path.join(PROJ, 'sections', 'body.tex'), '\nSee Section~\\ref{sec:not-there}.\n');
+      await until(`return document.querySelector('.editor-host .cm-content').innerText.includes('sec:not-there');`, 5000);
+      await focusEditor();
+      await key('Enter', [MOD]);
+      const chip = await until(`return !document.querySelector('.status-dot.building') && !!document.querySelector('.doc-bar .chip.undefined');`, 90000);
+      check('B4: the PDF goes to the out_dir of the latexmkrc', chip && fs.existsSync(path.join(PROJ, 'build', 'paper.pdf')) && !fs.existsSync(path.join(PROJ, 'build', 'paper.dvi')), fs.existsSync(path.join(PROJ, 'build')) && fs.readdirSync(path.join(PROJ, 'build')));
+      check('B4: the log in that folder is read: one ??, not "zero ??"', (await js(`return [...document.querySelectorAll('.doc-bar .chip')].map((c) => c.innerText.trim()).filter((t) => /\\?\\?/.test(t)).join('|');`)) === '1 ??', await js(`return document.querySelector('.doc-bar')?.innerText;`));
+    }
 
     // ---- outline of the whole document, from the main file
     await js(`[...document.querySelectorAll('.tab')].find((t) => t.innerText.includes('paper.tex')).click(); return true;`);
@@ -212,6 +230,20 @@ app.whenReady().then(async () => {
     check('B3: the differences show what came from outside', (await js(`return [...document.querySelectorAll('.modal del')].map((d) => d.innerText).join(' ');`)).includes('from a coauthor'));
     await clickBtn('.modal footer', 'Ficar com a do disco');
     check('B3: keeping the disk version reloads the tab', await until(`return !document.querySelector('.tab.dirty') && document.querySelector('.editor-host .cm-content').innerText.includes('from a coauthor');`, 4000));
+    // Juntar: my edit at the top, a coauthor's at the bottom, both kept.
+    await focusEditor();
+    await key('p', [MOD]);
+    await type(':1');
+    await key('Enter');
+    await sleep(300);
+    await type('% MERGE-MINE\n');
+    fs.appendFileSync(path.join(PROJ, 'parts', 'body.tex'), '% merged from a coauthor\n');
+    await sleep(1500);
+    await key('s', [MOD]);
+    check('B3: the conflict dialog offers Juntar as duas', await until(`return [...document.querySelectorAll('.modal footer button')].some((b) => b.innerText.trim() === 'Juntar as duas');`, 4000));
+    await clickBtn('.modal footer', 'Juntar as duas');
+    const merged = () => fs.readFileSync(path.join(PROJ, 'parts', 'body.tex'), 'utf8');
+    check('B3: Juntar keeps both edits, on disk and in the tab', (await until(`return !document.querySelector('.modal') && !document.querySelector('.tab.dirty') && /MERGE-MINE[\\s\\S]*merged from a coauthor/.test(document.querySelector('.editor-host .cm-content').innerText);`, 5000)) && /MERGE-MINE[\s\S]*merged from a coauthor/.test(merged()), { disk: merged().slice(0, 120), modal: await js(`return document.querySelector('.modal')?.innerText || '';`), editor: await js(`return document.querySelector('.editor-host .cm-content').innerText.slice(0, 120);`), dirty: await js(`return !!document.querySelector('.tab.dirty');`) });
     if (hasGit) {
       await focusEditor();
       await type(' BEFORE-COMMIT');
@@ -272,14 +304,35 @@ app.whenReady().then(async () => {
     await key('s', [MOD]);
     check('B1: and saving still works', await until(`return !document.querySelector('.tab.dirty');`, 4000) && fs.readFileSync(path.join(PROJ, 'parts', 'body.tex'), 'utf8').includes('UNSAVED'));
 
-    const failed = results.filter((r) => !r.ok);
-    console.log(`\n${results.length - failed.length} of ${results.length} checks passed${failed.length ? ': ' + failed.map((f) => f.name).join('; ') : ''}`);
-    code = failed.length ? 1 : 0;
+    // ---- B1: quitting with unsaved edits, answered "Salvar tudo e fechar".
+    // The app really quits here: the last check runs in the quit handler.
+    await focusEditor();
+    await type(' SAVED-ON-QUIT');
+    check('B1: the tab is dirty before quitting', await until(`return !!document.querySelector('.tab.dirty');`, 3000));
+    nextChoice = 0;
+    const asked = dialogs.length;
+    app.once('quit', () => {
+      check('B1: ⌘Q + Save all asks once, writes the file and quits', dialogs.length === asked + 1 && fs.readFileSync(path.join(PROJ, 'parts', 'body.tex'), 'utf8').includes('SAVED-ON-QUIT'), { dialogs: dialogs.length - asked, events });
+      finish();
+    });
+    app.quit();
+    await sleep(20000);
+    check('B1: ⌘Q + Save all quits within 20 s', false, { events, windows: BrowserWindow.getAllWindows().length });
   } catch (err) {
     console.error('FAIL (the script itself):', err);
+    results.push({ name: 'the script itself', ok: false });
   }
+  finish();
+});
+
+let finished = false;
+function finish() {
+  if (finished) return;
+  finished = true;
+  const failed = results.filter((r) => !r.ok);
+  console.log(`\n${results.length - failed.length} of ${results.length} checks passed${failed.length ? ': ' + failed.map((f) => f.name).join('; ') : ''}`);
   try {
     fs.rmSync(TMP, { recursive: true, force: true });
   } catch {}
-  app.exit(code);
-});
+  app.exit(failed.length || !results.length ? 1 : 0);
+}

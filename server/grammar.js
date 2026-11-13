@@ -15,7 +15,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import net from 'node:net';
-import { toolEnv, which, sha1, dataDir } from './util.js';
+import { toolEnv, which, sha1, dataDir, isOffline } from './util.js';
 import { ACADEMIC_WORDS } from './academic-words.js';
 import { killTree } from './platform.js';
 import { Ngrams } from './ngrams.js';
@@ -376,7 +376,10 @@ export class Grammar {
         const on = (await this.offFor(b.lang)).filter((id) => !disabled.includes(id));
         if (on.length) body.set('enabledRules', on.join(','));
       }
-      const r = await fetch(base + '/v2/check', { method: 'POST', body, signal: AbortSignal.timeout(120000) });
+      const r = await fetch(base + '/v2/check', { method: 'POST', body, signal: AbortSignal.timeout(120000) }).catch((err) => {
+        if (server === 'online' && isOffline(err)) throw new Error('Sem conexão com a internet: o servidor online do LanguageTool não responde. O servidor local, em Preferências, funciona sem rede.');
+        throw err;
+      });
       if (r.status === 429) throw new Error('O servidor online do LanguageTool recusou: limite de consultas por minuto. Espere um pouco.');
       if (!r.ok) throw new Error(`LanguageTool respondeu ${r.status}: ${(await r.text()).slice(0, 200)}`);
       const data = await r.json();

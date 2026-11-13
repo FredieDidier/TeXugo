@@ -4,7 +4,7 @@
 // journal DOI when the preprint has one.
 import fs from 'node:fs';
 import path from 'node:path';
-import { writeKeepingLink } from './util.js';
+import { writeKeepingLink, isOffline } from './util.js';
 
 const UA = 'TeXugo (LaTeX editor; https://github.com/FredieDidier/TeXugo)';
 const TIMEOUT = 15000;
@@ -19,7 +19,7 @@ async function get(url, accept = 'application/json') {
     return accept.includes('json') ? r.json() : r.text();
   } catch (err) {
     if (err.name === 'AbortError') throw new Error(`${new URL(url).host} não respondeu a tempo`);
-    if (err.cause && /ENOTFOUND|ECONNREFUSED|EAI_AGAIN/.test(err.cause.code || '')) throw new Error('Sem conexão com a internet');
+    if (isOffline(err)) throw new Error('Sem conexão com a internet');
     throw err;
   } finally {
     clearTimeout(timer);

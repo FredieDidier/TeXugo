@@ -17,7 +17,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
-import { dataDir, toolEnv } from './util.js';
+import { dataDir, toolEnv, isOffline } from './util.js';
 import { unzipCommand } from './platform.js';
 
 export const OFFICIAL_URL = 'https://languagetool.org/download/ngram-data/ngrams-en-20150817.zip';
@@ -158,7 +158,7 @@ export class Ngrams {
       return this.status();
     } catch (err) {
       if (job.paused) return this.status();
-      this.error = err.message;
+      this.error = isOffline(err) ? 'Sem conexão com a internet. Tente de novo quando ela voltar; o download segue de onde parou.' : err.message;
       return this.status();
     }
   }
