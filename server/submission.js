@@ -21,16 +21,25 @@ export function systemTexRoots() {
   texRoots = [];
   const kpse = findOnPath('kpsewhich');
   if (kpse) {
-    // TEXMFMAIN: on Debian and Ubuntu texmf.cnf lives in /usr/share/texmf,
-    // outside TEXMFROOT (/usr/share/texlive).
-    for (const v of ['TEXMFROOT', 'TEXMFMAIN', 'TEXMFDIST', 'TEXMFLOCAL', 'TEXMFSYSVAR', 'TEXMFSYSCONFIG', 'TEXMFVAR', 'TEXMFCONFIG', 'TEXMFHOME']) {
+    const kp = (args) => execFileSync(kpse, args, { env: toolEnv(), encoding: 'utf8', timeout: 5000 }).trim();
+    const add = (r) => {
+      for (const x of [path.resolve(r), (() => { try { return fs.realpathSync(r); } catch { return null; } })()])
+        // Never a whole drive or the home folder: that would hide projects.
+        if (x && path.dirname(x) !== x && x !== os.homedir() && !texRoots.includes(x)) texRoots.push(x);
+    };
+    // Values can be lists, with braces: {!!/usr/share/texlive/texmf-dist,...}.
+    // On Debian and Ubuntu texmf.cnf lives in /usr/share/texmf/web2c, a
+    // TEXMFCNF folder outside TEXMFROOT (/usr/share/texlive).
+    for (const v of ['TEXMFROOT', 'TEXMFMAIN', 'TEXMFDIST', 'TEXMFLOCAL', 'TEXMFSYSVAR', 'TEXMFSYSCONFIG', 'TEXMFVAR', 'TEXMFCONFIG', 'TEXMFHOME', 'TEXMF', 'TEXMFCNF']) {
       try {
-        const out = execFileSync(kpse, ['-var-value', v], { env: toolEnv(), encoding: 'utf8', timeout: 5000 }).trim();
-        for (const r of out.split(/[;:](?![\\/])/).map((x) => x.replace(/^!!/, '').trim()).filter((x) => path.isAbsolute(x)))
-          for (const x of [path.resolve(r), (() => { try { return fs.realpathSync(r); } catch { return null; } })()])
-            if (x && !texRoots.includes(x)) texRoots.push(x);
+        for (const r of kp(['-var-value', v]).replace(/[{}]/g, ',').split(/[,;]|:(?![\\/])/).map((x) => x.replace(/^!!/, '').trim()).filter((x) => path.isAbsolute(x)))
+          // TEXMFCNF also lists bin folders ($SELFAUTOLOC = /usr/bin): only its web2c ones.
+          if (v !== 'TEXMFCNF' || path.basename(r) === 'web2c') add(r);
       } catch {}
     }
+    try {
+      for (const f of kp(['-all', 'texmf.cnf']).split(/\r?\n/).filter((x) => path.isAbsolute(x))) add(path.dirname(f));
+    } catch {}
   }
   return texRoots;
 }
