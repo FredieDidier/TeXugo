@@ -231,3 +231,27 @@ export function auxFingerprint(auxFile) {
   const cites = text.split('\n').filter((l) => l.startsWith('\\bibcite')).join('\n');
   return [...labels.entries()].map(([k, v]) => `${k}=${v}`).sort().join('\n') + '\n' + cites;
 }
+
+// BibTeX's own errors, read from the .blg. latexmk only reports that BibTeX
+// failed, and the LaTeX log says nothing; without this the build shows
+// "1 erro" with no message. An error is the line before "---line N of
+// file", or the text before "---while reading file".
+export function blgErrors(blgText, blgFile) {
+  const out = [];
+  const lines = String(blgText || '').split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++) {
+    let msg = null;
+    if (/^---line \d+ of file /.test(lines[i + 1] || '')) msg = lines[i];
+    else if (/---while reading file /.test(lines[i])) msg = lines[i].split('---')[0];
+    if (!msg || !msg.trim()) continue;
+    msg = msg.trim();
+    const style = msg.match(/^I couldn't open style file (\S+)/);
+    const db = msg.match(/^I couldn't open database file (\S+)/);
+    if (style) msg = `BibTeX: falta o estilo de bibliografia ${style[1]}. Instale o pacote do TeX que o traz (pelo Médico do TeX ou pelo gerenciador do TeX) ou troque o \\bibliographystyle.`;
+    else if (db) msg = `BibTeX: não achei o arquivo de referências ${db[1]}. Confira o nome no \\bibliography.`;
+    else if (/^I found no style file/.test(msg) && out.some((e) => e.message.includes('estilo'))) continue;
+    else msg = 'BibTeX: ' + msg;
+    if (!out.some((e) => e.message === msg)) out.push({ file: blgFile, line: null, message: msg });
+  }
+  return out;
+}

@@ -585,6 +585,8 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  [/^BibTeX: falta o estilo de bibliografia (\S+)\. Instale o pacote do TeX que o traz \(pelo Médico do TeX ou pelo gerenciador do TeX\) ou troque o \\bibliographystyle\.$/, 'BibTeX: the bibliography style $1 is missing. Install the TeX package that has it (with the TeX doctor or the TeX package manager) or change the \\bibliographystyle.'],
+  [/^BibTeX: não achei o arquivo de referências (\S+)\. Confira o nome no \\bibliography\.$/, 'BibTeX: could not find the references file $1. Check the name in \\bibliography.'],
   [/^Versão (\S+) disponível$/, 'Version $1 available'],
   [/^TeXugo (\S+) disponível$/, 'TeXugo $1 available'],
   [/^Você já está na versão mais recente \((\S+)\)\.$/, 'You already have the latest version ($1).'],

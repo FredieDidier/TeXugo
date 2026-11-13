@@ -112,3 +112,14 @@ test('latexmkrc with Perl out_dir and aux_dir: externals, ZIP and SyncTeX', { ti
   assert.ok(zip.files.includes('appendix.aux'), JSON.stringify(zip.files));
   assert.equal(zip.check.undefinedRefs.length, 0, JSON.stringify(zip.check));
 });
+
+// A BibTeX that stops (style missing) used to give "1 erro" with no message.
+test('BibTeX failure: the .blg says why', { timeout: 60000 }, async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-blg-'));
+  fs.writeFileSync(path.join(dir, 'refs.bib'), '@article{a, author={A}, title={T}, journal={J}, year={2020}}\n');
+  fs.writeFileSync(path.join(dir, 'paper.tex'), '\\documentclass{article}\n\\begin{document}\n\\cite{a}\n\\bibliographystyle{no-such-style-xyz}\n\\bibliography{refs}\n\\end{document}\n');
+  const res = await buildOnce(new BuildManager(), dir, [path.join(dir, 'paper.tex')]);
+  const d = res.docs[0];
+  assert.equal(d.status, 'error');
+  assert.ok(d.errors.some((e) => e.message.includes('no-such-style-xyz.bst')), JSON.stringify(d.errors));
+});

@@ -19,7 +19,7 @@ import { EventEmitter } from 'node:events';
 import fs from 'node:fs';
 import path from 'node:path';
 import { docInfo, projectSymbols, includeClosure } from './project.js';
-import { parseLog, auxFingerprint, auxLabels } from './logparse.js';
+import { parseLog, auxFingerprint, auxLabels, blgErrors } from './logparse.js';
 import { toolEnv, which, perlProblem } from './util.js';
 import { rcInfo, outputs } from './outdirs.js';
 import { killTree, texInstallHint } from './platform.js';
@@ -204,6 +204,11 @@ export class BuildManager extends EventEmitter {
       }
       const code = exitCodes.get(doc);
       const errors = parsed ? parsed.errors : [];
+      // latexmk failed and the LaTeX log has no error: say what BibTeX said.
+      if (code && code !== 0 && !errors.length) {
+        const blg = where.bbl.replace(/\.bbl$/, '.blg');
+        errors.push(...blgErrors(readMaybe(blg), blg));
+      }
       // Never report success without having read the log.
       if (code === 0 && !parsed) errors.push({ file: doc, line: null, message: `A compilação terminou, mas não achei o log em ${where.log}; não dá para dizer se há ?? no PDF.` });
       const status = code == null ? 'skipped' : errors.length || code !== 0 ? 'error' : parsed && (parsed.undefinedRefs.length || parsed.undefinedCites.length) ? 'undefined' : 'ok';
