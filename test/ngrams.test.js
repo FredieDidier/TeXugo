@@ -83,6 +83,30 @@ test('n-grams: drop, resume with Range, unpack, model folder, remove', { skip: !
   }
 });
 
+test('n-grams: a pause during the HEAD stops the download', { skip: !hasZip && 'zip not installed' }, async () => {
+  let gets = 0;
+  const srv = http.createServer((req, res) => {
+    if (req.method === 'HEAD') return setTimeout(() => (res.writeHead(200, { 'content-length': 10, etag: '"h"' }), res.end()), 150);
+    gets++;
+    res.writeHead(200, { 'content-length': 10 });
+    res.end(Buffer.alloc(10));
+  });
+  await new Promise((r) => srv.listen(0, '127.0.0.1', r));
+  const ng = new Ngrams({ url: `http://127.0.0.1:${srv.address().port}/x.zip`, root: path.join(TMP, 'pause-head'), retries: 0 });
+  try {
+    const run = ng.start();
+    await new Promise((r) => setTimeout(r, 30));
+    ng.pause();
+    const st = await run;
+    assert.equal(gets, 0, 'no GET after the pause');
+    assert.notEqual(st.state, 'ready');
+    assert.ok(!st.error);
+  } finally {
+    srv.close();
+    await ng.remove();
+  }
+});
+
 test('n-grams: pause keeps the partial; a new ETag starts over', { skip: !hasZip && 'zip not installed' }, async () => {
   const big = Buffer.alloc(3_000_000, 7);
   let etag = '"a"';
@@ -119,7 +143,9 @@ test('n-grams: pause keeps the partial; a new ETag starts over', { skip: !hasZip
     await new Promise((r) => setTimeout(r, 30));
     ng.pause();
     await run2;
-    assert.ok(fs.statSync(ng.partial).size < kept, 'restarted from zero');
+    // Paused before the first byte of the new file: nothing kept, which is also zero.
+    const now = fs.existsSync(ng.partial) ? fs.statSync(ng.partial).size : 0;
+    assert.ok(now < kept, 'restarted from zero');
   } finally {
     srv.close();
     await ng.remove();

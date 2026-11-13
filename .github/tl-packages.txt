@@ -1,0 +1,19 @@
+# Ubuntu packages for the TeX job: what the templates load (IEEEtran, acmart,
+# apa7, elsarticle, beamer, exam, tcolorbox, pgfplots, babel portuguese),
+# plus latexmk, biber, latexdiff and latexindent.
+latexmk
+biber
+latexdiff
+texlive-latex-base
+texlive-latex-recommended
+texlive-latex-extra
+texlive-fonts-recommended
+texlive-bibtex-extra
+texlive-publishers
+texlive-pictures
+texlive-science
+texlive-lang-portuguese
+texlive-lang-english
+texlive-extra-utils
+texlive-plain-generic
+lmodern

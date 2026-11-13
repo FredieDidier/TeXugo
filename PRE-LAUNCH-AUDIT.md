@@ -468,6 +468,8 @@ Esta parte é para o Opus 5.5. Ordem sugerida no fim.
 
 ## Item 2. GitHub Actions: testes, instaladores e teste de fumaça
 
+**Estado (13/11/2026): feito em parte, falta rodar no GitHub.** `ci.yml`: testes sem TeX nos três sistemas (`npm run test:notex`, `scripts/run-tests.mjs`, que separa `build`, `compare`, `live`, `rr`, `sent`, `submission` e `templates`) e a suíte inteira no Linux com TeX Live do apt (lista em `.github/tl-packages.txt`); `npm audit --omit=dev` como aviso. `smoke.yml`: o roteiro `test/ui/smoke.mjs` nos três sistemas, com `xvfb-run` no Linux e sem TeX (pula as checagens de compilação). `node-pty` entrou no `allowScripts`, porque no Linux ele compila. Validado aqui: YAML, `test:notex` sem TeX no PATH, oito rodadas seguidas sem falha intermitente. Nessa busca apareceu um defeito no download de n-gramas: uma pausa durante o HEAD não parava o download; corrigido, com teste. Não feito: `release.yml`, que depende do `electron-builder` (item 9 e B5); a compilação na fumaça nos três sistemas; `test/git.test.js`. Ninguém viu esses fluxos rodarem: o primeiro push vai mostrar o que quebra no Windows e no Linux, e é para isso que eles servem.
+
 **O que a auditoria muda:** o teste de fumaça é a peça que falta para pegar B1, B2 e B4. Vale mais que a matriz de instaladores.
 
 **Fluxos:**

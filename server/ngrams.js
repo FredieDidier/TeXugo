@@ -164,6 +164,8 @@ export class Ngrams {
   }
 
   async _download(job, etag) {
+    // A pause that came during the HEAD had nothing to abort yet.
+    if (job.paused) throw new Error('paused');
     job.ctrl = new AbortController();
     const done = fs.existsSync(this.partial) ? fs.statSync(this.partial).size : 0;
     if (job.total && done >= job.total) return;
