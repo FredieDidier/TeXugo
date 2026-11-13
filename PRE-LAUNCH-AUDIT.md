@@ -672,7 +672,7 @@ Testes a criar, na ordem de retorno:
 2. **`test/api.test.js`**: sobe `createServer` com `TEXUGO_DATA_DIR` temporário. Token, anfitrião, 403 fora do projeto, conflito por `mtime`, link simbólico, modo do arquivo, cabeçalhos.
 3. **`test/git.test.js`**: remoto local e dois clones. Sincronizar limpo, com mudança fora do commit, com remoto inacessível, com conflito real.
 4. **`test/i18n.test.js`**: a varredura como teste.
-5. **Casos novos em testes existentes**: `latexmkrc` (B4), pasta `tex/` (I5), 3.100 tabelas (I6), tempo de `lineChanges` (I10). *Estado (12/11): B4 em `test/build.test.js`, I5 em `test/submission.test.js` e, agora, I6 em `test/project.test.js` (3.100 tabelas: acha o paper, a raiz da seção e `sec:intro`). Falta o tempo de `lineChanges` (I10).*
+5. **Casos novos em testes existentes**: `latexmkrc` (B4), pasta `tex/` (I5), 3.100 tabelas (I6), tempo de `lineChanges` (I10). *Estado (12/11): B4 em `test/build.test.js`, I5 em `test/submission.test.js` e, agora, I6 em `test/project.test.js` (3.100 tabelas: acha o paper, a raiz da seção e `sec:intro`). O tempo de `lineChanges` (I10) está em `test/changes.test.js` (menos de 4 ms por tecla em 2.000 linhas, com uma edição no começo e outra no fim). Os quatro casos estão cobertos.*
 
 ---
 
