@@ -151,6 +151,7 @@ export function openSettings(app, S) {
     ]],
     ['geral', 'Geral', [
       check('reopenLast', 'Reabrir o último projeto ao iniciar'),
+      check('updateCheck', 'Avisar quando houver versão nova (consulta o GitHub uma vez por dia)'),
       h('p', { class: 'faint', style: { marginTop: '14px', fontSize: '12px' } }, `TeXugo ${S.hello.version} · ${S.hello.tex || 'TeX não encontrado'}`),
     ]],
   ];

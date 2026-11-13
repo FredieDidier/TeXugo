@@ -18,6 +18,7 @@ Some features, all optional, talk to outside services. The table says which, whe
 | Git remote (GitHub or another) | When the project opens (`fetch`), and on pull, push, Sync and clone | What Git normally sends | Use a project without a remote |
 | TeX Live mirrors | TeX doctor, when finding and installing a package | Package names | Do not use the TeX doctor |
 | LanguageTool (`languagetool.org`) | Only if you click *Download* on the advanced English checker (Settings → Checker) | The download request for the n-grams (9 GB). None of your text goes with it | Do not download |
+| GitHub (`api.github.com`) | When the app opens, at most once a day, to see if there is a new version. Off in Preferences → General | The request, with your IP and the TeXugo version. No project data | Turn off "Tell me when there is a new version" |
 | Homebrew | Installing LanguageTool with the button | What `brew` normally sends | Install it by hand |
 | Google (Chromium dictionaries) | On Windows and Linux, the first time the system spell checker is used | The dictionary download request | Use it on a Mac, which uses the macOS dictionary |
 

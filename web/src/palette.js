@@ -1,5 +1,6 @@
 // Command palette (⌘K), quick open (⌘P) and go to line (⌃G, or ":42").
 import { setupDialog } from './setup.js';
+import { updateDialog } from './update.js';
 import { AI_ACTIONS, runAiAction } from './ai.js';
 import { call } from './api.js';
 import { tr } from './i18n.js';
@@ -73,6 +74,7 @@ function commands(app, S) {
     { a: 'Editar', t: 'Formatar documento', kw: 'latexindent indentar', k: '⌥⇧F', i: 'wrap', run: () => app.tools.formatDoc(app, S) },
     { a: 'Compilar', t: 'Médico do TeX (pacotes, instalação)', i: 'info', run: () => app.tools.texDoctor(app, S) },
     { a: 'Ajuda', t: 'Verificar instalação (TeX, Git, Claude, corretor)', kw: 'setup instalar instalação git identidade primeira abertura', i: 'checkCircle', run: () => setupDialog(app, S) },
+    { a: 'Ajuda', t: 'Procurar atualizações', kw: 'update versão nova atualizar baixar release', i: 'external', run: () => updateDialog(app, S, { force: true }) },
     { a: 'Revisão e submissão', t: 'Exportar ZIP para submissão', kw: 'arxiv', i: 'down', run: () => app.tools.exportZip(app, S) },
     ...AI_ACTIONS.map((a) => ({ a: 'Escrita', t: `IA: ${a.label} (seleção)`, kw: 'claude ia ai reescrever ' + a.hint, i: 'edit', run: () => runAiAction(app, S, a.id) })),
     { a: 'Janela e ajuda', t: 'Abrir terminal na pasta do projeto', k: '⌃`', kw: 'shell zsh bash console', i: 'command', run: () => app.terminals.open('shell') },

@@ -17,6 +17,16 @@ export function locale() {
 }
 
 const EN = {
+  // item 6: new version notice
+  'Há uma versão nova do TeXugo. Clique para ver.': 'A new version of TeXugo is out. Click to see it.',
+  'Não consegui falar com o GitHub agora. Tente de novo mais tarde.': 'Could not reach GitHub right now. Try again later.',
+  'Ainda não há nenhuma versão publicada.': 'No version has been published yet.',
+  'Procurar atualizações': 'Check for updates',
+  'Avisar quando houver versão nova (consulta o GitHub uma vez por dia)': 'Tell me when there is a new version (asks GitHub once a day)',
+  'Notas da versão': 'Release notes', 'Baixar': 'Download',
+  'O TeXugo não é assinado pela Apple. Na primeira vez que abrir a versão nova, o macOS vai recusar: abra Ajustes do Sistema → Privacidade e Segurança e clique em "Abrir mesmo assim". Só é preciso uma vez por versão.': 'TeXugo is not signed by Apple. The first time you open the new version, macOS will refuse it: open System Settings → Privacy & Security and click "Open Anyway". This is needed once per version.',
+  'O TeXugo não é assinado pela Microsoft. Se o Windows mostrar "O Windows protegeu o computador", clique em "Mais informações" e depois em "Executar assim mesmo".': 'TeXugo is not signed by Microsoft. If Windows shows "Windows protected your PC", click "More info" and then "Run anyway".',
+  'Baixe o AppImage novo, marque como executável (chmod +x) e use no lugar do antigo.': 'Download the new AppImage, make it executable (chmod +x) and use it instead of the old one.',
   // interface pass: keyboard, dialogs, palette, save conflict
   'Digite “:42” na paleta; clique em “Ln, Col” na barra de status; ⌥⌘G dentro do editor': 'Type “:42” in the palette; click “Ln, Col” in the status bar; ⌥⌘G inside the editor',
   'Andar entre as áreas (arquivos, editor, PDF, painel inferior) só com o teclado': 'Move between the areas (files, editor, PDF, bottom panel) with the keyboard alone', 'Tab percorre os botões; as setas andam nas listas, nas abas e nos menus; Esc fecha': 'Tab walks the buttons; the arrows move through lists, tabs and menus; Esc closes',
@@ -564,6 +574,11 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  [/^Versão (\S+) disponível$/, 'Version $1 available'],
+  [/^TeXugo (\S+) disponível$/, 'TeXugo $1 available'],
+  [/^Você já está na versão mais recente \((\S+)\)\.$/, 'You already have the latest version ($1).'],
+  [/^Você está na versão (\S+)\. Baixe a nova e instale por cima da antiga; seus projetos e preferências continuam onde estão\.$/, 'You have version $1. Download the new one and install it over the old one; your projects and settings stay where they are.'],
+  [/^Baixar \((\d+) MB\)$/, 'Download ($1 MB)'],
   [/^(.+) com latexmk\. Os documentos compilam\.$/, '$1 with latexmk. Documents compile.'],
   // third interface pass (I9, 12/11/2026): sentences built in code
   [/^(\S+\.[A-Za-z]\w*) linhas? (\d+(?:–\d+)?)$/, (m, f, n) => `${f} line${n.includes('–') ? 's' : ''} ${n}`],

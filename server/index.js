@@ -40,12 +40,14 @@ import { setServerLang } from './lang.js';
 import * as library from './library.js';
 import * as reviewer from './review.js';
 import * as rr from './rr.js';
+import { UpdateChecker } from './update.js';
 import { openCommand, revealCommand, terminalCommand, texInstallHint, texInstallUrl } from './platform.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
 const APP_VERSION = JSON.parse(fs.readFileSync(path.join(APP_ROOT, 'package.json'), 'utf8')).version;
 const DIST = path.join(APP_ROOT, 'dist');
+const updates = new UpdateChecker({ current: APP_VERSION });
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -461,6 +463,12 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async grammarInstall() {
       await grammar.install();
       return grammar.status();
+    },
+    // New version on GitHub Releases (item 6). Off in Preferences → Geral;
+    // `force` is the "Procurar agora" button, which asks even when off.
+    async updateCheck({ force } = {}) {
+      if (!force && (state.settings || {}).updateCheck === false) return { current: APP_VERSION, off: true };
+      return updates.check({ force: !!force });
     },
     // Advanced English checking (n-gram data, ~9 GB): progress goes out as
     // 'ngrams' events; start() returns at once.

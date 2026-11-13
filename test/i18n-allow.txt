@@ -45,3 +45,4 @@
 "EM_QUE_ONDE_NO_QUAL"
 "# TeXugo: arquivos gerados pelo LaTeX\n"
 "TeXugo (LaTeX editor; https://github.com/FredieDidier/TeXugo)"
+"TeXugo/${…} (LaTeX editor; https://github.com/FredieDidier/TeXugo)"

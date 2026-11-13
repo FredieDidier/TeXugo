@@ -497,6 +497,8 @@ body > .cm-tooltip { z-index: 40; }
 .term-view .xterm { height: 100%; }
 .term-view .xterm-viewport { background: transparent !important; }
 .statusbar .ide-on { color: #d97757; }
+.statusbar .update-on, .welcome .update-on { color: var(--accent-text); font-weight: 600; }
+.update-notes { white-space: pre-wrap; max-height: 260px; overflow: auto; font-size: 12px; padding: 10px; border-radius: 6px; background: var(--accent-soft); }
 .bottom-body:has(.term-panel) { padding: 0; overflow: hidden; }
 
 /* Claude panel */

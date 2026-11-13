@@ -29,6 +29,7 @@ import { compareDialog } from './compare.js';
 import { shortcutsDialog } from './shortcuts.js';
 import { zoteroDialog } from './zotero.js';
 import { mathPreview } from './mathpreview.js';
+import { startUpdateChecks, updateItem, updateDialog } from './update.js';
 import { reviewDialog, loadLastReview } from './review.js';
 import { responseDialog } from './rr.js';
 import { annotationsDialog } from './annotations.js';
@@ -53,7 +54,7 @@ export const S = {
   building: null, // { id, order, requested }
   queued: false,
   lastSummary: null,
-  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true, vicios: true, changeMarks: true, mathPreview: true, livePreview: false, grammar: true, grammarServer: 'local', grammarLevel: 'picky', grammarWords: [], grammarRules: [] },
+  settings: { theme: 'system', editorSize: 13.5, wrap: true, autoCompile: false, invertPdf: false, sidebarWidth: 260, pdfWidth: null, bottomHeight: 230, bottomOpen: true, reopenLast: true, updateCheck: true, vicios: true, changeMarks: true, mathPreview: true, livePreview: false, grammar: true, grammarServer: 'local', grammarLevel: 'picky', grammarWords: [], grammarRules: [] },
   cursor: { line: 1, col: 1, words: 0 },
   detached: new Set(), // PDFs shown in their own window
 };
@@ -1435,6 +1436,7 @@ function renderStatus() {
       : null,
     S.building ? h('span', { class: 'item' }, h('span', { class: 'status-dot building' }), 'compilando') : null,
     h('span', { class: 'grow' }),
+    updateItem(app, S),
     t && !t.binary && viciosConfig.enabled && /\.(tex|ltx|md|markdown|qmd|rmd|txt)$/i.test(t.path) ? viciosItem() : null,
     t && !t.binary && /\.(tex|ltx|md|markdown|qmd|rmd|txt)$/i.test(t.path) ? grammarItem(app, S) : null,
     t && !t.binary ? h('span', { class: 'item' }, `${S.cursor.words.toLocaleString(locale())} palavra${S.cursor.words === 1 ? '' : 's'}`) : null,
@@ -1918,6 +1920,7 @@ function wireKeys() {
         welcome: () => showWelcome(app, S),
         shortcuts: () => shortcutsDialog(),
         setup: () => setupDialog(app, S),
+        update: () => updateDialog(app, S, { force: true }),
         library: () => libraryDialog(app, S),
         // Asked by the app's "unsaved changes" dialog on close or quit.
         saveAllThenClose: async () => (await saveAll()) && (native.closeSaved ? native.closeSaved() : window.close()),
@@ -1952,6 +1955,7 @@ async function boot() {
   mathPreview.on = S.settings.mathPreview !== false;
   viciosConfig.onResult = (view) => view === app.view && renderStatusSoon();
   setupGrammar(app, S);
+  startUpdateChecks(app, S);
   // Nothing to show before the first build: start with the bottom panel
   // closed; it opens when a build starts.
   S.settings.bottomOpen = false;

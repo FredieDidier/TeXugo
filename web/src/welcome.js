@@ -3,6 +3,7 @@ import { call, native } from './api.js';
 import { h, clear, icon, wordmark, toast, modal, basename, dirname, joinPath, IS_MAC } from './dom.js';
 import { shortcutsDialog } from './shortcuts.js';
 import { openSettings } from './settings.js';
+import { updateSlot } from './update.js';
 
 export async function showWelcome(app, S) {
   document.querySelector('.welcome')?.remove();
@@ -65,6 +66,7 @@ export async function showWelcome(app, S) {
             h('button', { class: 'btn ghost', title: 'Todos os atalhos e onde achar cada comando (⌘?)', onclick: () => shortcutsDialog() }, icon('command'), 'Atalhos (⌘?)'),
             h('button', { class: 'btn ghost', title: 'Preferências (⌘,)', onclick: () => openSettings(app, S) }, icon('gear'), 'Preferências'),
             langSwitch(app, S),
+            updateSlot(app, S),
           ),
           recents.length ? h('h3', { style: { marginTop: '8px' } }, 'Recentes') : null,
           recents.map((r) =>

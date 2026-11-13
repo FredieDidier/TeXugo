@@ -110,6 +110,7 @@ const MENU_EN = {
   'Salvar tudo e fechar': 'Save all and close', 'Descartar': 'Discard', 'Cancelar': 'Cancel',
   'O servidor do TeXugo parou várias vezes seguidas. Salve o que puder e reabra o app.': 'The TeXugo server stopped several times in a row. Save what you can and reopen the app.',
   'Verificar instalação': 'Check installation',
+  'Procurar atualizações': 'Check for updates',
   'Abrir': 'Open', 'Comparar': 'Compare', 'Ler anotações': 'Read annotations', 'Adicionar': 'Add', 'Importar': 'Import', 'Anexar': 'Attach', 'LaTeX, ZIP ou pasta': 'LaTeX, ZIP or folder',
   'Visualizar': 'View', 'Paleta de comandos': 'Command palette', 'Biblioteca de papers': 'Paper library', 'Painel inferior': 'Bottom panel', 'Ferramentas de desenvolvedor': 'Developer tools', 'Janela': 'Window',
 };
@@ -155,7 +156,7 @@ function buildMenu() {
       submenu: [item('Paleta de comandos', 'CmdOrCtrl+K', 'palette'), item('Biblioteca de papers', 'CmdOrCtrl+Alt+B', 'library'), item('Painel inferior', 'CmdOrCtrl+Shift+Y', 'toggleBottom'), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools', label: L('Ferramentas de desenvolvedor') }],
     },
     { role: 'windowMenu', label: L('Janela') },
-    { role: 'help', label: L('Ajuda'), submenu: [item('Atalhos e comandos', 'CmdOrCtrl+Shift+/', 'shortcuts'), item('Verificar instalação', null, 'setup'), { type: 'separator' }, { label: L('Licenças'), click: () => shell.openPath(path.join(app.getAppPath(), 'THIRD-PARTY-NOTICES.txt')) }] },
+    { role: 'help', label: L('Ajuda'), submenu: [item('Atalhos e comandos', 'CmdOrCtrl+Shift+/', 'shortcuts'), item('Verificar instalação', null, 'setup'), item('Procurar atualizações', null, 'update'), { type: 'separator' }, { label: L('Licenças'), click: () => shell.openPath(path.join(app.getAppPath(), 'THIRD-PARTY-NOTICES.txt')) }] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template.filter(Boolean)));
 }

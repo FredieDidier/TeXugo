@@ -94,7 +94,7 @@ Os outros três são de distribuição: assinatura e notarização no Mac (B5), 
 
 A maior lacuna de QA é estrutural: `server/index.js` (toda a API), `git.js`, `terminal.js`, o Electron e cerca de 40 dos 50 módulos da interface não têm nenhum teste. Os quatro defeitos acima moram exatamente aí.
 
-Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. **Atualização de 13/11/2026:** pendentes só B5, os itens 3, 4, 6, 8 e 9 do roteiro e o `release.yml`; I17, D8 e os itens 2 e 5 foram feitos. Corrigidos até 12/11/2026: 3 bloqueadores (B1, B2, B3), 11 importantes (I1, I3, I4, I5, I7, I11, I12, I13, I14, I15, I16), 9 desejáveis (D1, D2, D3, D4, D5, D6, D7, D9, D10).
+Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. **Atualização de 13/11/2026:** pendentes só B5, os itens 3, 4, 6, 8 e 9 do roteiro e o `release.yml`; I17, D8 e os itens 2 e 5 foram feitos. **13/11/2026, depois:** decisão do Fredie, distribuição sem nenhum custo (sem Apple Developer Program, sem certificado do Windows). B5 fica decidido nesse sentido (ver lá) e o item 6 foi feito na forma sem assinatura. Corrigidos até 12/11/2026: 3 bloqueadores (B1, B2, B3), 11 importantes (I1, I3, I4, I5, I7, I11, I12, I13, I14, I15, I16), 9 desejáveis (D1, D2, D3, D4, D5, D6, D7, D9, D10).
 
 ---
 
@@ -172,7 +172,10 @@ Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. **Atualização de 13/
   3. Nunca devolver `status: 'ok'` sem log: se o processo saiu com 0 e o log não foi achado, o estado é "não sei", com uma mensagem que diga onde procurei.
 - **Critério de aceite:** dois testes novos em `test/build.test.js` com os casos acima: PDF encontrado e `undefinedRefs.length === 1`.
 
-## B5. Distribuição no Mac: assinatura ad hoc, sem notarização, só Apple Silicon
+## B5. Distribuição no Mac: assinatura ad hoc, sem notarização, só Apple Silicon — **DECIDIDO: sem pagar**
+
+- **Decisão (13/11/2026):** nada de Apple Developer Program nem de certificado do Windows. O app sai sem assinatura paga nos três sistemas. Consequências aceitas: no Mac, a primeira abertura de cada versão pede Ajustes do Sistema → Privacidade e Segurança → *Abrir mesmo assim* (a assinatura ad hoc continua, porque o Apple Silicon exige alguma); no Windows, o SmartScreen pede *Mais informações* → *Executar assim mesmo*; no Linux não muda nada. A página de download do item 9 explica esses passos com capturas. Não há atualização automática no Mac (o atualizador do Electron exige assinatura); o item 6 virou aviso com *Baixar*. Ainda falta, sem custo: gerar também o binário x64 (ou universal) para Macs Intel, com o `electron-builder` do item 9. Opção gratuita para depois: o SignPath Foundation assina instaladores de Windows de projetos de código aberto sem cobrar; vale pedir quando o projeto estiver público e com algum uso.
+
 
 - **Classificação:** confirmado (leitura e inspeção do pacote). **Gravidade:** alta. **Esforço:** M, mais uma decisão sua.
 - **Evidência:** [scripts/package-mac.mjs:57](scripts/package-mac.mjs:57) assina com `codesign --sign -`. O script copia o `Electron.app` de `node_modules`, que tem a arquitetura da máquina que empacota: `out/TeXugo.app/Contents/MacOS/TeXugo` é `Mach-O 64-bit executable arm64`. Não há Developer ID, runtime endurecido, entitlements, notarização nem `.dmg`.
@@ -560,7 +563,10 @@ Regras: nunca rodar `sudo` nem instalador sem clique; *Continuar mesmo assim* se
 
 **Aceite:** num perfil novo sem TeX no caminho, a tela aparece; depois de corrigir o caminho, *Verificar de novo* fica verde sem reiniciar.
 
-## Item 6. Aviso de versão nova com "Atualizar agora"
+## ✅ Item 6. Aviso de versão nova — **FEITO, na forma sem assinatura**
+
+**Estado (13/11/2026):** sem assinatura paga (B5), nada é instalado pelo app. `server/update.js` consulta `api.github.com/repos/FredieDidier/TeXugo/releases/latest` na abertura e no máximo uma vez por dia; ignora rascunho e pré-release; só aceita links de `github.com`; escolhe o instalador do sistema e da arquitetura (`.dmg` arm64/x64/universal, `.exe`, `.AppImage`). Sem release publicada (404) ou sem rede, não diz nada. Na barra de status e na tela inicial aparece "Versão X disponível"; o diálogo mostra as notas da versão, *Notas da versão*, *Depois* e *Baixar (N MB)*, que abre o instalador no navegador, e explica como passar pelo aviso do macOS ou do Windows. Ajuda → Procurar atualizações e a paleta perguntam na hora. Preferências → Geral desliga a checagem; PRIVACIDADE.md e PRIVACY.md ganharam a linha do GitHub. Testes em test/update.test.js (comparação de versão, escolha do instalador, servidor falso com cache, pré-release, 404 e sem rede). Conferido no navegador com um GitHub falso. Não feito: instalar por cima sozinho (exigiria assinatura no Mac; no Windows e no Linux dá para acrescentar o `electron-updater` depois do item 9, se valer a pena); o aviso de alterações não salvas não é necessário, porque o app não fecha sozinho. O formato do nome dos arquivos precisa casar com o que o `electron-builder` gerar (item 9): `arm64`/`x64` no nome do `.dmg`.
+
 
 **O que a auditoria muda:** depende de B1 (o atualizador chama `app.quit()`) e de B5 (assinatura).
 

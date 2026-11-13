@@ -18,6 +18,7 @@ Alguns recursos, todos opcionais, falam com serviços de fora. A tabela diz quai
 | Remoto do Git (GitHub ou outro) | Ao abrir o projeto (`fetch`), e em pull, push, Sincronizar e clonar | O que o Git manda normalmente | Usar um projeto sem remoto |
 | Espelhos do TeX Live | Médico do TeX, ao procurar e instalar um pacote | O nome dos pacotes | Não usar o Médico do TeX |
 | LanguageTool (`languagetool.org`) | Só se você clicar em *Baixar* no corretor avançado de inglês (Preferências → Corretor) | O pedido de download dos n-gramas (9 GB). Nenhum texto seu vai junto | Não baixar |
+| GitHub (`api.github.com`) | Ao abrir o app e no máximo uma vez por dia, para saber se há versão nova. Desliga em Preferências → Geral | O pedido, com o IP e a versão do TeXugo. Nenhum dado de projeto | Desligar "Avisar quando houver versão nova" |
 | Homebrew | Instalar o LanguageTool pelo botão | O que o `brew` manda normalmente | Instalar à mão |
 | Google (dicionários do Chromium) | No Windows e no Linux, na primeira vez que o corretor ortográfico do sistema é usado | O pedido de download do dicionário | Usar no Mac, que usa o dicionário do macOS |
 
