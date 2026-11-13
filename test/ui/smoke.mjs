@@ -70,10 +70,10 @@ app.whenReady().then(async () => {
       return false;
     };
     const key = async (keyCode, modifiers = []) => {
-      // On Linux, Electron drops synthetic key events with Ctrl before they
-      // reach the page; there the shortcut goes in as a DOM event, which is
-      // what the page's own handler reads.
-      if (modifiers.length && (process.platform === 'linux' || process.env.TEXUGO_DOM_KEYS)) {
+      // Under xvfb, Electron's synthetic key events do not reliably reach
+      // the page (Ctrl+P and Enter were lost); on Linux keys go in as DOM
+      // events, which is what the page's handlers read.
+      if (process.platform === 'linux' || process.env.TEXUGO_DOM_KEYS) {
         const init = { key: keyCode, code: keyCode.length === 1 ? 'Key' + keyCode.toUpperCase() : keyCode, ctrlKey: modifiers.includes('control'), metaKey: modifiers.includes('meta'), shiftKey: modifiers.includes('shift'), altKey: modifiers.includes('alt'), bubbles: true, cancelable: true };
         await js(`(document.activeElement || document.body).dispatchEvent(new KeyboardEvent('keydown', ${JSON.stringify(init)})); return true;`);
         return sleep(120);
