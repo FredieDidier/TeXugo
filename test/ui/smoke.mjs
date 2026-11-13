@@ -72,7 +72,7 @@ app.whenReady().then(async () => {
     const key = async (keyCode, modifiers = []) => {
       wc.focus();
       wc.sendInputEvent({ type: 'keyDown', keyCode, modifiers });
-      if (keyCode.length === 1) wc.sendInputEvent({ type: 'char', keyCode, modifiers });
+      if (keyCode.length === 1 && !modifiers.length) wc.sendInputEvent({ type: 'char', keyCode, modifiers });
       wc.sendInputEvent({ type: 'keyUp', keyCode, modifiers });
       await sleep(120);
     };
@@ -97,7 +97,7 @@ app.whenReady().then(async () => {
     await key('k', [MOD]);
     await type('body');
     const pal = await js(`return [...document.querySelectorAll('.palette .item')].map((e) => e.innerText);`);
-    check('⌘K also finds files', pal.some((t) => t.includes('sections/body.tex')), pal);
+    check('⌘K also finds files', pal.some((t) => /sections[\\/]body\.tex/.test(t)), pal);
     check('palette: "body" does not match unrelated commands', !pal.some((t) => /Biblioteca|Zotero/.test(t)), pal);
     await key('Escape');
     check('Esc gives the focus back to the editor', await js(`return document.activeElement.classList.contains('cm-content');`));
@@ -144,7 +144,7 @@ app.whenReady().then(async () => {
     await js(`[...document.querySelectorAll('.tab')].find((t) => t.innerText.includes('body.tex')).click(); return true;`);
     await js(`const row = [...document.querySelectorAll('.tree-row')].find((r) => r.innerText.trim() === 'sections'); row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 80, clientY: 90 })); await new Promise((r) => setTimeout(r, 200)); [...document.querySelectorAll('.menu .mi')].find((m) => m.innerText.includes('Renomear')).click(); await new Promise((r) => setTimeout(r, 300)); const i = document.querySelector('.modal input'); i.value = 'parts'; return true;`);
     await clickBtn('.modal footer', 'Renomear');
-    check('I14: the tab follows the renamed folder', await until(`return document.querySelector('.tab.active')?.title.startsWith('parts/body.tex');`, 4000), await js(`return document.querySelector('.tab.active')?.title;`));
+    check('I14: the tab follows the renamed folder', await until(`return document.querySelector('.tab.active')?.title.replace(/\\\\/g, '/').startsWith('parts/body.tex');`, 4000), await js(`return document.querySelector('.tab.active')?.title;`));
     fs.writeFileSync(path.join(PROJ, 'paper.tex'), fs.readFileSync(path.join(PROJ, 'paper.tex'), 'utf8').replace('sections/body', 'parts/body'));
     await sleep(1200);
     await focusEditor();

@@ -102,8 +102,13 @@ function rememberCommand(t) {
 }
 
 export async function openPalette(app, S, mode = 'commands') {
-  document.querySelector('.overlay.palette-ov')?.remove();
-  const opener = document.activeElement;
+  // On Linux and Windows one shortcut can arrive twice (menu accelerator
+  // and keydown): a second open in the same mode keeps the palette, and a
+  // replaced palette hands over the element focus goes back to.
+  const prev = document.querySelector('.overlay.palette-ov');
+  if (prev && prev.dataset.mode === mode) return prev.querySelector('input')?.focus();
+  const opener = prev ? prev._opener : document.activeElement;
+  prev?.remove();
   let files = [];
   const input = h('input', {
     placeholder: 'Arquivo ou comando…   > só comandos   : linha',
@@ -118,7 +123,8 @@ export async function openPalette(app, S, mode = 'commands') {
   const list = h('div', { class: 'items', id: 'palette-list', role: 'listbox' });
   const hints = h('div', { class: 'hints' });
   const box = h('div', { class: 'modal palette', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'Paleta de comandos' }, input, list, hints);
-  const ov = h('div', { class: 'overlay palette-ov' }, box);
+  const ov = h('div', { class: 'overlay palette-ov', 'data-mode': mode }, box);
+  ov._opener = opener;
   let sel = 0;
   let items = [];
   const close = (back = true) => {
