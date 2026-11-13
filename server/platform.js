@@ -14,9 +14,11 @@ export const IS_LINUX = !IS_MAC && !IS_WIN;
 
 // The app's data folder (state, paper library, caches).
 export function appDataDir(name = 'TeXugo', { platform = process.platform, env = process.env, home = os.homedir() } = {}) {
-  if (platform === 'darwin') return path.join(home, 'Library', 'Application Support', name);
-  if (platform === 'win32') return path.join(env.APPDATA || path.join(home, 'AppData', 'Roaming'), name);
-  return path.join(env.XDG_CONFIG_HOME || path.join(home, '.config'), name);
+  // Joined with the separator of the system asked for, not of the host.
+  const p = platform === 'win32' ? path.win32 : path.posix;
+  if (platform === 'darwin') return p.join(home, 'Library', 'Application Support', name);
+  if (platform === 'win32') return p.join(env.APPDATA || p.join(home, 'AppData', 'Roaming'), name);
+  return p.join(env.XDG_CONFIG_HOME || p.join(home, '.config'), name);
 }
 
 // TeX Live installs into a folder named after the year: take every year

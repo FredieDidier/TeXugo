@@ -19,8 +19,10 @@ test('3,100 generated tables do not hide the paper', () => {
   try {
     assert.equal(listTexFiles(root).truncated, true);
     const paper = path.join(w, 'paper.tex');
-    assert.ok(JSON.stringify(listDocuments(root)).includes(paper), 'paper.tex not found');
-    assert.ok(JSON.stringify(rootsFor(root, path.join(w, 'sections', 'intro.tex'))).includes(paper), 'intro.tex has no root');
+    // Searched inside JSON, where a Windows \ is written \\.
+    const inJson = (v, p) => JSON.stringify(v).includes(JSON.stringify(p).slice(1, -1));
+    assert.ok(inJson(listDocuments(root), paper), 'paper.tex not found');
+    assert.ok(inJson(rootsFor(root, path.join(w, 'sections', 'intro.tex')), paper), 'intro.tex has no root');
     assert.ok(JSON.stringify(projectSymbols(root)).includes('sec:intro'), 'label sec:intro not found');
   } finally {
     fs.rmSync(root, { recursive: true, force: true });

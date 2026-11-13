@@ -1804,6 +1804,16 @@ function cycleRegion(step) {
   regions[(at + step + regions.length) % regions.length][1]();
 }
 
+// The key of a ⌘/Ctrl shortcut. Some X11 setups (and Electron's synthetic
+// events on Linux) give Ctrl+P an e.key of "\x10": then the physical key.
+function modKey(e) {
+  const key = e.key || '';
+  if (key.length !== 1 || key >= ' ') return key.toLowerCase();
+  if (/^Key[A-Z]$/.test(e.code || '')) return e.code.slice(3).toLowerCase();
+  if (e.keyCode >= 65 && e.keyCode <= 90) return String.fromCharCode(e.keyCode).toLowerCase();
+  return key;
+}
+
 function wireKeys() {
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && (e.key === '`' || e.code === 'Backquote')) {
@@ -1824,7 +1834,7 @@ function wireKeys() {
     }
     const mod = e.metaKey || e.ctrlKey;
     if (!mod) return;
-    const k = e.key.toLowerCase();
+    const k = modKey(e);
     if (e.key === '?' || (e.code === 'Slash' && e.shiftKey)) {
       e.preventDefault();
       return shortcutsDialog();
