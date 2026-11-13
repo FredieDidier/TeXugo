@@ -1000,3 +1000,5 @@ button.chip:hover { filter: brightness(0.96); }
 .ngrams-bar > span { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }
 .ngrams-err { margin-top: 6px; color: var(--err-text, var(--err)); }
 .ngrams .faint { margin: 6px 0 0; font-size: 12px; }
+.agent-panel.drop { outline: 2px dashed var(--accent); outline-offset: -6px; }
+.agent-attach-chip svg { width: 11px; height: 11px; }

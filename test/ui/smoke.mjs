@@ -62,7 +62,7 @@ app.whenReady().then(async () => {
     await sleep(1500);
     const win = BrowserWindow.getAllWindows()[0];
     const wc = win.webContents;
-    const js = (body) => wc.executeJavaScript(`(async () => { ${body} })()`, true);
+    const js = (body) => wc.executeJavaScript(`(async () => { ${body} })()`, true).catch((err) => { throw new Error(err.message + " in: " + body.slice(0, 160)); });
     const until = async (body, ms = 15000) => {
       for (const end = Date.now() + ms; Date.now() < end; await sleep(150)) if (await js(body).catch(() => false)) return true;
       return false;
@@ -161,6 +161,7 @@ app.whenReady().then(async () => {
     // ---- I7: raw HTML in a Markdown file renders as text only
     fs.writeFileSync(path.join(PROJ, 'evil.md'), '# Notes\n\n<script>window.__pwned = 1</script>\n<img src="x" onerror="window.__pwned = 2">\n<base href="https://example.org/">\n<style>body { display: none }</style>\n<form action="https://example.org"><input name="q"></form>\n<a href="javascript:window.__pwned=3">link</a> <details><summary>More</summary>kept</details>\n');
     await sleep(1200);
+    await until(`return [...document.querySelectorAll('.tree-row')].some((r) => r.innerText.trim() === 'evil.md');`, 5000);
     await js(`[...document.querySelectorAll('.tree-row')].find((r) => r.innerText.trim() === 'evil.md').click(); return true;`);
     check('I7: the Markdown preview opens', await until(`return document.querySelector('.markdown-body')?.innerText.includes('Notes');`, 5000));
     await sleep(500);
@@ -198,6 +199,21 @@ app.whenReady().then(async () => {
       };
       check('B3: commit saves the open tabs first', (await until(`return !document.querySelector('.tab.dirty');`, 6000)) && (await committed()));
     }
+
+    // ---- Claude panel: attach files with the button or by dragging them in
+    await activity('Claude');
+    check('Claude panel has an attach-files button', await js(`return !!document.querySelector('.agent-panel .agent-files-btn');`));
+    check('Claude panel: the send button fits inside the panel', await js(`const p = document.querySelector('.agent-panel').getBoundingClientRect(); return [...document.querySelectorAll('.agent-compose .agent-row > *')].every((c) => c.getBoundingClientRect().right <= p.right + 0.5);`));
+    const dropped = path.join(TMP, 'dados de campo.csv');
+    fs.writeFileSync(dropped, 'a,b\n1,2\n');
+    const box = await js(`const r = document.querySelector('.agent-log').getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) };`);
+    wc.debugger.attach('1.3');
+    const data = { items: [], files: [dropped], dragOperationsMask: 1 };
+    for (const type of ['dragEnter', 'dragOver', 'drop']) await wc.debugger.sendCommand('Input.dispatchDragEvent', { type, x: box.x, y: box.y, data });
+    wc.debugger.detach();
+    check('a file dragged from the computer becomes an attachment', await until(`return [...document.querySelectorAll('.agent-attach-chip')].some((c) => c.title === ${JSON.stringify(dropped)});`, 3000));
+    check('dropping does not leave the page', await js(`return !!document.querySelector('.agent-panel') && !document.querySelector('.agent-panel.drop');`));
+    await js(`[...document.querySelectorAll('.agent-attach-chip')].forEach((c) => c.querySelector('.close').click()); return true;`);
 
     // ---- B2: another project with unsaved edits
     await focusEditor();

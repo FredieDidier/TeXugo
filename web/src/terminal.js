@@ -5,7 +5,7 @@
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import { WebLinksAddon } from '@xterm/addon-web-links';
-import { call, on, wsSend } from './api.js';
+import { call, on, wsSend, native } from './api.js';
 import { h, clear, icon, toast } from './dom.js';
 import { claudeChoice } from './agent.js';
 
@@ -34,6 +34,20 @@ export class TerminalPanel {
     this.bar = h('div', { class: 'term-bar' });
     this.stack = h('div', { class: 'term-stack' });
     this.el = h('div', { class: 'term-panel' }, this.bar, this.stack);
+    // Dropping files on a terminal types their paths, quoted, as Terminal.app does.
+    this.stack.addEventListener('dragover', (e) => {
+      if ([...(e.dataTransfer?.types || [])].includes('Files')) (e.preventDefault(), (e.dataTransfer.dropEffect = 'copy'));
+    });
+    this.stack.addEventListener('drop', (e) => {
+      const t = this.items.get(this.active);
+      if (!t || !e.dataTransfer?.files.length) return;
+      e.preventDefault();
+      const quote = (p) => (/^[\w@%+=:,./-]+$/.test(p) ? p : `'${p.replace(/'/g, `'\\''`)}'`);
+      const paths = [...e.dataTransfer.files].map((f) => (native && native.pathOf ? native.pathOf(f) : '')).filter(Boolean);
+      if (!paths.length) return;
+      wsSend({ type: 'term:input', id: t.id, data: paths.map(quote).join(' ') + ' ' });
+      t.term.focus();
+    });
     on('term:data', (e) => this.items.get(e.id)?.term.write(e.data));
     on('term:exit', (e) => {
       const t = this.items.get(e.id);

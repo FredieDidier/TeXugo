@@ -44,6 +44,7 @@ import { openCommand, revealCommand, terminalCommand } from './platform.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
+const APP_VERSION = JSON.parse(fs.readFileSync(path.join(APP_ROOT, 'package.json'), 'utf8')).version;
 const DIST = path.join(APP_ROOT, 'dist');
 
 const MIME = {
@@ -177,7 +178,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       for (const t of ['latexmk', 'pdflatex', 'xelatex', 'lualatex', 'biber', 'bibtex', 'synctex', 'git', 'chktex']) tools[t] = await which(t);
       const tex = tools.pdflatex ? (await run('pdflatex', ['--version'])).stdout.split('\n')[0] : null;
       return {
-        version: JSON.parse(fs.readFileSync(path.join(APP_ROOT, 'package.json'), 'utf8')).version,
+        version: APP_VERSION,
         tools,
         tex,
         recents: (state.recents || []).filter((r) => fs.existsSync(r)),

@@ -390,7 +390,7 @@ const EN = {
   'Nova': 'New', 'Começa uma conversa nova': 'Starts a new conversation', 'Abrir o Claude Code completo no terminal': 'Open the full Claude Code in the terminal',
   'Marcar na margem as linhas alteradas desde a última compilação': 'Mark in the margin the lines changed since the last build',
   'Perguntar ao Claude sobre o trecho': 'Ask Claude about the passage', 'Anexa o trecho à mensagem no painel Claude': 'Attaches the passage to the message in the Claude panel',
-  'Perguntar ao Claude sobre a seleção': 'Ask Claude about the selection', 'Tirar': 'Remove', 
+  'Perguntar ao Claude sobre a seleção': 'Ask Claude about the selection', 'Tirar': 'Remove', 'Anexar arquivos': 'Attach files', 'Anexar arquivos do computador (ou arraste-os para o painel)': 'Attach files from your computer (or drag them onto the panel)', 'Anexar arquivos só funciona no app.': 'Attaching files only works in the app.', 'Arraste arquivos do computador; no navegador isso não funciona.': 'Drag files from your computer; this does not work in the browser.', 
   'Perguntar sobre o trecho…': 'Ask about the passage…', 'Perguntar ao Claude sobre o trecho, ou revisar, humanizar, encurtar, traduzir…': 'Ask Claude about the passage, or review, humanize, shorten, translate…',
   // split editor
   'Arquivo mostrado no lado direito': 'File shown on the right', 'Fechar a divisão (⌘⌥\\)': 'Close the split (⌘⌥\\)',

@@ -109,7 +109,7 @@ const MENU_EN = {
   'Compilar documento da aba': 'Compile the tab’s document', 'Compilar tudo que está aberto': 'Compile everything open', 'Mostrar no PDF': 'Show in PDF',
   'Há alterações não salvas.': 'There are unsaved changes.', 'Se você não salvar, o que foi digitado desde o último salvamento se perde.': 'If you do not save, what was typed since the last save is lost.',
   'Salvar tudo e fechar': 'Save all and close', 'Descartar': 'Discard', 'Cancelar': 'Cancel',
-  'Abrir': 'Open', 'Comparar': 'Compare', 'Ler anotações': 'Read annotations', 'Adicionar': 'Add', 'Importar': 'Import', 'LaTeX, ZIP ou pasta': 'LaTeX, ZIP or folder',
+  'Abrir': 'Open', 'Comparar': 'Compare', 'Ler anotações': 'Read annotations', 'Adicionar': 'Add', 'Importar': 'Import', 'Anexar': 'Attach', 'LaTeX, ZIP ou pasta': 'LaTeX, ZIP or folder',
   'Visualizar': 'View', 'Paleta de comandos': 'Command palette', 'Biblioteca de papers': 'Paper library', 'Painel inferior': 'Bottom panel', 'Ferramentas de desenvolvedor': 'Developer tools', 'Janela': 'Window',
 };
 let menuLang = 'pt';
@@ -174,6 +174,12 @@ ipcMain.handle('pick-pdf', async (e) => {
 ipcMain.handle('pick-pdfs', async (e) => {
   const win = BrowserWindow.fromWebContents(e.sender);
   const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], filters: [{ name: 'PDF', extensions: ['pdf'] }], buttonLabel: L('Adicionar') });
+  return r.canceled ? [] : r.filePaths;
+});
+// Any files, for the Claude panel's "Arquivos" button.
+ipcMain.handle('pick-files', async (e) => {
+  const win = BrowserWindow.fromWebContents(e.sender);
+  const r = await dialog.showOpenDialog(win, { properties: ['openFile', 'multiSelections'], buttonLabel: L('Anexar') });
   return r.canceled ? [] : r.filePaths;
 });
 ipcMain.handle('pick-bib', async (e) => {

@@ -181,7 +181,9 @@ Contagem: 7 bloqueadores, 17 importantes, 10 desejáveis. Corrigidos até 12/11/
 - **Correção recomendada:** trocar o script manual por `electron-builder`, que resolve de uma vez os itens 2, 6 e 9 do roteiro: `.dmg` universal (ou dois, arm64 e x64), runtime endurecido, notarização, `.exe` (NSIS), `.AppImage`, recompilação do `node-pty` e os arquivos `latest*.yml` que o `electron-updater` lê. É uma troca do empacotador (73 linhas), não do app. O hook `post-commit` pode continuar chamando `npm run package` com um alvo `--dir` para a instalação local. Ver o item 9 na Parte 4.
 - **Critério de aceite:** `spctl -a -vv TeXugo.app` responde "accepted, source=Notarized Developer ID"; o `.dmg` abre num Mac limpo, Intel e Apple Silicon, sem passar pelos Ajustes.
 
-## B6. Electron 38 está sete versões atrás e tem avisos de segurança altos
+## ✅ B6. Electron 38 está sete versões atrás e tem avisos de segurança altos — **CORRIGIDO**
+
+- ✅ **Estado (13/11/2026):** Electron 45.3.1 (Node 24.22, `node:sqlite` presente) e katex 0.19.1. `npm audit --omit=dev`: 0 vulnerabilidades. 134 testes e 42 checagens do roteiro de fumaça verdes, no Mac. Não conferido: `titleBarOverlay` no Windows e `fs.watch` recursivo no Linux (ficam com a CI do item 2). O zip do Electron 38 saiu do cache.
 
 - **Classificação:** confirmado (`npm view`, `npm audit`). **Gravidade:** alta. **Esforço:** P a M.
 - **Evidência:** instalado 38.8.6; a última publicada é 45.3.0. `npm audit` lista `electron` como *high* para `<=42.11.15` (três avisos, dois de uso de memória liberada). O Electron mantém as três versões maiores mais recentes, então a 38 não recebe correção.
@@ -565,7 +567,7 @@ Regras: nunca rodar `sudo` nem instalador sem clique; *Continuar mesmo assim* se
 - Antes de instalar: o mesmo diálogo de alterações não salvas de B1; avisar se houver compilação, terminal ou agente rodando.
 - Sem conta de desenvolvedor da Apple: no Mac o botão vira *Baixar* e abre a página da release. Não tente trocar o pacote por conta própria sem verificar a origem: um atualizador que instala o que baixou sem checar assinatura é um vetor de ataque pior do que não ter atualizador.
 - Privacidade: a checagem manda o IP e a versão ao GitHub. Entra na página de privacidade, com uma opção para desligar.
-- A versão hoje é 0.1.0 e o `hello` relê o `package.json` a cada chamada: leia uma vez.
+- A versão hoje é 0.1.0 e o `hello` relê o `package.json` a cada chamada: leia uma vez. ✅ **FEITO (13/11):** lida uma vez, em `APP_VERSION`.
 
 **Aceite:** com duas releases de teste num repositório auxiliar, a 0.1.0 oferece a 0.1.1, instala, reabre e mostra 0.1.1; com aba suja, pergunta antes.
 

@@ -4,7 +4,7 @@
 // happens. Messages carry the active file, the selection and the build
 // errors, so "fix this" and "fix the build" work without copying anything.
 import { Marked } from 'marked';
-import { call, on } from './api.js';
+import { call, on, native } from './api.js';
 import { h, clear, icon, toast, basename, relPath, joinPath } from './dom.js';
 import { fileDiff } from './ide.js';
 
@@ -110,11 +110,13 @@ export class AgentPanel {
           { class: 'agent-row' },
           h('label', { class: 'agent-chip', title: 'Envia junto o trecho selecionado no editor' }, this.withSel, 'seleção'),
           h('label', { class: 'agent-chip', title: 'Envia junto os erros e ?? da última compilação' }, this.withErr, 'erros'),
+          h('button', { class: 'icon-btn agent-files-btn', title: 'Anexar arquivos do computador (ou arraste-os para o painel)', 'aria-label': 'Anexar arquivos', onclick: () => this.pickFiles() }, icon('clip')),
           h('span', { style: { flex: 1 } }),
           this.sendBtn,
         ),
       ),
     );
+    this.dropZone();
     this.empty();
     this.setRunning(false);
     on('agent:event', (e) => this.S.project && e.root === this.S.project.root && this.event(e));
@@ -157,14 +159,57 @@ export class AgentPanel {
     this.focus();
   }
 
+  // Files from the computer: Claude reads them from where they are (a PDF,
+  // an image, a .tex), nothing is copied into the project.
+  attachFiles(paths) {
+    const fresh = paths.filter((p) => p && !this.attachments.some((y) => y.file && y.path === p));
+    if (!fresh.length) return this.focus();
+    for (const p of fresh) this.attachments.push({ file: true, path: p });
+    this.renderAttachments();
+    this.focus();
+  }
+
+  async pickFiles() {
+    if (!native || !native.pickFiles) return toast('Anexar arquivos só funciona no app.', 'warn');
+    this.attachFiles(await native.pickFiles());
+  }
+
+  dropZone() {
+    const has = (e) => [...(e.dataTransfer?.types || [])].includes('Files');
+    let depth = 0;
+    this.el.addEventListener('dragenter', (e) => {
+      if (!has(e)) return;
+      e.preventDefault();
+      depth++;
+      this.el.classList.add('drop');
+    });
+    this.el.addEventListener('dragover', (e) => {
+      if (!has(e)) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    });
+    this.el.addEventListener('dragleave', () => {
+      if (--depth <= 0) (depth = 0), this.el.classList.remove('drop');
+    });
+    this.el.addEventListener('drop', (e) => {
+      if (!has(e)) return;
+      e.preventDefault();
+      depth = 0;
+      this.el.classList.remove('drop');
+      const paths = [...e.dataTransfer.files].map((f) => (native && native.pathOf ? native.pathOf(f) : '')).filter(Boolean);
+      if (!paths.length) return toast('Arraste arquivos do computador; no navegador isso não funciona.', 'warn');
+      this.attachFiles(paths);
+    });
+  }
+
   renderAttachments() {
     clear(
       this.attachEl,
       this.attachments.map((x, k) =>
         h(
           'span',
-          { class: 'agent-attach-chip', title: x.text.slice(0, 300) },
-          `${basename(x.path)} ${x.a === x.b ? 'linha ' + x.a : `linhas ${x.a}–${x.b}`}`,
+          { class: 'agent-attach-chip', title: x.file ? x.path : x.text.slice(0, 300) },
+          x.file ? [icon('file'), basename(x.path)] : `${basename(x.path)} ${x.a === x.b ? 'linha ' + x.a : `linhas ${x.a}–${x.b}`}`,
           h('span', { class: 'close', title: 'Tirar', onclick: () => (this.attachments.splice(k, 1), this.renderAttachments()) }, icon('x')),
         ),
       ),
@@ -174,7 +219,9 @@ export class AgentPanel {
   context() {
     const t = this.app.activeTab();
     const parts = [];
-    for (const x of this.attachments) parts.push(`Excerpt the user points to: ${x.path}, lines ${x.a}-${x.b}:\n"""\n${x.text.slice(0, 8000)}\n"""`);
+    const files = this.attachments.filter((x) => x.file);
+    if (files.length) parts.push('Files the user attached from their computer (read them with the Read tool; they may be outside the project):\n' + files.map((x) => `- ${x.path}`).join('\n'));
+    for (const x of this.attachments.filter((y) => !y.file)) parts.push(`Excerpt the user points to: ${x.path}, lines ${x.a}-${x.b}:\n"""\n${x.text.slice(0, 8000)}\n"""`);
     if (t && !t.binary) {
       parts.push(`Active file: ${t.path}`);
       const sel = this.app.view.state.selection.main;
