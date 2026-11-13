@@ -1,7 +1,9 @@
 # The Electron smoke script (test/ui/smoke.mjs) on the three systems: opens
 # a project, edits, renames, conflicts, commit, switching project, closing
 # and quitting with unsaved tabs, and compiling the template to a PDF:
-# TeX Live from apt on Linux, TinyTeX on the Mac and on Windows.
+# TeX Live from apt on Linux, TinyTeX on the Mac and on Windows. The
+# templates' bibliography style (aer.bst) is in the economic package
+# (texlive-bibtex-extra on Ubuntu); without it BibTeX fails.
 name: Fumaça
 
 on:
@@ -35,14 +37,14 @@ jobs:
         uses: r-lib/actions/setup-tinytex@v2
       - name: Pacotes do modelo (Mac e Windows)
         if: runner.os != 'Linux'
-        run: tlmgr install latexmk lm babel-english booktabs setspace microtype natbib tools geometry hyperref amsmath amsfonts
+        run: tlmgr install latexmk lm babel-english booktabs setspace microtype natbib tools geometry hyperref amsmath amsfonts economic
       - name: Fumaça (Linux, com tela virtual)
         if: runner.os == 'Linux'
         env:
           TEXUGO_NEED_TEX: '1'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libgtk-3-0 libnss3 libasound2t64 libgbm1 latexmk texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-lang-english lmodern
+          sudo apt-get install -y xvfb libgtk-3-0 libnss3 libasound2t64 libgbm1 latexmk texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-bibtex-extra texlive-lang-english lmodern
           npm run build:web
           xvfb-run -a npx electron --no-sandbox test/ui/smoke.mjs
       - name: Fumaça

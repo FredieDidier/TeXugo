@@ -122,6 +122,7 @@ app.whenReady().then(async () => {
     if (hasTex) {
       await key('Enter', [MOD]);
       check('compiles to a PDF', await until(`return !!document.querySelector('.pdf-view:not(.hidden) .page') && !document.querySelector('.status-dot.building');`, 90000));
+      check('the first build ends with zero ??, not an error', await until(`return !!document.querySelector('.doc-bar .chip.ok');`, 5000), await js(`return document.querySelector('.doc-bar')?.innerText;`));
       await sleep(800);
     }
     for (const [w, h] of [[1480, 870], [1200, 760], [1000, 640], [900, 560]]) {

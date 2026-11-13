@@ -81,3 +81,14 @@ export class UpdateChecker {
     return info;
   }
 }
+
+// Ajuda → Relatar um problema: the GitHub issue form with the version and
+// the system filled in through the query string (field ids of
+// .github/ISSUE_TEMPLATE/problema.yml). Nothing is sent by the app; the
+// browser opens the form and the person decides what to submit.
+export const ISSUES_NEW = 'https://github.com/FredieDidier/TeXugo/issues/new';
+export function issueUrl({ version, platform = process.platform, arch = process.arch, release = '' }) {
+  const os = { darwin: 'macOS', win32: 'Windows', linux: 'Linux' }[platform] || platform;
+  const q = new URLSearchParams({ template: 'problema.yml', versao: String(version || ''), sistema: `${os} ${release}`.trim() + ` (${arch})` });
+  return `${ISSUES_NEW}?${q}`;
+}

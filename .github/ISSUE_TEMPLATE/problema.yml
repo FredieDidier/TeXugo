@@ -1,0 +1,42 @@
+name: Relatar um problema / Report a problem
+description: Algo no TeXugo não funciona como deveria. / Something in TeXugo does not work as it should.
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Não cole trechos de um paper inédito, dados ou nomes de coautores.** Um exemplo mínimo inventado basta.
+        **Do not paste text from an unpublished paper, data or coauthors' names.** A small made-up example is enough.
+  - type: input
+    id: versao
+    attributes:
+      label: Versão do TeXugo / TeXugo version
+      description: Ajuda → Sobre o TeXugo. / Help → About TeXugo.
+    validations:
+      required: true
+  - type: input
+    id: sistema
+    attributes:
+      label: Sistema / System
+      placeholder: macOS 15.5 (arm64), Windows 11, Ubuntu 24.04
+    validations:
+      required: true
+  - type: input
+    id: tex
+    attributes:
+      label: Versão do TeX / TeX version
+      description: Ajuda → Verificar instalação mostra o ano do TeX Live. / Help → Check installation shows the TeX Live year.
+  - type: textarea
+    id: passos
+    attributes:
+      label: Passos para reproduzir / Steps to reproduce
+      placeholder: |
+        1. Novo projeto → Artigo
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: esperado
+    attributes:
+      label: O que aconteceu e o que você esperava / What happened and what you expected
+    validations:
+      required: true

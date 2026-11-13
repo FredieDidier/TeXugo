@@ -56,3 +56,16 @@ test('checker: newer, cached for a day, 404, offline', async () => {
   const off = new UpdateChecker({ current: '0.1.0', url: 'http://127.0.0.1:1/none' });
   assert.ok((await off.check()).error);
 });
+
+test('issue form link carries the version and the system', async () => {
+  const { issueUrl } = await import('../server/update.js');
+  const u = new URL(issueUrl({ version: '0.1.0', platform: 'darwin', arch: 'arm64', release: '25.2.0' }));
+  assert.equal(u.origin + u.pathname, 'https://github.com/FredieDidier/TeXugo/issues/new');
+  assert.equal(u.searchParams.get('template'), 'problema.yml');
+  assert.equal(u.searchParams.get('versao'), '0.1.0');
+  assert.equal(u.searchParams.get('sistema'), 'macOS 25.2.0 (arm64)');
+  // The ids the link fills must exist in the form.
+  const fs = await import('node:fs');
+  const form = fs.readFileSync(new URL('../.github/ISSUE_TEMPLATE/problema.yml', import.meta.url), 'utf8');
+  for (const id of ['versao', 'sistema']) assert.match(form, new RegExp(`^\\s+id: ${id}$`, 'm'));
+});
