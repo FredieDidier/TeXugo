@@ -3,8 +3,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { formatLatex, texInfo } from '../server/doctor.js';
 
-test('latexindent formats with two-space indent', { timeout: 60000 }, async () => {
+test('latexindent formats with two-space indent', { timeout: 60000 }, async (t) => {
   const info = await texInfo();
+  if (!info.latexindent.ok && !process.env.TEXUGO_NEED_TEX) return t.skip(info.latexindent.reason);
   assert.ok(info.latexindent.ok, info.latexindent.reason);
   const src = '\\documentclass{article}\n\\begin{document}\n\\begin{table}\n\\centering\n\\end{table}\n\\end{document}\n';
   const r = await formatLatex(src, '/tmp/x/main.tex');

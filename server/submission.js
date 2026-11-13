@@ -21,7 +21,9 @@ export function systemTexRoots() {
   texRoots = [];
   const kpse = findOnPath('kpsewhich');
   if (kpse) {
-    for (const v of ['TEXMFROOT', 'TEXMFDIST', 'TEXMFLOCAL', 'TEXMFSYSVAR', 'TEXMFSYSCONFIG', 'TEXMFVAR', 'TEXMFCONFIG', 'TEXMFHOME']) {
+    // TEXMFMAIN: on Debian and Ubuntu texmf.cnf lives in /usr/share/texmf,
+    // outside TEXMFROOT (/usr/share/texlive).
+    for (const v of ['TEXMFROOT', 'TEXMFMAIN', 'TEXMFDIST', 'TEXMFLOCAL', 'TEXMFSYSVAR', 'TEXMFSYSCONFIG', 'TEXMFVAR', 'TEXMFCONFIG', 'TEXMFHOME']) {
       try {
         const out = execFileSync(kpse, ['-var-value', v], { env: toolEnv(), encoding: 'utf8', timeout: 5000 }).trim();
         for (const r of out.split(/[;:](?![\\/])/).map((x) => x.replace(/^!!/, '').trim()).filter((x) => path.isAbsolute(x)))

@@ -1,6 +1,8 @@
 # Ubuntu packages for the TeX job: what the templates load (IEEEtran, acmart,
 # apa7, elsarticle, beamer, exam, tcolorbox, pgfplots, babel portuguese),
-# plus latexmk, biber, latexdiff and latexindent.
+# plus latexmk, biber, latexdiff and latexindent, and pdftotext (poppler-utils)
+# for the tests that read the PDF.
+poppler-utils
 latexmk
 biber
 latexdiff

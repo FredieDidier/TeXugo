@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { news, markSeen, readVisit, blame, headings, sectionsFor, hunkRanges, newsDiff, showCommit } from '../server/coauthors.js';
+import { findOnPath } from '../server/util.js';
 
 const PAPER = (intro, data) => `\\documentclass{article}
 \\begin{document}
@@ -131,7 +132,8 @@ test('sections carry their current line, and diffs take project paths', async ()
   assert.match(await showCommit(root, { rev: n.head, file: f }), /Bruno Lima/);
 });
 
-test('the paper as a PDF with what is on the remote, before the pull', async () => {
+test('the paper as a PDF with what is on the remote, before the pull', async (t) => {
+  if (!findOnPath('latexdiff') && !process.env.TEXUGO_NEED_TEX) return t.skip('latexdiff não instalado');
   const { compareBuild } = await import('../server/compare.js');
   const { execFileSync } = await import('node:child_process');
   const base = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-remote-'));

@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { riskyItems, underTrusted, setTrustCheck, claudeSourceFlags } from '../server/trust.js';
 import { rcInfo } from '../server/outdirs.js';
+import { findOnPath } from '../server/util.js';
 
 test('risky items: .claude settings and latexmkrc in the root or a document folder', () => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-trust-'));
@@ -34,7 +35,8 @@ test('untrusted project: claude -p only with the user settings; latexmk not aske
     assert.equal(rcInfo(root).outDir, null, 'the Perl in the rc must not run');
     setTrustCheck((d) => underTrusted([root], d));
     assert.deepEqual(claudeSourceFlags(root), []);
-    assert.equal(rcInfo(root).outDir, path.join(root, 'build'));
+    // Trusted, the rc's Perl is asked of latexmk: only where latexmk exists.
+    if (findOnPath('latexmk') || process.env.TEXUGO_NEED_TEX) assert.equal(rcInfo(root).outDir, path.join(root, 'build'));
   } finally {
     setTrustCheck(() => true);
   }
