@@ -119,7 +119,11 @@ try {
 const L = (label) => (menuLang === 'en' && MENU_EN[label]) || label;
 
 function buildMenu() {
-  const item = (label, accelerator, action) => ({ label: L(label), accelerator, click: () => send(action) });
+  // Off the Mac a registered accelerator fires as well as the page's own
+  // keydown handler (web/src/main.js wireKeys), so ⌘W closed two tabs and ⌘P
+  // opened the palette twice. Keys the page handles are only shown there.
+  const PAGE_KEYS = new Set(['CmdOrCtrl+P', 'CmdOrCtrl+S', 'CmdOrCtrl+Alt+S', 'CmdOrCtrl+W', 'CmdOrCtrl+Enter', 'CmdOrCtrl+Shift+Enter', 'CmdOrCtrl+J', 'CmdOrCtrl+K', 'CmdOrCtrl+,', 'CmdOrCtrl+Shift+/']);
+  const item = (label, accelerator, action) => ({ label: L(label), accelerator, registerAccelerator: IS_MAC || !PAGE_KEYS.has(accelerator), click: () => send(action) });
   const template = [
     !IS_MAC ? null : { role: 'appMenu', submenu: [{ role: 'about', label: L('Sobre o TeXugo') }, { type: 'separator' }, item('Preferências…', 'CmdOrCtrl+,', 'settings'), { type: 'separator' }, { role: 'hide', label: L('Ocultar TeXugo') }, { role: 'hideOthers' }, { role: 'unhide' }, { type: 'separator' }, { role: 'quit', label: L('Encerrar TeXugo') }] },
     {

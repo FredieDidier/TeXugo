@@ -20,10 +20,11 @@ test('risky items: .claude settings and latexmkrc in the root or a document fold
 });
 
 test('trusted roots cover their subfolders only', () => {
-  assert.ok(underTrusted(['/a/b'], '/a/b'));
-  assert.ok(underTrusted(['/a/b'], '/a/b/latex'));
-  assert.ok(!underTrusted(['/a/b'], '/a/bc'));
-  assert.ok(!underTrusted([], '/a/b'));
+  const p = (x) => path.resolve(x);
+  assert.ok(underTrusted([p('/a/b')], p('/a/b')));
+  assert.ok(underTrusted([p('/a/b')], p('/a/b/latex')));
+  assert.ok(!underTrusted([p('/a/b')], p('/a/bc')));
+  assert.ok(!underTrusted([], p('/a/b')));
 });
 
 test('untrusted project: claude -p only with the user settings; latexmk not asked', () => {

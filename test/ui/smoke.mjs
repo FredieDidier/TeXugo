@@ -91,7 +91,7 @@ app.whenReady().then(async () => {
     await type('body');
     check('⌘P finds the file', (await js(`return document.querySelector('.palette .item.sel')?.innerText || '';`)).includes('body.tex'));
     await key('Enter');
-    check('the file opens and the editor has the focus', await until(`return document.querySelector('.tab.active .label')?.textContent === 'body.tex' && document.activeElement.classList.contains('cm-content');`, 4000));
+    check('the file opens and the editor has the focus', await until(`return document.querySelector('.tab.active .label')?.textContent === 'body.tex' && document.activeElement.classList.contains('cm-content');`, 4000), await js(`return { tabs: [...document.querySelectorAll('.tab .label')].map((e) => e.textContent), active: document.activeElement?.className, palette: !!document.querySelector('.palette-ov') };`));
 
     // ---- palette: one search for files and commands, no scattered matches
     await key('k', [MOD]);
