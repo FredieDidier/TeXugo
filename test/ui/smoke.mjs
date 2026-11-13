@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const REPO = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-ui-'));
@@ -21,7 +21,7 @@ fs.mkdirSync(path.join(TMP, 'profile'));
 fs.writeFileSync(path.join(TMP, 'profile', 'state.json'), JSON.stringify({ settings: { grammar: false, lang: 'pt', reopenLast: false }, recents: [OTHER] }));
 app.setPath('userData', path.join(TMP, 'profile'));
 
-const { createFromTemplate } = await import(REPO + '/server/templates.js');
+const { createFromTemplate } = await import(pathToFileURL(path.join(REPO, 'server/templates.js')).href);
 createFromTemplate('artigo-apendice', PROJ, { title: 'Bus Lanes and Commuting Time', author: 'A. Author' }, 'en');
 createFromTemplate('carta', OTHER, { title: 'A letter', author: 'A. Author' }, 'en');
 const git = (...a) => execFileSync('git', a, { cwd: PROJ, stdio: 'pipe' });
@@ -47,13 +47,15 @@ const events = [];
 app.on('will-quit', () => events.push('will-quit'));
 
 process.argv.push(PROJ);
-await import(REPO + '/electron/main.js');
+await import(pathToFileURL(path.join(REPO, 'electron/main.js')).href);
 
 const results = [];
 const check = (name, ok, detail = '') => {
   results.push({ name, ok: !!ok });
   console.log(`${ok ? 'ok  ' : 'FAIL'} ${name}${ok ? '' : ' :: ' + JSON.stringify(detail)}`);
 };
+// ⌘ on the Mac, Ctrl elsewhere, as the menu accelerators (CmdOrCtrl).
+const MOD = process.platform === 'darwin' ? 'meta' : 'control';
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 app.whenReady().then(async () => {
@@ -85,14 +87,14 @@ app.whenReady().then(async () => {
 
     // ---- a file of the document: the bar with the most controls
     await focusEditor();
-    await key('p', ['meta']);
+    await key('p', [MOD]);
     await type('body');
     check('⌘P finds the file', (await js(`return document.querySelector('.palette .item.sel')?.innerText || '';`)).includes('body.tex'));
     await key('Enter');
     check('the file opens and the editor has the focus', await until(`return document.querySelector('.tab.active .label')?.textContent === 'body.tex' && document.activeElement.classList.contains('cm-content');`, 4000));
 
     // ---- palette: one search for files and commands, no scattered matches
-    await key('k', ['meta']);
+    await key('k', [MOD]);
     await type('body');
     const pal = await js(`return [...document.querySelectorAll('.palette .item')].map((e) => e.innerText);`);
     check('⌘K also finds files', pal.some((t) => t.includes('sections/body.tex')), pal);
@@ -102,7 +104,7 @@ app.whenReady().then(async () => {
 
     // ---- compile, then nothing is cut off at any size
     if (hasTex) {
-      await key('Enter', ['meta']);
+      await key('Enter', [MOD]);
       check('compiles to a PDF', await until(`return !!document.querySelector('.pdf-view:not(.hidden) .page') && !document.querySelector('.status-dot.building');`, 90000));
       await sleep(800);
     }
@@ -147,7 +149,7 @@ app.whenReady().then(async () => {
     await sleep(1200);
     await focusEditor();
     await type(' EDITED-AFTER-RENAME');
-    await key('s', ['meta']);
+    await key('s', [MOD]);
     check('I14: saving after the rename writes to the new path', await until(`return !document.querySelector('.tab.dirty');`, 4000) && fs.readFileSync(path.join(PROJ, 'parts', 'body.tex'), 'utf8').includes('EDITED-AFTER-RENAME'));
 
     // ---- D6: an error stays until closed
@@ -174,7 +176,7 @@ app.whenReady().then(async () => {
     await type(' MINE');
     fs.appendFileSync(path.join(PROJ, 'parts', 'body.tex'), '\n% from a coauthor\n');
     await sleep(1500);
-    await key('s', ['meta']);
+    await key('s', [MOD]);
     check('B3: saving over a changed file opens the conflict dialog', await until(`return document.querySelector('.modal-title')?.innerText === 'O arquivo mudou no disco';`, 4000));
     check('B3: the focus is not on the destructive button', await js(`return !document.activeElement.classList.contains('danger');`));
     await clickBtn('.modal', 'Ver diferenças');
@@ -238,7 +240,7 @@ app.whenReady().then(async () => {
     const alive = await js(`const r = await fetch('/api/hello', { method: 'POST', body: '{}' }).catch(() => null); return r ? r.status : 0;`);
     check('B1: after a cancelled quit the server still answers', alive > 0 && !events.includes('will-quit') && !win.isDestroyed(), { alive, events });
     await focusEditor();
-    await key('s', ['meta']);
+    await key('s', [MOD]);
     check('B1: and saving still works', await until(`return !document.querySelector('.tab.dirty');`, 4000) && fs.readFileSync(path.join(PROJ, 'parts', 'body.tex'), 'utf8').includes('UNSAVED'));
 
     const failed = results.filter((r) => !r.ok);

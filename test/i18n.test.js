@@ -9,12 +9,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 globalThis.document = { documentElement: {} };
 const { tr, setLang } = await import('../web/src/i18n.js');
 setLang('en');
 
-const ROOT = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 // Whole files that are not UI text, or translate themselves.
 const SKIP_FILES = new Set([

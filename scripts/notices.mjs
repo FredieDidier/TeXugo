@@ -4,9 +4,9 @@
 // the file; test/notices.test.js fails when a shipped package is missing.
 import fs from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { pathToFileURL, fileURLToPath } from 'node:url';
 
-export const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+export const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const NOTICES = path.join(root, 'THIRD-PARTY-NOTICES.txt');
 
 // Package name from a path inside node_modules (the innermost one).
