@@ -67,6 +67,13 @@ export function texInstallHint(platform = process.platform) {
   return 'Instale o TeX Live (pelo gerenciador de pacotes, por exemplo sudo apt install texlive-full, ou por https://tug.org/texlive/) e reabra o TeXugo.';
 }
 
+// Where to download TeX on each system.
+export function texInstallUrl(platform = process.platform) {
+  if (platform === 'win32') return 'https://miktex.org/download';
+  if (platform === 'darwin') return 'https://tug.org/mactex/';
+  return 'https://tug.org/texlive/';
+}
+
 // Commands that open a file or link with its default app, show a file in
 // the file manager, or open a terminal in a folder. Used when the Electron
 // shell is not there (the browser version).

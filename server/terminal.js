@@ -4,7 +4,7 @@
 // it. Each terminal keeps its recent output, so a reloaded window gets its
 // screen back.
 import { execFileSync } from 'node:child_process';
-import { serverLang } from './lang.js';
+import { serverLang, L } from './lang.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -16,7 +16,17 @@ const require = createRequire(import.meta.url);
 let pty = null;
 function loadPty() {
   if (pty) return pty;
-  pty = require('node-pty');
+  try {
+    pty = require('node-pty');
+  } catch (err) {
+    // node-pty is a native module: prebuilt for macOS and Windows, compiled
+    // at install on Linux. A build that did not compile it still runs; only
+    // the terminal is missing, and it says why.
+    throw new Error(L(
+      'O terminal não está disponível nesta instalação (o módulo node-pty não carregou). O resto do TeXugo funciona; use o terminal do sistema. Detalhe: ',
+      'The terminal is not available in this installation (the node-pty module did not load). The rest of TeXugo works; use the system terminal. Detail: ',
+    ) + String(err.message).split('\n')[0]);
+  }
   // npm may install node-pty without running its scripts, which leaves the
   // helper it spawns through without the execute bit.
   try {

@@ -1,6 +1,7 @@
 # The Electron smoke script (test/ui/smoke.mjs) on the three systems: opens
 # a project, edits, renames, conflicts, commit, switching project, closing
-# and quitting with unsaved tabs. Without TeX it skips the compile checks.
+# and quitting with unsaved tabs, and compiling the template to a PDF:
+# TeX Live from apt on Linux, TinyTeX on the Mac and on Windows.
 name: Fumaça
 
 on:
@@ -29,13 +30,23 @@ jobs:
           cache: npm
       - run: git config --global user.name "TeXugo CI" && git config --global user.email "ci@example.invalid"
       - run: npm ci
+      - name: TinyTeX (Mac e Windows)
+        if: runner.os != 'Linux'
+        uses: r-lib/actions/setup-tinytex@v2
+      - name: Pacotes do modelo (Mac e Windows)
+        if: runner.os != 'Linux'
+        run: tlmgr install latexmk lm babel-english booktabs setspace microtype natbib xr geometry hyperref amsmath amsfonts
       - name: Fumaça (Linux, com tela virtual)
         if: runner.os == 'Linux'
+        env:
+          TEXUGO_NEED_TEX: '1'
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb libgtk-3-0 libnss3 libasound2t64 libgbm1
+          sudo apt-get install -y xvfb libgtk-3-0 libnss3 libasound2t64 libgbm1 latexmk texlive-latex-base texlive-latex-recommended texlive-latex-extra texlive-fonts-recommended texlive-lang-english lmodern
           npm run build:web
           xvfb-run -a npx electron --no-sandbox test/ui/smoke.mjs
       - name: Fumaça
         if: runner.os != 'Linux'
+        env:
+          TEXUGO_NEED_TEX: '1'
         run: npm run test:ui

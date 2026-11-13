@@ -1,13 +1,12 @@
 // Electron shell: starts the local server, opens windows, native menus,
 // folder pickers and "move to Trash".
-import { app, BrowserWindow, Menu, dialog, ipcMain, shell, nativeTheme } from 'electron';
+import { app, BrowserWindow, Menu, dialog, ipcMain, shell, nativeTheme, utilityProcess } from 'electron';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 process.env.TEXUGO_DATA_DIR = app.getPath('userData');
-const { createServer } = await import('../server/index.js');
 
 let server;
 let quitting = false; // ⌘Q was asked and is waiting on the windows
@@ -109,6 +108,8 @@ const MENU_EN = {
   'Compilar documento da aba': 'Compile the tab’s document', 'Compilar tudo que está aberto': 'Compile everything open', 'Mostrar no PDF': 'Show in PDF',
   'Há alterações não salvas.': 'There are unsaved changes.', 'Se você não salvar, o que foi digitado desde o último salvamento se perde.': 'If you do not save, what was typed since the last save is lost.',
   'Salvar tudo e fechar': 'Save all and close', 'Descartar': 'Discard', 'Cancelar': 'Cancel',
+  'O servidor do TeXugo parou várias vezes seguidas. Salve o que puder e reabra o app.': 'The TeXugo server stopped several times in a row. Save what you can and reopen the app.',
+  'Verificar instalação': 'Check installation',
   'Abrir': 'Open', 'Comparar': 'Compare', 'Ler anotações': 'Read annotations', 'Adicionar': 'Add', 'Importar': 'Import', 'Anexar': 'Attach', 'LaTeX, ZIP ou pasta': 'LaTeX, ZIP or folder',
   'Visualizar': 'View', 'Paleta de comandos': 'Command palette', 'Biblioteca de papers': 'Paper library', 'Painel inferior': 'Bottom panel', 'Ferramentas de desenvolvedor': 'Developer tools', 'Janela': 'Window',
 };
@@ -154,7 +155,7 @@ function buildMenu() {
       submenu: [item('Paleta de comandos', 'CmdOrCtrl+K', 'palette'), item('Biblioteca de papers', 'CmdOrCtrl+Alt+B', 'library'), item('Painel inferior', 'CmdOrCtrl+Shift+Y', 'toggleBottom'), { type: 'separator' }, { role: 'resetZoom' }, { role: 'zoomIn' }, { role: 'zoomOut' }, { type: 'separator' }, { role: 'togglefullscreen' }, { role: 'toggleDevTools', label: L('Ferramentas de desenvolvedor') }],
     },
     { role: 'windowMenu', label: L('Janela') },
-    { role: 'help', label: L('Ajuda'), submenu: [item('Atalhos e comandos', 'CmdOrCtrl+Shift+/', 'shortcuts'), { type: 'separator' }, { label: L('Licenças'), click: () => shell.openPath(path.join(app.getAppPath(), 'THIRD-PARTY-NOTICES.txt')) }] },
+    { role: 'help', label: L('Ajuda'), submenu: [item('Atalhos e comandos', 'CmdOrCtrl+Shift+/', 'shortcuts'), item('Verificar instalação', null, 'setup'), { type: 'separator' }, { label: L('Licenças'), click: () => shell.openPath(path.join(app.getAppPath(), 'THIRD-PARTY-NOTICES.txt')) }] },
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template.filter(Boolean)));
 }
@@ -242,6 +243,73 @@ app.on('second-instance', (_e, argv) => {
   if (win && win.focus) win.focus();
 });
 
+// The server runs in a utility process (server-process.mjs), so its file
+// scans never freeze menus and windows. If it dies, it comes back on the same
+// port and token: the open windows reconnect and keep their tabs.
+const hooks = {
+  trash: (p) => shell.trashItem(p),
+  reveal: (p) => shell.showItemInFolder(p),
+  openPath: async (p) => {
+    const err = await shell.openPath(p);
+    if (err) throw new Error(err);
+  },
+  openUrl: (u) => shell.openExternal(u),
+};
+let child = null;
+let serverClosing = false;
+let serverClosed = false;
+let restarts = [];
+function startServer(port = 0, token) {
+  return new Promise((resolve, reject) => {
+    const c = utilityProcess.fork(path.join(HERE, 'server-process.mjs'), [], { serviceName: 'TeXugo server', stdio: 'inherit', env: { ...process.env } });
+    child = c;
+    let ready = false;
+    c.on('message', async (m) => {
+      if (m.type === 'ready') {
+        ready = true;
+        resolve({ url: m.url, port: m.port, token: m.token, idle: () => c.postMessage({ type: 'idle' }) });
+      } else if (m.type === 'hook') {
+        let error = null;
+        try {
+          await hooks[m.name](m.arg);
+        } catch (err) {
+          error = String(err.message || err);
+        }
+        c.postMessage({ type: 'hook:reply', id: m.id, error });
+      } else if (m.type === 'closed') {
+        serverClosed = true;
+      }
+    });
+    c.on('exit', (code) => {
+      if (child === c) child = null;
+      if (!ready) return reject(new Error(`the server process exited (${code}) before starting`));
+      // Exit code 0: closed on purpose, or the app itself is exiting.
+      if (serverClosing || serverClosed || code === 0) return;
+      restarts = [...restarts.filter((t) => t > Date.now() - 60000), Date.now()];
+      if (restarts.length > 3) {
+        dialog.showErrorBox('TeXugo', L('O servidor do TeXugo parou várias vezes seguidas. Salve o que puder e reabra o app.'));
+        return;
+      }
+      console.error(`TeXugo: the server process exited (${code}); starting it again`);
+      startServer(server.port, server.token).then((s) => (server = s)).catch((err) => console.error(err));
+    });
+    c.postMessage({ type: 'start', port, token });
+  });
+}
+// Asks the server to stop what it started (terminals, builds, LanguageTool)
+// and waits for it, at most a few seconds.
+function closeServer() {
+  const c = child;
+  if (!c || serverClosed) return Promise.resolve();
+  serverClosing = true;
+  return new Promise((resolve) => {
+    const done = () => (clearTimeout(t), resolve());
+    const t = setTimeout(() => (c.kill(), resolve()), 4000);
+    c.once('exit', done);
+    c.postMessage({ type: 'close' });
+  });
+}
+
 // open-file can arrive before the server is up (double-click on a folder
 // that launches the app): keep it and open it once ready.
 const pendingOpen = [];
@@ -249,17 +317,7 @@ const pendingOpen = [];
 app.setName('TeXugo');
 app.whenReady().then(async () => {
   if (!primary) return;
-  server = await createServer({
-    hooks: {
-      trash: (p) => shell.trashItem(p),
-      reveal: (p) => shell.showItemInFolder(p),
-      openPath: async (p) => {
-        const err = await shell.openPath(p);
-        if (err) throw new Error(err);
-      },
-      openUrl: (u) => shell.openExternal(u),
-    },
-  });
+  server = await startServer();
   buildMenu();
   if (IS_MAC && app.dock) app.dock.setIcon(path.join(HERE, '..', 'build', 'icon.png'));
   const argPath = folderArg(process.argv);
@@ -284,4 +342,12 @@ app.on('window-all-closed', () => {
 // The server must outlive a cancelled quit: with unsaved edits the windows
 // may stay open, and saving needs it. will-quit fires only once they closed.
 app.on('before-quit', () => (quitting = true));
-app.on('will-quit', () => server && server.close());
+// will-quit waits once for the server process to stop its children.
+app.on('will-quit', (e) => {
+  if (!child || serverClosed) return;
+  e.preventDefault();
+  closeServer().then(() => {
+    serverClosed = true;
+    app.quit();
+  });
+});

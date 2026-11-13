@@ -19,7 +19,7 @@ import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
 import { LiveManager, overlayPath, realPath } from './live.js';
 import { Grammar } from './grammar.js';
-import { isInside, dataDir, run, which, toolEnv, writeKeepingLink, refreshTools, linkTargetOk } from './util.js';
+import { isInside, dataDir, run, which, toolEnv, writeKeepingLink, refreshTools, linkTargetOk, perlProblem } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
 import * as replication from './replication.js';
@@ -40,7 +40,7 @@ import { setServerLang } from './lang.js';
 import * as library from './library.js';
 import * as reviewer from './review.js';
 import * as rr from './rr.js';
-import { openCommand, revealCommand, terminalCommand } from './platform.js';
+import { openCommand, revealCommand, terminalCommand, texInstallHint, texInstallUrl } from './platform.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP_ROOT = path.resolve(HERE, '..');
@@ -186,8 +186,38 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
         models: MODEL_LIST,
         home: os.homedir(),
         // Nothing chosen and nothing opened yet: the page picks the language.
-        firstRun: !(state.recents || []).length && !state.projects && !(state.settings || {}).lang,
+        firstRun: !(state.recents || []).length && !Object.keys(state.projects || {}).length && !(state.settings || {}).lang,
       };
+    },
+    // The first-run check (PRE-LAUNCH-AUDIT.md item 5), also in Ajuda →
+    // Verificar instalação: TeX, Git and its identity, an AI agent, the
+    // grammar checker. Reads only; nothing is installed from here.
+    async setupStatus() {
+      refreshTools();
+      const [latexmk, pdflatex, xelatex, lualatex, git, claude] = await Promise.all(['latexmk', 'pdflatex', 'xelatex', 'lualatex', 'git', 'claude'].map((t) => which(t)));
+      const version = pdflatex ? (await run('pdflatex', ['--version'])).stdout.split('\n')[0] : null;
+      const perl = latexmk ? await perlProblem('latexmk') : null;
+      const ident = async (k) => (git ? (await run('git', ['config', '--global', '--get', k])).stdout.trim() : '');
+      return {
+        tex: { ok: !!(latexmk && (pdflatex || xelatex || lualatex)) && !perl, latexmk: !!latexmk, engine: !!(pdflatex || xelatex || lualatex), version, perl, hint: texInstallHint(), url: texInstallUrl() },
+        git: { ok: !!git, name: await ident('user.name'), email: await ident('user.email') },
+        agent: { ok: !!claude },
+        grammar: await grammar.status(),
+        platform: process.platform,
+      };
+    },
+    // Writes the Git identity the user typed (git config --global). Only
+    // name and e-mail, each on one line.
+    async setGitIdentity({ name, email }) {
+      name = String(name || '').trim();
+      email = String(email || '').trim();
+      if (!name || name.length > 120 || /[\r\n]/.test(name)) throw httpError(400, 'Nome inválido.');
+      if (!/^[^\s@]+@[^\s@]+$/.test(email) || email.length > 200) throw httpError(400, 'E-mail inválido.');
+      for (const [k, v] of [['user.name', name], ['user.email', email]]) {
+        const r = await run('git', ['config', '--global', k, v]);
+        if (r.code !== 0) throw new Error((r.stderr || 'git config falhou').trim());
+      }
+      return { name, email };
     },
     async saveSettings({ settings }) {
       state.settings = { ...(state.settings || {}), ...settings };

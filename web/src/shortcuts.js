@@ -98,6 +98,7 @@ export const SECTIONS = [
       ['Vícios de escrita (tiques de IA)', '', 'Contador “vícios” na barra de status; aba Revisão'],
       ['Revisar estilo (ChkTeX) / contar palavras', '', 'Aba Revisão'],
       ['Médico do TeX (pacotes que faltam)', '', 'Seta ao lado de Compilar'],
+      ['Verificar instalação (TeX, Git, Claude, corretor)', '', 'Ajuda → Verificar instalação; paleta'],
     ],
   },
   {

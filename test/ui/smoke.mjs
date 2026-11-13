@@ -4,8 +4,8 @@
 // off at any window size, the palette, the outline, renaming a folder, and
 // the three ways of not losing work (B1, B2, B3 of PRE-LAUNCH-AUDIT.md).
 // Native dialogs are answered by code. Needs a display; compiling is
-// skipped when latexmk is missing.
-import { app, BrowserWindow, dialog } from 'electron';
+// skipped when latexmk is missing (unless TEXUGO_NEED_TEX is set).
+import { app, BrowserWindow, dialog, shell } from 'electron';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -18,7 +18,7 @@ const PROJ = path.join(TMP, 'demo-paper');
 const OTHER = path.join(TMP, 'second-letter');
 fs.mkdirSync(path.join(TMP, 'profile'));
 // No grammar server (it would outlive the test) and a fixed language.
-fs.writeFileSync(path.join(TMP, 'profile', 'state.json'), JSON.stringify({ settings: { grammar: false, lang: 'pt', reopenLast: false }, recents: [OTHER] }));
+fs.writeFileSync(path.join(TMP, 'profile', 'state.json'), JSON.stringify({ settings: { grammar: false, lang: 'pt', reopenLast: false, onboarded: true }, recents: [OTHER] }));
 app.setPath('userData', path.join(TMP, 'profile'));
 
 const { createFromTemplate } = await import(pathToFileURL(path.join(REPO, 'server/templates.js')).href);
@@ -38,6 +38,11 @@ try {
   execFileSync('latexmk', ['-v'], { stdio: 'pipe' });
 } catch {
   hasTex = false;
+}
+// In the CI TeX is installed on purpose: missing it is a failure there.
+if (!hasTex && process.env.TEXUGO_NEED_TEX) {
+  console.log('FAIL latexmk is not on the PATH, and TEXUGO_NEED_TEX is set');
+  process.exit(1);
 }
 
 const dialogs = [];
@@ -168,6 +173,21 @@ app.whenReady().then(async () => {
     check('D6: an error notice has role=alert', await js(`return !!document.querySelector('.toast.error[role=alert]');`));
     await sleep(6500);
     check('D6: the error is still there after 6 s, and its × closes it', (await js(`const t = document.querySelector('.toast.error'); if (!t) return false; t.querySelector('.toast-x').click(); return !document.querySelector('.toast.error');`)) === true);
+
+    // ---- item 5: Ajuda → Verificar instalação
+    wc.send('menu', 'setup');
+    check('setup: four lines, each with a status', await until(`return document.querySelectorAll('.setup-row[data-state]').length === 4;`, 8000), await js(`return document.querySelector('.setup-list')?.innerText;`));
+    if (hasTex && hasGit) check('setup: TeX and Git are ready here', await js(`const r = [...document.querySelectorAll('.setup-row')]; return r[0].dataset.state === 'ok' && r[1].dataset.state === 'ok';`), await js(`return document.querySelector('.setup-list').innerText;`));
+    check('setup: Continuar is always there', await js(`return [...document.querySelectorAll('.modal footer .btn')].some((b) => b.innerText.trim() === 'Continuar');`));
+    await key('Escape');
+    await sleep(300);
+
+    // ---- D8: the server runs in a utility process; Trash goes through main
+    const trashed = [];
+    shell.trashItem = async (p) => void trashed.push(p);
+    fs.writeFileSync(path.join(PROJ, 'scratch.txt'), 'x');
+    const tr = await js(`const r = await fetch('/api/trash', { method: 'POST', headers: { 'content-type': 'application/json', 'x-texugo-token': new URLSearchParams(location.search).get('t') }, body: JSON.stringify({ path: ${JSON.stringify(path.join(PROJ, 'scratch.txt'))} }) }); return r.status;`);
+    check('D8: Trash asked by the server reaches the main process', tr === 200 && trashed.some((p) => p.endsWith('scratch.txt')), { tr, trashed });
 
     // ---- I7: raw HTML in a Markdown file renders as text only
     fs.writeFileSync(path.join(PROJ, 'evil.md'), '# Notes\n\n<script>window.__pwned = 1</script>\n<img src="x" onerror="window.__pwned = 2">\n<base href="https://example.org/">\n<style>body { display: none }</style>\n<form action="https://example.org"><input name="q"></form>\n<a href="javascript:window.__pwned=3">link</a> <details><summary>More</summary>kept</details>\n');

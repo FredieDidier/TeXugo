@@ -1,4 +1,5 @@
 // TeXugo UI entry point: layout, tabs, compile flow, PDF panes, problems.
+import { setupDialog, setupIncomplete } from './setup.js';
 import { call, connect, on, fileUrl, native } from './api.js';
 import { h, clear, icon, wordmark, fileIcon, fileKind, basename, relPath, debounce, toast, menu, modal, prompt, confirmBox, gutter, isUnder, relParts, dirname, REVEAL, setFocusHome, OPEN_PDF } from './dom.js';
 import { wordDiff } from './diff.js';
@@ -1916,6 +1917,7 @@ function wireKeys() {
         toggleBottom: () => toggleBottom(),
         welcome: () => showWelcome(app, S),
         shortcuts: () => shortcutsDialog(),
+        setup: () => setupDialog(app, S),
         library: () => libraryDialog(app, S),
         // Asked by the app's "unsaved changes" dialog on close or quit.
         saveAllThenClose: async () => (await saveAll()) && (native.closeSaved ? native.closeSaved() : window.close()),
@@ -1992,6 +1994,15 @@ async function boot() {
   // A folder the user did not trust (or that failed to open) leaves the
   // start screen up.
   if (!last || (await openProject(last)) === false || !S.project) showWelcome(app, S);
+  // First run: what is installed and what is missing (item 5). A profile
+  // from before this screen sees it only when something essential is missing.
+  if (!S.settings.onboarded) {
+    if (S.hello.firstRun) setupDialog(app, S, { first: true });
+    else
+      call('setupStatus')
+        .then((st) => (setupIncomplete(st) ? setupDialog(app, S, { first: true }) : ((S.settings.onboarded = true), call('saveSettings', { settings: { onboarded: true } }))))
+        .catch(() => {});
+  }
 }
 
 app.S = S;

@@ -12,7 +12,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { run, toolEnv, readText } from './util.js';
+import { run, toolEnv, readText, perlProblem } from './util.js';
 import { includeClosure, docInfo } from './project.js';
 import { unzipCommand } from './platform.js';
 
@@ -174,6 +174,8 @@ export async function compareBuild(doc, source, target = null) {
     fs.mkdirSync(outDir, { recursive: true });
     const job = target ? `${stem}-novidades` : `${stem}-mudancas`;
     const diffTex = path.join(outDir, job + '.tex');
+    const noPerl = await perlProblem('latexdiff');
+    if (noPerl) throw new Error(noPerl);
     const ld = await run('latexdiff', ['--flatten', '--encoding=utf8', oldDoc, newDoc], { cwd: docDir, timeout: 180000 });
     if (ld.code !== 0 || !ld.stdout.includes('\\begin{document}')) {
       throw new Error('O latexdiff falhou: ' + (ld.stderr || '').split('\n').filter((l) => /error|die|at .* line/i.test(l)).slice(0, 3).join(' ').slice(0, 400) || `código ${ld.code}`);

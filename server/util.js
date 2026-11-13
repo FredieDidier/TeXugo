@@ -112,6 +112,18 @@ export async function which(bin) {
   return found;
 }
 
+// MiKTeX's latexmk, latexdiff and latexindent are Perl scripts behind an
+// .exe wrapper, and MiKTeX does not bring Perl (TeX Live for Windows does).
+// Without it they die with a message nobody understands, so say it first.
+export function perlProblemFor({ tool, toolPath, perlPath, platform = process.platform }) {
+  if (platform !== 'win32' || !toolPath || perlPath || !/miktex/i.test(toolPath)) return null;
+  return `O ${tool} do MiKTeX precisa de Perl, que o MiKTeX não traz. Instale o Strawberry Perl (https://strawberryperl.com) e clique em Verificar de novo, ou use o TeX Live, que já vem com Perl.`;
+}
+export async function perlProblem(tool) {
+  if (!IS_WIN) return null;
+  return perlProblemFor({ tool, toolPath: await which(tool), perlPath: await which('perl') });
+}
+
 // Where a path really points: symbolic links resolved, for a path that does
 // not exist yet through its nearest existing folder.
 export function realPath(p) {

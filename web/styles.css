@@ -1002,3 +1002,20 @@ button.chip:hover { filter: brightness(0.96); }
 .ngrams .faint { margin: 6px 0 0; font-size: 12px; }
 .agent-panel.drop { outline: 2px dashed var(--accent); outline-offset: -6px; }
 .agent-attach-chip svg { width: 11px; height: 11px; }
+
+/* Verificar instalação (web/src/setup.js) */
+.setup-lead { margin: 0 0 14px; max-width: 62ch; }
+.setup-list { display: flex; flex-direction: column; }
+.setup-row { display: grid; grid-template-columns: 14px 1fr auto; gap: 12px; align-items: start; padding: 12px 2px; border-top: 1px solid var(--border); }
+.setup-row:first-child { border-top: 0; }
+.setup-dot { width: 10px; height: 10px; margin-top: 5px; border-radius: 50%; background: var(--faint); }
+.setup-row.ok .setup-dot { background: var(--ok); }
+.setup-row.missing .setup-dot { background: var(--warn); }
+.setup-row.optional .setup-dot { background: transparent; border: 2px solid var(--faint); width: 6px; height: 6px; }
+.setup-title { font-weight: 600; margin-bottom: 2px; }
+.setup-desc { color: var(--muted); line-height: 1.45; overflow-wrap: anywhere; }
+.setup-code { font: 12px var(--mono); padding: 1px 4px; border-radius: 4px; background: var(--raised); color: var(--text); }
+.setup-fields { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.setup-fields input { flex: 1 1 180px; min-width: 0; }
+.setup-act { align-self: center; }
+@media (max-width: 640px) { .setup-row { grid-template-columns: 14px 1fr; } .setup-act { grid-column: 2; } }

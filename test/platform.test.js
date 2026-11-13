@@ -38,3 +38,12 @@ test('Mac key symbols become Ctrl/Alt/Shift elsewhere', () => {
   assert.equal(keyLabel('Compilar (⌘↵)', false), 'Compilar (Ctrl+↵)');
   assert.equal(keyLabel('⌥⌘B', true), '⌥⌘B');
 });
+
+test('MiKTeX tools without Perl say so before failing (I17)', async () => {
+  const { perlProblemFor } = await import('../server/util.js');
+  const miktex = 'C:\\Users\\a\\AppData\\Local\\Programs\\MiKTeX\\miktex\\bin\\x64\\latexdiff.exe';
+  assert.match(perlProblemFor({ tool: 'latexdiff', toolPath: miktex, perlPath: null, platform: 'win32' }), /Strawberry Perl/);
+  assert.equal(perlProblemFor({ tool: 'latexdiff', toolPath: miktex, perlPath: 'C:\\Strawberry\\perl\\bin\\perl.exe', platform: 'win32' }), null);
+  assert.equal(perlProblemFor({ tool: 'latexmk', toolPath: 'C:\\texlive\\2026\\bin\\windows\\latexmk.exe', perlPath: null, platform: 'win32' }), null);
+  assert.equal(perlProblemFor({ tool: 'latexmk', toolPath: '/usr/bin/latexmk', perlPath: null, platform: 'linux' }), null);
+});

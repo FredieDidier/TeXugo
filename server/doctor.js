@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { run, toolEnv, which } from './util.js';
+import { run, toolEnv, which, perlProblem } from './util.js';
 import { IS_MAC, IS_WIN } from './platform.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -40,6 +40,8 @@ export async function texInfo({ refresh = false } = {}) {
 
 async function latexindentStatus() {
   if (!(await which('latexindent'))) return { ok: false, reason: 'latexindent não está instalado.' };
+  const noPerl = await perlProblem('latexindent');
+  if (noPerl) return { ok: false, reason: noPerl };
   const r = await run('latexindent', ['--version'], { env: indentEnv(), timeout: 20000 });
   return r.code === 0 ? { ok: true, version: r.stdout.trim().split('\n')[0] } : { ok: false, reason: (r.stderr || r.stdout).split('\n')[0] };
 }

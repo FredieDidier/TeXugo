@@ -20,7 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { docInfo, projectSymbols, includeClosure } from './project.js';
 import { parseLog, auxFingerprint, auxLabels } from './logparse.js';
-import { toolEnv, which } from './util.js';
+import { toolEnv, which, perlProblem } from './util.js';
 import { rcInfo, outputs } from './outdirs.js';
 import { killTree, texInstallHint } from './platform.js';
 
@@ -120,6 +120,8 @@ export class BuildManager extends EventEmitter {
     if (!latexmk) {
       throw new Error('latexmk não encontrado. ' + texInstallHint());
     }
+    const noPerl = await perlProblem('latexmk');
+    if (noPerl) throw new Error(noPerl);
     const { order, infos } = this.plan(req.docs);
     const missingExternal = [];
     for (const info of infos.values()) {
