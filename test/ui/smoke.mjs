@@ -8,7 +8,7 @@
 // answered by code. The last step quits the app through "Salvar tudo e
 // fechar". Needs a display; compiling is skipped when latexmk is missing
 // (unless TEXUGO_NEED_TEX is set).
-import { app, BrowserWindow, dialog, shell } from 'electron';
+import { app, BrowserWindow, dialog, Menu, shell } from 'electron';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -224,6 +224,25 @@ app.whenReady().then(async () => {
     fs.writeFileSync(path.join(PROJ, 'scratch.txt'), 'x');
     const tr = await js(`const r = await fetch('/api/trash', { method: 'POST', headers: { 'content-type': 'application/json', 'x-texugo-token': new URLSearchParams(location.search).get('t') }, body: JSON.stringify({ path: ${JSON.stringify(path.join(PROJ, 'scratch.txt'))} }) }); return r.status;`);
     check('D8: Trash asked by the server reaches the main process', tr === 200 && trashed.some((p) => p.endsWith('scratch.txt')), { tr, trashed });
+
+    // ---- Ajuda → Relatar um problema and Licenças, clicked in the real menu.
+    {
+      const opened = [];
+      const [ext, op] = [shell.openExternal, shell.openPath];
+      shell.openExternal = async (u) => { opened.push(u); };
+      shell.openPath = async (p) => { opened.push(p); return ''; };
+      const find = (label) => Menu.getApplicationMenu().items.flatMap((m) => m.submenu ? m.submenu.items : []).find((i) => i.label === label);
+      find('Relatar um problema')?.click();
+      find('Licenças')?.click();
+      shell.openExternal = ext;
+      shell.openPath = op;
+      const issue = opened.find((u) => /^https:/.test(u)) || '';
+      const q = issue ? new URL(issue).searchParams : new URLSearchParams();
+      check('Ajuda → Relatar um problema opens the issue form with version and system', /^https:\/\/github\.com\/FredieDidier\/TeXugo\/issues\/new\?/.test(issue) && q.get('template') === 'problema.yml' && q.get('versao') === app.getVersion() && new RegExp(`^${{ darwin: 'macOS', win32: 'Windows', linux: 'Linux' }[process.platform]} .*\\(${process.arch}\\)$`).test(q.get('sistema') || ''), opened);
+      // Here the app path is test/ui; in the installed app it is
+      // Resources/app, where the packager puts the notices.
+      check('Ajuda → Licenças opens THIRD-PARTY-NOTICES.txt in the app folder', opened.includes(path.join(app.getAppPath(), 'THIRD-PARTY-NOTICES.txt')), opened);
+    }
 
     // ---- I7: raw HTML in a Markdown file renders as text only
     fs.writeFileSync(path.join(PROJ, 'evil.md'), '# Notes\n\n<script>window.__pwned = 1</script>\n<img src="x" onerror="window.__pwned = 2">\n<base href="https://example.org/">\n<style>body { display: none }</style>\n<form action="https://example.org"><input name="q"></form>\n<a href="javascript:window.__pwned=3">link</a> <details><summary>More</summary>kept</details>\n');
