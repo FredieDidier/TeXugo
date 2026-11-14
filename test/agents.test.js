@@ -233,3 +233,7 @@ test('an agent whose program is missing says how to install it, without hanging'
   const s = new AcpSession(root, {}, () => {}, agent);
   await assert.rejects(() => s.start(), /Gone Agent não encontrado\. Instale com: npm install -g gone-agent/);
 });
+
+test('OpenCode starts without the user’s Claude Code skills, in the panel, the one-shot and the terminal', () => {
+  for (const env of [opencode.acp.env, opencode.readOnlyEnv, opencode.tuiEnv]) assert.equal(env.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS, '1');
+});

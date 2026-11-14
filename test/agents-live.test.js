@@ -99,3 +99,42 @@ test('opencode panel: a write waits for the card; refused nothing is written, al
     }
   }
 });
+
+// OpenCode lists the Claude Code skills it would send to its model as
+// commands. Started the way TeXugo starts it, an invented skill in the home
+// folder must not be among them. No prompt is sent: no model is called.
+test('opencode: started by TeXugo it does not read the Claude Code skills', { skip: !WANTED.includes('opencode') && 'set TEXUGO_LIVE_AGENTS to run it', timeout: 60000 }, async (t) => {
+  if (!(await which('opencode'))) return t.skip('opencode is not installed');
+  opencodeHome();
+  const dir = path.join(process.env.HOME, '.claude', 'skills', 'canary-skill');
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, 'SKILL.md'), '---\nname: canary-skill\ndescription: An invented skill.\n---\nNothing here.\n');
+  const { opencode } = await import('../server/agents/others.js');
+  const { spawnLong } = await import('../server/agents/proc.js');
+  const listed = async (env) => {
+    const root = project();
+    const child = spawnLong('opencode', ['acp'], root, env);
+    let buf = '';
+    const names = await new Promise((resolve) => {
+      const done = setTimeout(() => resolve(null), 20000);
+      child.stdout.on('data', (d) => {
+        buf += d;
+        for (const line of buf.split('\n')) {
+          try {
+            const m = JSON.parse(line);
+            if (m.id === 1) child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'session/new', params: { cwd: root, mcpServers: [] } }) + '\n');
+            const u = m.params && m.params.update;
+            if (u && u.sessionUpdate === 'available_commands_update') clearTimeout(done), resolve(u.availableCommands.map((c) => c.name));
+          } catch {}
+        }
+        buf = buf.slice(buf.lastIndexOf('\n') + 1);
+      });
+      child.stdin.write(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: 1, clientCapabilities: {} } }) + '\n');
+    });
+    child.kill();
+    return names;
+  };
+  // The control: without TeXugo's setting the invented skill is listed.
+  assert.ok((await listed({})).includes('canary-skill'), 'control: OpenCode did not list the skill, so the check below proves nothing');
+  assert.ok(!(await listed(opencode.acp.env)).includes('canary-skill'), 'OpenCode read the Claude Code skills');
+});

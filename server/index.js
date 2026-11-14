@@ -681,7 +681,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       if (kind === 'agent') {
         const a = agentById(agent);
         if (a.id === 'claude' || !a.tui) throw httpError(400, 'Agente sem terminal.');
-        return terminals.create({ cwd: root, kind, cols, rows, title: a.product, command: a.tui({ model, effort }) });
+        return terminals.create({ cwd: root, kind, cols, rows, title: a.product, command: a.tui({ model, effort }), env: a.tuiEnv || {} });
       }
       return terminals.create({ cwd: root, kind, cols, rows, env, claudeArgs: kind === 'claude' ? claudeFlags({ model, effort }) : [] });
     },

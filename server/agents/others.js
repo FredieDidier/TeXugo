@@ -30,6 +30,10 @@ const CHANGING = ['edit', 'bash', 'webfetch', 'websearch', 'task', 'external_dir
 const READING = { read: 'allow', grep: 'allow', glob: 'allow', list: 'allow', skill: 'allow' };
 const OPENCODE_PANEL = { permission: { '*': 'ask', ...Object.fromEntries(CHANGING.map((k) => [k, 'ask'])), ...READING, todowrite: 'allow', todoread: 'allow' } };
 const OPENCODE_READ_ONLY = { permission: { '*': 'deny', ...Object.fromEntries(CHANGING.map((k) => [k, 'deny'])), ...READING } };
+// OpenCode reads the user's Claude Code skills from ~/.claude/skills and
+// sends them to its model; their descriptions name the user's projects.
+// TeXugo starts it without them, in the panel, the one-shot and the terminal.
+const NO_CLAUDE_SKILLS = { OPENCODE_DISABLE_CLAUDE_CODE_SKILLS: '1' };
 
 export const opencode = {
   id: 'opencode',
@@ -38,9 +42,10 @@ export const opencode = {
   install: 'npm install -g opencode-ai',
   site: 'https://opencode.ai',
   login: 'Rode "opencode auth login" no terminal e escolha um provedor.',
-  acp: { bin: 'opencode', args: ['acp'], env: { OPENCODE_CONFIG_CONTENT: JSON.stringify(OPENCODE_PANEL) } },
-  readOnlyEnv: { OPENCODE_CONFIG_CONTENT: JSON.stringify(OPENCODE_READ_ONLY) },
+  acp: { bin: 'opencode', args: ['acp'], env: { ...NO_CLAUDE_SKILLS, OPENCODE_CONFIG_CONTENT: JSON.stringify(OPENCODE_PANEL) } },
+  readOnlyEnv: { ...NO_CLAUDE_SKILLS, OPENCODE_CONFIG_CONTENT: JSON.stringify(OPENCODE_READ_ONLY) },
   tui: ({ model }) => ['opencode', ...(safeId(model) ? ['-m', model] : [])],
+  tuiEnv: NO_CLAUDE_SKILLS,
   async detect() {
     const bin = await which('opencode');
     return { installed: !!bin, panel: !!bin, oneShot: !!bin, version: bin ? await versionOf(bin) : null };
