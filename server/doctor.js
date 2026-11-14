@@ -54,6 +54,20 @@ function indentEnv() {
 
 const repoArgs = (info) => (info.repository ? ['--repository', info.repository] : []);
 
+function offlineMessage(output) {
+  if (/TLPDB::from_file could not get texlive\.tlpdb from: https?:\/\//i.test(output)) {
+    return L(
+      'Não foi possível baixar a lista de pacotes do TeX Live. Confira a conexão ou tente novamente mais tarde.',
+      'Could not download the TeX Live package list. Check the connection or try again later.',
+    );
+  }
+  if (!/Could not resolve (?:host|proxy)|Temporary failure in name resolution|Name or service not known|(?:Failed|Unable) to connect|Couldn't connect to server|Connection (?:refused|timed out)|(?:Network is unreachable|No route to host)|(?:Could not resolve|Connection) .+\((?:6|7|28)\)/i.test(output)) return null;
+  return L(
+    'Sem conexão com o repositório de pacotes do TeX. Tente novamente quando a conexão voltar.',
+    'Cannot connect to the TeX package repository. Try again when the connection is back.',
+  );
+}
+
 // Which TeX Live package provides each missing file. Needs the network.
 const pkgCache = new Map();
 export async function findPackages(files) {
@@ -69,6 +83,8 @@ export async function findPackages(files) {
       continue;
     }
     const r = await run('tlmgr', [...repoArgs(info), 'search', '--global', '--file', '/' + file], { timeout: 180000 });
+    const offline = r.code !== 0 && offlineMessage(r.stderr + '\n' + r.stdout);
+    if (offline) throw new Error(offline);
     // Output: "pkgname:\n\ttexmf-dist/.../file" blocks.
     let pkg = null;
     let current = null;
@@ -99,7 +115,7 @@ export async function installPackages(pkgs) {
   if (!tlmgr && info.miktex) {
     r = await run('miktex', ['packages', 'install', ...pkgs], { timeout: 15 * 60000 });
     const output = (r.stdout + r.stderr).trim();
-    return { ok: r.code === 0, installed: r.code === 0 ? pkgs : [], output: output.split('\n').slice(-40).join('\n') };
+    return { ok: r.code === 0, installed: r.code === 0 ? pkgs : [], output: (r.code !== 0 && offlineMessage(output)) || output.split('\n').slice(-40).join('\n') };
   }
   const repo = repoArgs(info).join(' ');
   const script = `(${tlmgr} ${repo} update --self; ${tlmgr} ${repo} install ${pkgs.join(' ')}) 2>&1`;
@@ -119,7 +135,8 @@ export async function installPackages(pkgs) {
   const output = (r.stdout + r.stderr).trim();
   if (/User canceled|-128/.test(output)) return { ok: false, cancelled: true, output };
   const installed = pkgs.filter((p) => new RegExp(`(\\[\\d+/\\d+[^\\]]*\\]\\s+)?install:\\s+${p}\\b|package already present: ${p}\\b`).test(output));
-  return { ok: r.code === 0 && installed.length === pkgs.length, installed, output: output.split('\n').slice(-40).join('\n') };
+  const ok = r.code === 0 && installed.length === pkgs.length;
+  return { ok, installed, output: (!ok && offlineMessage(output)) || output.split('\n').slice(-40).join('\n') };
 }
 
 // Formats LaTeX with latexindent, in a scratch folder so indent.log and

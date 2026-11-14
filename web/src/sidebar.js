@@ -1,9 +1,11 @@
 // Sidebar views: files, outline, project search, git.
-import { locale } from './i18n.js';
+import { getLang, locale } from './i18n.js';
 import { call } from './api.js';
 import { h, clear, icon, fileIcon, fileKind, basename, relPath, debounce, toast, menu, prompt, confirmBox, modal, dirname, joinPath, isUnder, REVEAL, TRASH_NOTE } from './dom.js';
 import { renderRefs } from './references.js';
 import { renderRevisao } from './revisao.js';
+
+const L = (pt, en) => getLang() === 'en' ? en : pt;
 
 export class Sidebar {
   constructor(app, S) {
@@ -395,6 +397,42 @@ export class Sidebar {
   }
 
   // ------------------------------------------------------------ git
+  connectOverleaf(root, connected) {
+    const address = h('input', { type: 'url', placeholder: 'https://www.overleaf.com/project/…', required: true });
+    const token = h('input', { type: 'password', autocomplete: 'off', required: true });
+    const result = h('p', { role: 'status' });
+    const form = h('form', {},
+      h('p', {}, L('A integração Git exige acesso premium no Overleaf. Você também pode importar um ZIP em Comparar com outra versão.', 'Git integration requires Overleaf premium access. You can also import a ZIP in Compare with another version.')),
+      h('div', { class: 'field' }, h('label', {}, L('Endereço do projeto', 'Project address')), address),
+      h('div', { class: 'field' }, h('label', {}, L('Token Git do Overleaf', 'Overleaf Git token')), token),
+      result,
+    );
+    const submit = h('button', { class: 'btn primary', onclick: () => form.requestSubmit() }, L('Conectar', 'Connect'));
+    const dialog = modal({
+      title: connected ? L('Configurar Overleaf', 'Configure Overleaf') : L('Conectar ao Overleaf', 'Connect to Overleaf'),
+      body: form,
+      footer: [h('button', { class: 'btn', onclick: () => dialog.close() }, 'Cancelar'), submit],
+      onClose: () => { token.value = ''; },
+    });
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (submit.disabled) return;
+      submit.disabled = true;
+      result.textContent = L('Conectando ao Overleaf…', 'Connecting to Overleaf…');
+      try {
+        const r = await call('overleafConnect', { root, address: address.value, token: token.value.trim() });
+        if (!r.code) {
+          dialog.close();
+          await this.app.refreshGit();
+        } else result.textContent = r.stderr;
+      } catch (err) {
+        result.textContent = err.message;
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  }
+
   async renderGit() {
     const S = this.S;
     const g = S.git;
@@ -515,6 +553,27 @@ export class Sidebar {
             h('button', { class: 'btn sm', onclick: () => remoteAction('gitPull', 'Pull') }, icon('down'), 'Pull', g.behind ? ` ${g.behind}` : ''),
             h('button', { class: 'btn sm', onclick: () => remoteAction('gitPush', 'Push') }, icon('up'), 'Push', g.ahead ? ` ${g.ahead}` : ''),
             g.webUrl ? h('button', { class: 'btn sm ghost', title: 'Abrir no GitHub', onclick: () => call('openUrl', { url: g.webUrl }) }, icon('github')) : null,
+          ),
+          h('div', { style: { display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' } },
+            g.overleaf ? h('button', { class: 'btn sm', onclick: async (event) => {
+              const button = event.currentTarget;
+              const root = S.project.root;
+              button.disabled = true;
+              try {
+                if (!(await saved()) || S.project?.root !== root) return;
+                const r = await withLarge('overleafSync', { root, message: msg.value.trim() });
+                if (!r) return;
+                if (r.code === 0) toast(L('Overleaf sincronizado.', 'Overleaf synced.'), 'ok');
+                else toast(r.stderr, 'error');
+                if (S.project?.root === root) await this.app.refreshGit();
+              } catch (err) {
+                toast(err.message, 'error');
+              } finally {
+                button.disabled = false;
+              }
+            } }, icon('refresh'), L('Sincronizar com Overleaf', 'Sync with Overleaf')) : null,
+            h('button', { class: 'btn sm', onclick: () => this.connectOverleaf(S.project.root, g.overleaf) },
+              g.overleaf ? L('Configurar Overleaf', 'Configure Overleaf') : L('Conectar ao Overleaf', 'Connect to Overleaf')),
           ),
         ),
         staged.length ? h('div', { class: 'section-label' }, `No commit (${staged.length})`) : null,

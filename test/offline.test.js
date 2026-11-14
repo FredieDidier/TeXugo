@@ -119,3 +119,36 @@ test('Git: the host is read from what git says over HTTPS and SSH', () => {
   assert.equal(git.offlineText("fatal: unable to access 'https://gitlab.com/a.git/': Failed to connect to gitlab.com port 443 after 3 ms: Couldn't connect to server", what), 'Sem conexão com gitlab.com. X.');
   assert.equal(git.offlineText('remote: Permission to a/b.git denied to someone.\nfatal: unable to access: The requested URL returned error: 403', what), null, 'no access is not no network');
 });
+
+test('TeX Doctor: failed repository downloads are reported in both languages', { skip: process.platform === 'win32' }, async () => {
+  const tex = path.join(TMP, 'fake-tex');
+  fs.mkdirSync(path.join(tex, 'tlpkg'), { recursive: true });
+  fs.writeFileSync(path.join(tex, 'tlmgr'), [
+    '#!/bin/sh',
+    'if [ "$1" = --version ]; then',
+    '  printf "installation: %s\\n" "$TEXUGO_TEST_TEX_ROOT"',
+    '  exit 0',
+    'fi',
+    'echo "TLPDB::from_file could not get texlive.tlpdb from: http://127.0.0.1:1/tlpkg/texlive.tlpdb" >&2',
+    'exit 1',
+    '',
+  ].join('\n'), { mode: 0o755 });
+  const originalPath = process.env.PATH;
+  process.env.PATH = tex + path.delimiter + originalPath;
+  process.env.TEXUGO_TEST_TEX_ROOT = tex;
+  try {
+    const doctor = await import('../server/doctor.js');
+    const info = await doctor.texInfo({ refresh: true });
+    assert.equal(info.writable, true);
+    await assert.rejects(doctor.findPackages(['fake.sty']), /Não foi possível baixar a lista de pacotes do TeX Live/);
+    setServerLang('en');
+    const result = await doctor.installPackages(['fake']);
+    assert.equal(result.ok, false);
+    assert.deepEqual(result.installed, []);
+    assert.match(result.output, /^Could not download the TeX Live package list/);
+  } finally {
+    setServerLang('pt');
+    process.env.PATH = originalPath;
+    delete process.env.TEXUGO_TEST_TEX_ROOT;
+  }
+});

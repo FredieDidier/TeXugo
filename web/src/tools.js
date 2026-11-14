@@ -204,7 +204,7 @@ export async function texDoctor(app, S, { files = [] } = {}) {
     const btn = h('button', { class: 'btn primary', disabled: !pkgs.length }, icon('down'), pkgs.length ? `Instalar ${pkgs.join(', ')}` : 'Nada para instalar');
     btn.onclick = async () => {
       btn.disabled = true;
-      btn.textContent = info.writable ? 'Instalando…' : 'Instalando… (digite sua senha na janela do macOS)';
+      btn.textContent = tr(info.writable ? 'Instalando…' : 'Instalando… (digite sua senha na janela do macOS)');
       const r = await call('installPackages', { pkgs }).catch((err) => ({ ok: false, output: err.message }));
       if (r.cancelled) {
         btn.disabled = false;

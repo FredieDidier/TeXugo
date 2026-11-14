@@ -529,6 +529,12 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       mustAllow(root);
       return gitOps.sync(root, message, { force });
     },
+    async overleafConnect({ root, address, token: credential }) {
+      return gitOps.connectOverleaf(mustAllow(root), address, credential);
+    },
+    async overleafSync({ root, message, force }) {
+      return gitOps.syncOverleaf(mustAllow(root), message, { force });
+    },
     async mergeText({ base, mine, theirs }) {
       if (![base, mine, theirs].every((x) => typeof x === 'string')) throw httpError(400, L('Faltam as três versões.', 'The three versions are missing.'));
       return gitOps.mergeText(base, mine, theirs);

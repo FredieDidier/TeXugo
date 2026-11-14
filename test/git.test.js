@@ -121,3 +121,57 @@ test('a new file above the limit asks first; force commits it', async () => {
   const f = await git.commit(B, 'Data', { all: true, force: true });
   assert.equal(f.code, 0, f.stderr);
 });
+
+test('Overleaf merges both directions without moving the GitHub upstream', async () => {
+  const remote = path.join(TMP, 'overleaf.git');
+  const local = path.join(TMP, 'local-paper');
+  const online = path.join(TMP, 'online-paper');
+  sh(TMP, 'init', '--bare', '-b', 'master', remote);
+  sh(TMP, 'clone', '-q', remote, online);
+  w(online, 'online.tex', 'online draft\n');
+  sh(online, 'add', '-A');
+  sh(online, 'commit', '-qm', 'Online draft');
+  sh(online, 'push', '-q', 'origin', 'master');
+
+  sh(TMP, 'clone', '-q', '-b', 'main', REMOTE, local);
+  w(local, 'local.tex', 'local draft\n');
+  const sync = async () => git.syncOverleafBranch(local, remote, await git.status(local), '', false);
+  const synced = await sync();
+  assert.equal(synced.code, 0, synced.stderr);
+  assert.equal(read(local, 'online.tex'), 'online draft\n');
+  sh(online, 'pull', '-q', '--ff-only');
+  assert.equal(read(online, 'local.tex'), 'local draft\n');
+  assert.equal((await git.status(local)).upstream, 'origin/main');
+
+  w(online, 'online.tex', 'edited online\n');
+  sh(online, 'commit', '-qam', 'Online changes');
+  sh(online, 'push', '-q', 'origin', 'master');
+  w(local, 'online.tex', 'edited locally\n');
+  const conflict = await sync();
+  assert.equal(conflict.conflict, true);
+  assert.equal(read(local, 'online.tex'), 'edited locally\n');
+  assert.equal((await git.status(local)).files.length, 0);
+  assert.equal(sh(remote, 'show', 'master:online.tex').trim(), 'edited online');
+
+  sh(local, 'merge', '-s', 'ours', '--no-edit', 'refs/remotes/overleaf/master');
+  sh(remote, 'config', 'receive.hideRefs', 'refs/heads/master');
+  const notSynced = await sync();
+  assert.notEqual(notSynced.code, 0);
+  assert.match(notSynced.stderr, /recusou o envio/);
+  assert.equal(read(local, 'online.tex'), 'edited locally\n');
+});
+
+test('Overleaf refuses a rejected token before saving credentials or adding a remote', async (t) => {
+  const local = path.join(TMP, 'wrong-token');
+  sh(TMP, 'init', local);
+  const token = 'fake-bad-token';
+  t.mock.method(globalThis, 'fetch', async (url, options) => {
+    assert.equal(url, 'https://git.overleaf.com/0123456789abcdef01234567/info/refs?service=git-upload-pack');
+    assert.equal(options.headers.Authorization, 'Basic ' + Buffer.from('git:' + token).toString('base64'));
+    return new Response(null, { status: 401 });
+  });
+  const result = await git.connectOverleaf(local, 'https://www.overleaf.com/project/0123456789abcdef01234567', token);
+  assert.match(result.stderr, /recusou o acesso/);
+  assert.equal(sh(local, 'remote').trim(), '');
+  assert.ok(!fs.readFileSync(path.join(local, '.git', 'config'), 'utf8').includes(token));
+});

@@ -5,7 +5,8 @@ import { L } from './lang.js';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { run } from './util.js';
+import { isOffline, run, toolEnv } from './util.js';
+import { IS_MAC, IS_WIN } from './platform.js';
 
 const git = (root, args, opts = {}) => run('git', ['-C', root, ...args], { timeout: 120000, ...opts });
 
@@ -58,7 +59,134 @@ export async function status(root) {
     files.push({ path: path.join(top, file), rel: file, index: x, work: y, from, staged: x !== ' ' && x !== '?', untracked: x === '?' });
   }
   const remote = (await git(root, ['remote', 'get-url', 'origin'])).stdout.trim() || null;
-  return { repo: true, top, branch, upstream, ahead, behind, files, remote, webUrl: webUrl(remote) };
+  const overleaf = overleafUrl((await git(root, ['config', '--get', 'remote.overleaf.url'])).stdout.trim());
+  return { repo: true, top, branch, upstream, ahead, behind, files, remote, webUrl: webUrl(remote), overleaf };
+}
+
+function overleafUrl(value) {
+  const match = /^https:\/\/(?:(?:www\.)?overleaf\.com\/project\/|git\.overleaf\.com\/)([a-f0-9]{24})\/?$/i.exec(value);
+  return match ? `https://git.overleaf.com/${match[1]}` : null;
+}
+
+function overleafGit(root, args, input) {
+  const helper = IS_MAC ? 'osxkeychain' : IS_WIN ? 'manager' : 'libsecret';
+  return git(root, [
+    '-c', 'credential.helper=', '-c', `credential.helper=${helper}`,
+    '-c', 'credential.username=git', '-c', 'credential.useHttpPath=false',
+    '-c', 'http.followRedirects=false', ...args,
+  ], { input, env: { ...toolEnv(), GIT_TERMINAL_PROMPT: '0', GIT_ASKPASS: '', GCM_INTERACTIVE: 'never' } });
+}
+
+function overleafFailure(result, phase) {
+  const output = result.stderr + '\n' + result.stdout;
+  const offline = offlineText(output, phase === 'connect' ? NOTHING : KEPT);
+  let stderr = offline;
+  if (!stderr && /Authentication failed|could not read (?:Username|Password)|401|403/i.test(output)) {
+    stderr = L('O Overleaf recusou o acesso. Confira o token e se o projeto tem acesso à integração Git.', 'Overleaf denied access. Check the token and the project’s access to Git integration.');
+  }
+  if (!stderr && /repository .*not found|404/i.test(output)) {
+    stderr = L('Projeto do Overleaf não encontrado. Confira o endereço e o acesso à integração Git.', 'Overleaf project not found. Check the address and access to Git integration.');
+  }
+  if (!stderr && /too large|size limit|exceeds|maximum size/i.test(output)) {
+    stderr = L('O Overleaf recusou o projeto pelo tamanho. Confira os limites de arquivos e do projeto.', 'Overleaf rejected the project because of its size. Check the file and project limits.');
+  }
+  if (!stderr && /non-fast-forward|fetch first|\[(?:remote )?rejected\]/i.test(output)) {
+    stderr = L('O Overleaf recusou o envio. Sincronize novamente para baixar as mudanças mais recentes.', 'Overleaf rejected the push. Sync again to download the latest changes.');
+  }
+  return { code: result.code || 1, stderr: stderr || L('A operação com o Overleaf falhou. Confira o acesso e tente novamente.', 'The Overleaf operation failed. Check access and try again.') };
+}
+
+const overleafBusy = new Set();
+
+export async function connectOverleaf(root, address, token) {
+  const url = typeof address === 'string' && overleafUrl(address.trim());
+  if (!url || typeof token !== 'string' || !token || /[\s\x00-\x1f\x7f]/.test(token)) {
+    return { code: 1, stderr: L('Informe o endereço do projeto e um token Git do Overleaf.', 'Enter the project address and an Overleaf Git token.') };
+  }
+  if (overleafBusy.has(root)) return overleafInProgress();
+  overleafBusy.add(root);
+  try {
+    const lookup = await git(root, ['ls-remote', '--get-url', url]);
+    if (lookup.code !== 0 || lookup.stdout.trim() !== url) return overleafFailure(lookup, 'connect');
+    // Verify access before replacing a token shared by other projects.
+    try {
+      const response = await globalThis.fetch(url + '/info/refs?service=git-upload-pack', {
+        headers: { Authorization: 'Basic ' + Buffer.from('git:' + token).toString('base64') },
+        redirect: 'error',
+        signal: AbortSignal.timeout(15000),
+      });
+      await response.body?.cancel();
+      if (!response.ok || !response.headers.get('content-type')?.startsWith('application/x-git-upload-pack-advertisement')) {
+        return overleafFailure({ code: 1, stdout: '', stderr: String(response.status) }, 'connect');
+      }
+    } catch (err) {
+      if (isOffline(err) || err.name === 'TimeoutError') {
+        return { code: 1, stderr: L('Sem conexão com o Overleaf. Tente novamente quando a conexão voltar.', 'Cannot connect to Overleaf. Try again when the connection is back.') };
+      }
+      return overleafFailure({ code: 1, stdout: '', stderr: '' }, 'connect');
+    }
+    const credential = ['protocol=https', 'host=git.overleaf.com', 'username=git', ''].join('\n');
+    const approved = await overleafGit(root, ['credential', 'approve'], credential + `password=${token}\n\n`);
+    const stored = await overleafGit(root, ['credential', 'fill'], credential + '\n');
+    if (approved.code !== 0 || stored.code !== 0 || !stored.stdout.split('\n').includes(`password=${token}`)) {
+      return { code: 1, stderr: L('O gerenciador de credenciais do sistema não guardou o token do Overleaf.', 'The system credential manager could not save the Overleaf token.') };
+    }
+    const existing = await git(root, ['remote', 'get-url', 'overleaf']);
+    const configured = await git(root, existing.code === 0 ? ['remote', 'set-url', 'overleaf', url] : ['remote', 'add', 'overleaf', url]);
+    return configured.code === 0 ? { code: 0 } : overleafFailure(configured, 'connect');
+  } finally {
+    overleafBusy.delete(root);
+  }
+}
+
+function overleafInProgress() {
+  return { code: 1, stderr: L('Já há uma operação com o Overleaf em andamento.', 'An Overleaf operation is already in progress.') };
+}
+
+export async function syncOverleaf(root, message, { force = false } = {}) {
+  if (overleafBusy.has(root)) return overleafInProgress();
+  overleafBusy.add(root);
+  try {
+    const st = await status(root);
+    if (!st.overleaf) return { code: 1, stderr: L('Conecte o projeto ao Overleaf primeiro.', 'Connect the project to Overleaf first.') };
+    // Check the effective fetch and push addresses before using credentials.
+    const urls = await Promise.all([
+      git(root, ['remote', 'get-url', '--all', 'overleaf']),
+      git(root, ['remote', 'get-url', '--push', '--all', 'overleaf']),
+    ]);
+    if (urls.some((r) => r.code !== 0 || r.stdout.trim() !== st.overleaf)) return overleafFailure({ code: 1, stdout: '', stderr: '' });
+    return await syncOverleafBranch(root, st.overleaf, st, message, force);
+  } finally {
+    overleafBusy.delete(root);
+  }
+}
+
+// Overleaf has one branch. An explicit refspec keeps the local upstream
+// available for GitHub, and merging preserves the histories of both remotes.
+export async function syncOverleafBranch(root, url, st, message, force) {
+  const gitDir = (await git(root, ['rev-parse', '--absolute-git-dir'])).stdout.trim();
+  const branch = await git(root, ['symbolic-ref', '--quiet', 'HEAD']);
+  if (!gitDir || branch.code !== 0 || ['MERGE_HEAD', 'CHERRY_PICK_HEAD', 'REVERT_HEAD', 'rebase-merge', 'rebase-apply', 'sequencer'].some((f) => fs.existsSync(path.join(gitDir, f)))) {
+    return { code: 1, stderr: L('Conclua a operação Git atual e selecione um ramo antes de sincronizar com o Overleaf.', 'Finish the current Git operation and select a branch before syncing with Overleaf.') };
+  }
+  if (st.files.length) {
+    const c = await commit(root, message, { all: true, force, files: st.files });
+    if (c.code !== 0) return { code: c.code, large: c.large, stderr: c.stderr || c.stdout };
+  }
+  const ref = 'refs/remotes/overleaf/master';
+  const fetched = await overleafGit(root, ['fetch', '--no-tags', '--no-write-fetch-head', url, `refs/heads/master:${ref}`]);
+  if (fetched.code !== 0) return overleafFailure(fetched);
+  const merged = await git(root, ['merge', '--ff', '--no-edit', '--no-autostash', '--allow-unrelated-histories', ref]);
+  if (merged.code !== 0) {
+    if (!fs.existsSync(path.join(gitDir, 'MERGE_HEAD'))) return overleafFailure(merged);
+    const aborted = await git(root, ['merge', '--abort']);
+    const stderr = aborted.code === 0
+      ? L('As mudanças do Overleaf conflitam com as locais. O merge foi cancelado e os commits locais foram preservados.', 'Overleaf changes conflict with local changes. The merge was aborted and local commits were preserved.')
+      : L('O merge com o Overleaf precisa ser resolvido no terminal.', 'Resolve the Overleaf merge in the terminal.');
+    return { code: 1, conflict: true, stderr };
+  }
+  const pushed = await overleafGit(root, ['push', '--no-force', '--no-follow-tags', url, 'HEAD:refs/heads/master']);
+  return pushed.code === 0 ? { code: 0 } : overleafFailure(pushed);
 }
 
 function webUrl(remote) {
@@ -110,7 +238,10 @@ export async function commit(root, message, { all = false, force = false, files 
     const large = largeNewFiles(files || (await status(root)).files || [], all);
     if (large.length) return { code: 1, large, stderr: `Arquivo novo grande: ${large.map((f) => `${f.rel} (${f.mb} MB)`).join(', ')}.` };
   }
-  if (all) await git(root, ['add', '-A']);
+  if (all) {
+    const staged = await git(root, ['add', '-A']);
+    if (staged.code !== 0) return staged;
+  }
   if (!message || !message.trim()) message = await autoMessage(root);
   const r = await git(root, ['commit', '-m', message]);
   return { ...r, message };
