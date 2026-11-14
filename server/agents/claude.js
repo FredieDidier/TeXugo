@@ -36,6 +36,7 @@ export function claudeFlags({ model, effort } = {}) {
 
 const FREE = ['Read', 'Grep', 'Glob', 'LS', 'TodoWrite', 'Skill'];
 const NOT_FOUND = 'Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash';
+const AUTH = /authenticat|log ?in|credential/i;
 const NOT_LOGGED = 'O Claude Code não está logado. Rode "claude" no Terminal (ou no terminal do TeXugo) e entre na sua conta.';
 
 export const SYSTEM = `You are running inside TeXugo, a LaTeX editor for academic writing, as the assistant in its side panel.
@@ -109,8 +110,13 @@ export class ClaudeSession {
       // reporting the model and effort it picked for this message.
       this.emit({ kind: m.subtype === 'ui_log' ? 'mod-log' : 'mod-status', plugin: String(m.plugin || ''), text: m.text == null ? null : String(m.text).slice(0, 2000) });
     } else if (m.type === 'assistant') {
+      // Claude Code's own notices come as assistant messages of the model
+      // "<synthetic>"; an expired login is one of them, and gets the notice
+      // in the user's language instead of passing as a reply from Claude.
+      const own = m.message.model === '<synthetic>';
       for (const c of m.message.content || []) {
-        if (c.type === 'text' && /does not support this model|requires? (?:Claude Code )?(?:version )?[\d.]+ or newer/i.test(c.text)) this.emit({ kind: 'error', text: `${c.text.trim()}\n\nSeu Claude Code está desatualizado para este modelo. Rode "claude update" no terminal (ou escolha outro modelo).` });
+        if (own && c.type === 'text' && AUTH.test(c.text)) this.emit({ kind: 'error', text: NOT_LOGGED });
+        else if (c.type === 'text' && /does not support this model|requires? (?:Claude Code )?(?:version )?[\d.]+ or newer/i.test(c.text)) this.emit({ kind: 'error', text: `${c.text.trim()}\n\nSeu Claude Code está desatualizado para este modelo. Rode "claude update" no terminal (ou escolha outro modelo).` });
         else if (c.type === 'text' && c.text.trim()) this.emit({ kind: 'text', text: c.text });
         else if (c.type === 'tool_use') this.emit({ kind: 'tool', id: c.id, name: c.name, input: brief(c.input) });
       }
@@ -120,7 +126,7 @@ export class ClaudeSession {
       }
     } else if (m.type === 'result') {
       this.running = false;
-      this.emit({ kind: 'result', ok: m.subtype === 'success' && !m.is_error, text: m.is_error ? String(m.result || '') : null, ms: m.duration_ms, turns: m.num_turns });
+      this.emit({ kind: 'result', ok: m.subtype === 'success' && !m.is_error, text: m.is_error ? (AUTH.test(String(m.result || '')) ? NOT_LOGGED : String(m.result || '')) : null, ms: m.duration_ms, turns: m.num_turns });
       this.emit({ kind: 'status', running: false });
     } else if (m.type === 'control_request' && m.request && m.request.subtype === 'can_use_tool') {
       this.permission(m.request_id, m.request);
