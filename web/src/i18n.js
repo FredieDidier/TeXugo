@@ -585,6 +585,9 @@ const EN = {
 
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
+  [/^Lista: as setas percorrem as linhas\.$/, 'List: the arrow keys walk the rows.'],
+  [/^Editor de (.+)\. Esc e depois Tab saem do editor\.$/, 'Editor of $1. Esc, then Tab, leaves the editor.'],
+  [/^(.+): compilado, zero \?\?\.$/, '$1: compiled, zero ??.'],
   [/^BibTeX: falta o estilo de bibliografia (\S+)\. Instale o pacote do TeX que o traz \(pelo Médico do TeX ou pelo gerenciador do TeX\) ou troque o \\bibliographystyle\.$/, 'BibTeX: the bibliography style $1 is missing. Install the TeX package that has it (with the TeX doctor or the TeX package manager) or change the \\bibliographystyle.'],
   [/^BibTeX: não achei o arquivo de referências (\S+)\. Confira o nome no \\bibliography\.$/, 'BibTeX: could not find the references file $1. Check the name in \\bibliography.'],
   [/^Versão (\S+) disponível$/, 'Version $1 available'],

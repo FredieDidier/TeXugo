@@ -18,7 +18,13 @@ export function h(tag, attrs = {}, ...children) {
   if (typeof attrs?.onclick === 'function' && !NATIVE.has(tag) && attrs.role == null && attrs.tabindex == null && !/\boverlay\b/.test(el.className)) clickable(el);
   else if (tag === 'button' && !el.hasAttribute('type')) el.type = 'button';
   // Scrolling lists take the focus, so the arrow keys can walk their rows.
-  if (/(^|\s)sidebar-body(\s|$)/.test(el.className) && attrs.tabindex == null) el.tabIndex = 0;
+  // A screen reader hears what the box is and how to walk it, not all its
+  // text at once.
+  if (/(^|\s)sidebar-body(\s|$)/.test(el.className) && attrs.tabindex == null) {
+    el.tabIndex = 0;
+    if (!el.hasAttribute('role')) el.setAttribute('role', 'group');
+    if (!el.hasAttribute('aria-label')) el.setAttribute('aria-label', tr('Lista: as setas percorrem as linhas.'));
+  }
   return el;
 }
 
@@ -247,6 +253,15 @@ export function debounce(fn, ms) {
 let toastBox;
 // Errors stay until dismissed: a failed save or sync must not vanish while
 // the user looks elsewhere. The rest leaves by itself, pausing under the mouse.
+// Says something to a screen reader without showing it: a hidden polite
+// live region. For results that have no notice on screen (a clean build).
+let announcer = null;
+export function announce(message) {
+  if (!announcer) document.body.append((announcer = h('div', { class: 'sr-only', role: 'status', 'aria-live': 'polite' })));
+  announcer.textContent = '';
+  setTimeout(() => (announcer.textContent = tr(message)), 50);
+}
+
 export function toast(message, kind = 'info', ms = 4200, opts = {}) {
   if (!toastBox) document.body.append((toastBox = h('div', { class: 'toasts', 'aria-live': 'polite' })));
   const ico = { error: 'error', ok: 'checkCircle', warn: 'warn', info: 'info' }[kind] || 'info';
@@ -369,6 +384,7 @@ export function modal({ title, body, footer, wide, onClose }) {
     h('div', { class: 'body' }, body),
     footer ? h('footer', {}, footer) : null,
   );
+  linkFieldLabels(el);
   overlay.append(el);
   overlay.addEventListener('mousedown', (e) => e.target === overlay && close());
   document.body.append(overlay);
@@ -379,6 +395,25 @@ export function modal({ title, body, footer, wide, onClose }) {
     target.focus({ preventScroll: true });
   }, 0);
   return { el, close };
+}
+
+// A `.field` is a <label> followed by its control. Without the link a
+// screen reader announces the control with no name: tie each label to the
+// first control after it; other controls of the same field without a name
+// of their own get the label's text.
+let fieldSeq = 0;
+function linkFieldLabels(root) {
+  for (const label of root.querySelectorAll('.field > label')) {
+    if (label.htmlFor || label.querySelector('input, select, textarea')) continue;
+    const field = label.parentElement;
+    const controls = [...field.querySelectorAll('input:not([type=hidden]), select, textarea')].filter((c) => !c.closest('label'));
+    if (!controls.length) continue;
+    const [first, ...rest] = controls;
+    if (!first.id) first.id = 'field-' + ++fieldSeq;
+    label.htmlFor = first.id;
+    const text = label.textContent.trim();
+    for (const c of rest) if (!c.labels?.length && !c.getAttribute('aria-label')) c.setAttribute('aria-label', text);
+  }
 }
 
 export function prompt(title, { value = '', placeholder = '', ok = 'OK', label } = {}) {

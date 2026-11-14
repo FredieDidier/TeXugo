@@ -199,6 +199,9 @@ app.whenReady().then(async () => {
     check('I14: saving after the rename writes to the new path', await until(`return !document.querySelector('.tab.dirty');`, 4000) && fs.readFileSync(path.join(PROJ, 'parts', 'body.tex'), 'utf8').includes('EDITED-AFTER-RENAME'));
     // A file changed outside the app inside a subfolder reloads its clean
     // tab: the project watcher sees subfolders on every system.
+    // The server ignores changes to a file for 1.5 s after saving it
+    // itself (its own write echoing back): wait that out first.
+    await sleep(1700);
     fs.appendFileSync(path.join(PROJ, 'parts', 'body.tex'), '\nCHANGED-OUTSIDE-IN-A-SUBFOLDER\n');
     check('a change outside the app in a subfolder reloads the tab', await until(`return document.querySelector('.editor-host .cm-content').innerText.includes('CHANGED-OUTSIDE-IN-A-SUBFOLDER') && !document.querySelector('.tab.dirty');`, 6000));
 

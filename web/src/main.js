@@ -1,7 +1,7 @@
 // TeXugo UI entry point: layout, tabs, compile flow, PDF panes, problems.
 import { setupDialog, setupIncomplete } from './setup.js';
 import { call, connect, on, fileUrl, native } from './api.js';
-import { h, clear, icon, wordmark, fileIcon, fileKind, basename, relPath, debounce, toast, menu, modal, prompt, confirmBox, gutter, isUnder, relParts, dirname, REVEAL, setFocusHome, OPEN_PDF } from './dom.js';
+import { h, clear, icon, wordmark, fileIcon, fileKind, basename, relPath, debounce, toast, announce, menu, modal, prompt, confirmBox, gutter, isUnder, relParts, dirname, REVEAL, setFocusHome, OPEN_PDF } from './dom.js';
 import { wordDiff } from './diff.js';
 import { createState, createView, jumpTo, showDiagnostics, symbols, EditorView, wrapCompartment } from './editor.js';
 import { PdfTab } from './pdfview.js';
@@ -1095,7 +1095,7 @@ function wireBuildEvents() {
     } else if (qq) {
       app.bottom.show('problems', { auto: true });
       toast(`Compilou, mas ainda há ${qq} ?? no PDF. Veja Problemas.`, 'warn', 6000);
-    }
+    } else if ((e.docs || []).some((d) => d.status === 'ok')) announce(`${(e.docs || []).filter((d) => d.status === 'ok').map((d) => d.name).join(', ')}: compilado, zero ??.`);
     refreshBuildUi();
     applyDiagnostics();
     refreshSymbolsSoon();

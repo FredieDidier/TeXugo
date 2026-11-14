@@ -18,6 +18,7 @@ import { commentExtension } from './comments.js';
 import { insertGrid } from './table.js';
 import { mathPreviewExtension } from './mathpreview.js';
 import { basename, dirname, joinPath } from './dom.js';
+import { tr } from './i18n.js';
 
 const latex = StreamLanguage.define(stex);
 
@@ -358,6 +359,9 @@ export function createState(doc, path, hooks, settings = {}) {
       blameCompartment.of([]),
       commentExtension,
       selectionBar(path, hooks),
+      // The name a screen reader says on entering the editor, with the way
+      // out: Tab indents here, so Esc and then Tab move on.
+      EditorView.contentAttributes.of({ 'aria-label': tr(`Editor de ${basename(path)}. Esc e depois Tab saem do editor.`) }),
       keymap.of([
         { key: 'Mod-s', preventDefault: true, run: () => (hooks.save(), true) },
         { key: 'Mod-Enter', preventDefault: true, run: () => (hooks.compile(), true) },

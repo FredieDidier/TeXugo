@@ -17,7 +17,8 @@
     "test:ui": "npm run build:web && electron test/ui/smoke.mjs",
     "icon": "node scripts/make-icon.mjs",
     "package": "npm run build:web && node scripts/package-mac.mjs",
-    "dist": "node scripts/dist.mjs"
+    "dist": "node scripts/dist.mjs",
+    "test:sr": "npm run build:web && electron test/ui/screenreader.mjs"
   },
   "dependencies": {
     "katex": "0.19.1",

@@ -52,3 +52,8 @@ jobs:
         env:
           TEXUGO_NEED_TEX: '1'
         run: npm run test:ui
+      - name: Leitor de tela (Mac)
+        if: runner.os == 'macOS'
+        env:
+          TEXUGO_NEED_TEX: '1'
+        run: npx electron test/ui/screenreader.mjs
