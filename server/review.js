@@ -1,5 +1,5 @@
-// "Revisar como parecerista": the whole paper (every \input file, with line
-// numbers) goes to the user's own agent (Claude Code or another), read-only, which writes a
+// "Revisar como parecerista": the whole paper (every \input file and the
+// online appendix linked by \externaldocument, with line numbers) goes to the user's own agent (Claude Code or another), read-only, which writes a
 // referee report as JSON. Each point quotes the passage it is about; the
 // quote, not the line Claude reports, places the point in the source, so a
 // click lands on the right line. Saved in .texugo/review for later.
@@ -7,14 +7,14 @@ import { L, locale } from './lang.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText } from './util.js';
-import { includeClosure } from './project.js';
+import { paperFiles } from './project.js';
 import { runAgent } from './ai.js';
 
 const MAX = 600000; // characters of source sent
 
 function sources(doc) {
   const docDir = path.dirname(doc);
-  const files = [...includeClosure(doc)].filter((f) => /\.(tex|ltx)$/i.test(f));
+  const files = paperFiles(doc).filter((f) => /\.(tex|ltx)$/i.test(f));
   let total = 0;
   const parts = [];
   for (const f of files) {
@@ -33,7 +33,7 @@ function sources(doc) {
 
 export function buildReviewPrompt({ doc, journal, focus, lang, text }) {
   return [
-    `You are a referee for ${journal ? journal : 'a high-impact field journal'}. Review the paper whose LaTeX source follows (main file ${path.basename(doc)} and every file it inputs, each line prefixed with its number).`,
+    `You are a referee for ${journal ? journal : 'a high-impact field journal'}. Review the paper whose LaTeX source follows (main file ${path.basename(doc)}, every file it inputs and the documents linked to it by \\externaldocument, such as an online appendix; each line prefixed with its number).`,
     `If a skill for this kind of paper is available to you (for example applied-micro-paper-writing, manuscript-audit or a field skill), load it and use its standards. You may Read other files of the project (tables, figures' code, notes) if a point needs them; do not edit anything.`,
     `Write the report a demanding but fair referee would write: what the paper does and claims, the main concerns (identification, data, inference, interpretation, contribution), then minor points, then typos and wording. Every point must be specific to this paper and actionable. No praise padding, no generic advice.`,
     focus ? `The author asks you to pay special attention to: ${focus}` : '',

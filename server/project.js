@@ -144,6 +144,22 @@ export function includeClosure(doc) {
   return seen;
 }
 
+// The document and the documents linked to it by \externaldocument (an
+// online appendix that imports the paper's labels back), followed
+// transitively from the document, which comes first.
+export function linkedDocuments(doc) {
+  const docs = [doc];
+  for (let i = 0; i < docs.length; i++) for (const ext of docInfo(docs[i]).externals) if (!docs.includes(ext) && fs.existsSync(ext)) docs.push(ext);
+  return docs;
+}
+
+// Every file the paper is made of: the files each linked document reads.
+export function paperFiles(doc) {
+  const files = new Set();
+  for (const d of linkedDocuments(doc)) for (const f of includeClosure(d)) files.add(f);
+  return [...files];
+}
+
 // Facts about a compilable document.
 export function docInfo(doc) {
   const text = readText(doc) || '';

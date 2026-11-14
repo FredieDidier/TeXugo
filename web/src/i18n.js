@@ -639,7 +639,7 @@ const PATTERNS = [
   [/^O (\S+) não mudou nada nesse trecho\.$/, '$1 changed nothing in this passage.'],
   [/^O trecho mudou enquanto o (\S+) trabalhava\. Selecione de novo e repita\.$/, 'The passage changed while $1 was working. Select it again and repeat.'],
   [/^Agente: converse com o seu (.+) sobre o projeto$/, 'Agent: chat with your $1 about the project'],
-  [/^O seu (.+) lê o paper inteiro \(com os \\input\) e escreve um parecer: resumo, recomendação e cada comentário ligado à linha do texto\. Ele só lê; nada é alterado\.$/, 'Your $1 reads the whole paper (with the \\input files) and writes a referee report: summary, recommendation and each comment tied to its line of the text. It only reads; nothing is changed.'],
+  [/^O seu (.+) lê o paper inteiro \(com os \\input e o apêndice ligado por \\externaldocument\) e escreve um parecer: resumo, recomendação e cada comentário ligado à linha do texto\. Ele só lê; nada é alterado\.$/, 'Your $1 reads the whole paper (with the \\input files and the appendix linked by \\externaldocument) and writes a referee report: summary, recommendation and each comment tied to its line of the text. It only reads; nothing is changed.'],
   [/^O seu (.+) lê o paper inteiro e escreve um parecer, cada ponto ligado à linha\.$/, 'Your $1 reads the whole paper and writes a referee report, each point tied to its line.'],
   [/^Lista: as setas percorrem as linhas\.$/, 'List: the arrow keys walk the rows.'],
   [/^Editor de (.+)\. Esc e depois Tab saem do editor\.$/, 'Editor of $1. Esc, then Tab, leaves the editor.'],

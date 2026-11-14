@@ -9,7 +9,7 @@ import { outputs } from './outdirs.js';
 import fs from 'node:fs';
 import path from 'node:path';
 import { readText } from './util.js';
-import { includeClosure } from './project.js';
+import { includeClosure, linkedDocuments, paperFiles } from './project.js';
 import { runAgent } from './ai.js';
 import { agentById } from './agents/adapter.js';
 import { wordDiff } from './compare.js';
@@ -18,7 +18,7 @@ import * as sync from './synctex.js';
 
 function numberedSources(doc, max = 400000) {
   const docDir = path.dirname(doc);
-  const files = [...includeClosure(doc)].filter((f) => /\.(tex|ltx)$/i.test(f));
+  const files = paperFiles(doc).filter((f) => /\.(tex|ltx)$/i.test(f));
   let total = 0;
   const parts = [];
   for (const f of files) {
@@ -29,6 +29,36 @@ function numberedSources(doc, max = 400000) {
   }
   return { files, text: parts.join('\n\n') };
 }
+
+// The word diff of the paper and of the documents linked to it (the online
+// appendix), with paths relative to the paper's folder. A linked document
+// comes from a Git version only: a .tex, ZIP or folder that was sent may not
+// bring it, and the mirror would then compare it with another document.
+async function paperDiff(doc, source) {
+  const docDir = path.dirname(doc);
+  const main = await wordDiff(doc, source);
+  const diff = { label: main.label, changedFiles: [...main.changedFiles], text: main.text };
+  if (source.kind !== 'git') return diff;
+  for (const other of linkedDocuments(doc).slice(1)) {
+    let d;
+    try {
+      d = await wordDiff(other, source);
+    } catch {
+      continue; // not in that version
+    }
+    const rel = (f) => path.relative(docDir, path.resolve(path.dirname(other), f));
+    for (const m of d.text.matchAll(/<diff file="([^"]+)">\n[\s\S]*?\n<\/diff>/g)) {
+      const f = rel(m[1]);
+      if (diff.changedFiles.includes(f)) continue; // a shared preamble, already there
+      diff.changedFiles.push(f);
+      diff.text += (diff.text ? '\n\n' : '') + m[0].replace(`<diff file="${m[1]}">`, `<diff file="${f}">`);
+    }
+  }
+  return diff;
+}
+
+// What a reader calls a linked document in the letter.
+const docLabel = (f) => (/append|ap[eê]ndice|supplement|online/i.test(path.basename(f)) ? 'Online Appendix' : path.basename(f));
 
 export function buildPrompt({ doc, reports, diff, sources, lang }) {
   return [
@@ -144,15 +174,15 @@ export function toLatex(data, { title, by = 'Claude' }) {
 
 export async function respond({ root, doc, reports, source, lang, agent, model, effort }) {
   const docDir = path.dirname(doc);
-  const diff = source ? await wordDiff(doc, source) : null;
+  const diff = source ? await paperDiff(doc, source) : null;
   const src = numberedSources(doc);
   const prompt = buildPrompt({ doc, reports, diff, sources: src.text, lang });
   const result = await runAgent(prompt, { root, agent, model, effort, timeout: 30 * 60000 });
   const data = parseJson(result);
-  // Tie each change to its line, section and, with SyncTeX, PDF page.
-  const built = outputs(doc);
-  const pdf = built.pdf;
-  const hasSync = fs.existsSync(built.synctex) && fs.existsSync(pdf);
+  // Tie each change to its line, section and, with SyncTeX, the page of
+  // the PDF it is in (the paper's, or the appendix's own).
+  const linked = linkedDocuments(doc).map((d) => ({ doc: d, files: includeClosure(d), built: outputs(d) }));
+  const hasSync = fs.existsSync(linked[0].built.synctex) && fs.existsSync(linked[0].built.pdf);
   let n = 0;
   let todo = 0;
   for (const sec of data.sections) {
@@ -164,11 +194,13 @@ export async function respond({ root, doc, reports, source, lang, agent, model, 
         const a = anchor(ch, src.files, docDir);
         ch.loc = `${path.relative(docDir, a.file)}:${a.line}`;
         const where = [];
+        const owner = linked.find((l) => l.files.has(a.file)) || linked[0];
+        if (owner !== linked[0]) where.push(escapeTex(docLabel(owner.doc)));
         const s = sectionAt(a.file, a.line);
         if (s) where.push('Section ``' + escapeTex(s) + "''");
-        if (hasSync) {
+        if (fs.existsSync(owner.built.synctex) && fs.existsSync(owner.built.pdf)) {
           try {
-            const r = await sync.forward({ file: a.file, line: a.line, pdf });
+            const r = await sync.forward({ file: a.file, line: a.line, pdf: owner.built.pdf });
             if (r.ok) where.push(`p.~${r.hits[0].page}`);
           } catch {}
         }

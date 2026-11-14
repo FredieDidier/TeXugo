@@ -25,7 +25,7 @@ export function reviewDialog(app, S) {
     body: h(
       'div',
       {},
-      h('p', { class: 'muted', style: { marginTop: 0 } }, `O seu ${who.product} lê o paper inteiro (com os \\input) e escreve um parecer: resumo, recomendação e cada comentário ligado à linha do texto. Ele só lê; nada é alterado.`),
+      h('p', { class: 'muted', style: { marginTop: 0 } }, `O seu ${who.product} lê o paper inteiro (com os \\input e o apêndice ligado por \\externaldocument) e escreve um parecer: resumo, recomendação e cada comentário ligado à linha do texto. Ele só lê; nada é alterado.`),
       h('div', { class: 'field' }, h('label', {}, 'Periódico (o padrão de exigência)'), journal),
       h('div', { class: 'field' }, h('label', {}, 'Foco'), focus),
       h('p', { class: 'faint', style: { fontSize: '12px' } }, `Modelo ${label(modelsOf(choice.agent), choice.model)}, esforço ${label(effortsOf(choice.agent), choice.effort).toLowerCase()} (troque no painel do agente). Um paper longo leva alguns minutos; você pode continuar trabalhando.`),
