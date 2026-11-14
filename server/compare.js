@@ -128,6 +128,19 @@ export async function buildMirror(doc, source, tmp) {
       if (text !== readText(f)) changedFiles.push(rel);
     }
   }
+  // latexdiff --flatten pastes <name>.bbl in place of \bibliography on each
+  // side that has one. The other version's own .bbl when it brings one, else
+  // the current one: a .bbl left out of Git or of a ZIP would otherwise show
+  // the whole reference list as new.
+  const bblRel = path.basename(doc, '.tex') + '.bbl';
+  const bblHere = path.join(docDir, bblRel);
+  if (fs.existsSync(bblHere)) {
+    const text = await src.read(bblRel);
+    if (text == null) {
+      fs.copyFileSync(bblHere, path.join(oldDir, bblRel));
+      fromCurrent.push(bblRel);
+    } else fs.writeFileSync(path.join(oldDir, bblRel), text);
+  }
   if (mainText !== readText(doc)) changedFiles.unshift(path.basename(doc));
   return { src, oldDir, oldDoc, changedFiles, fromCurrent };
 }

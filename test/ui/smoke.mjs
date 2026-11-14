@@ -167,6 +167,13 @@ app.whenReady().then(async () => {
       await sleep(800);
     }
 
+    // ---- a .bib changed on disk (a reference added from its DOI, a pull):
+    // its keys are read again without a save, so the Referências view and
+    // the citation card know the new entry.
+    await activity('Referências');
+    fs.appendFileSync(path.join(PROJ, 'references.bib'), '\n@article{added2001outside,\n  author  = {Outside, Ann},\n  title   = {Added from Outside},\n  journal = {Journal},\n  year    = {2001}\n}\n');
+    check('a .bib changed on disk shows its new key without a save', await until(`return !!document.querySelector('.refs-item[title="added2001outside"]');`, 5000), await js(`return [...document.querySelectorAll('.refs-item')].map((e) => e.title);`));
+
     // ---- outline of the whole document, from the main file
     await js(`[...document.querySelectorAll('.tab')].find((t) => t.innerText.includes('paper.tex')).click(); return true;`);
     await activity('Estrutura');

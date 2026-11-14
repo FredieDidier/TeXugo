@@ -1828,6 +1828,9 @@ function wireFsEvents() {
     await checkDisk();
     // A pull (or a coauthor's sync) brought comments.
     if (e.files.some((f) => /[\\/]\.texugo-comments[\\/]/.test(f))) app.comments.load();
+    // Labels, .bib keys and macros changed on disk: a reference added from
+    // its DOI or imported from Zotero, a pull, another editor.
+    if (e.files.some((f) => /\.(tex|bib|sty)$/.test(f))) refreshSymbolsSoon();
     // A pull (or any change) brought a latexmkrc or Claude Code settings into
     // a folder the user has not trusted: ask now, not at the next opening.
     if (e.files.some((f) => /(^|[\\/])\.?latexmkrc$/.test(f) || /[\\/]\.claude([\\/]|$)/.test(f))) recheckTrust();
