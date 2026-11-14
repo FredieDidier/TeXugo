@@ -522,7 +522,7 @@ export class Sidebar {
         h(
           'div',
           { class: 'pad' },
-          h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' } }, icon('git'), h('b', {}, g.branch || '(sem branch)'), g.upstream ? h('span', { class: 'faint' }, '→ ' + g.upstream) : h('span', { class: 'faint' }, 'sem remoto')),
+          h('div', { style: { display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' } }, icon('git'), h('b', {}, g.branch || '(sem branch)'), g.upstream ? h('span', { class: 'faint' }, '→ ' + g.upstream) : g.hasRemotes ? null : h('span', { class: 'faint' }, 'sem remoto')),
           msg,
           h(
             'div',
@@ -535,23 +535,30 @@ export class Sidebar {
                     class: 'btn sm',
                     title: 'Commit do que mudou (se houver), pull e push, num clique',
                     onclick: async (e) => {
-                      if (!(await saved())) return;
                       const btn = e.currentTarget;
+                      const root = S.project.root;
                       btn.disabled = true;
-                      toast('Sincronizando…', 'info', 1500);
-                      const r = await withLarge('gitSync', { root: S.project.root, message: msg.value.trim() });
-                      if (!r) return (btn.disabled = false);
-                      if (r.code === 0) toast(r.steps.length ? `Sincronizado: ${r.steps.join(', ')}.` : 'Já estava tudo sincronizado.', 'ok', 6000);
-                      else toast((r.stderr || '').trim().split('\n').slice(-3).join(' '), 'error', 10000);
-                      this.app.refreshGit();
+                      try {
+                        if (!(await saved()) || S.project?.root !== root) return;
+                        toast('Sincronizando…', 'info', 1500);
+                        const r = await withLarge('gitSync', { root, message: msg.value.trim() });
+                        if (!r) return;
+                        if (r.code === 0) toast(r.steps.length ? `Sincronizado: ${r.steps.join(', ')}.` : 'Já estava tudo sincronizado.', 'ok', 6000);
+                        else toast((r.stderr || '').trim().split('\n').slice(-3).join(' '), 'error', 10000);
+                        if (S.project?.root === root) await this.app.refreshGit();
+                      } catch (err) {
+                        toast(err.message, 'error');
+                      } finally {
+                        btn.disabled = false;
+                      }
                     },
                   },
                   icon('refresh'),
                   'Sincronizar',
                 )
               : null,
-            h('button', { class: 'btn sm', onclick: () => remoteAction('gitPull', 'Pull') }, icon('down'), 'Pull', g.behind ? ` ${g.behind}` : ''),
-            h('button', { class: 'btn sm', onclick: () => remoteAction('gitPush', 'Push') }, icon('up'), 'Push', g.ahead ? ` ${g.ahead}` : ''),
+            h('button', { class: 'btn sm', disabled: !g.hasRemotes, onclick: () => remoteAction('gitPull', 'Pull') }, icon('down'), 'Pull', g.behind ? ` ${g.behind}` : ''),
+            h('button', { class: 'btn sm', disabled: !g.hasRemotes, onclick: () => remoteAction('gitPush', 'Push') }, icon('up'), 'Push', g.ahead ? ` ${g.ahead}` : ''),
             g.webUrl ? h('button', { class: 'btn sm ghost', title: 'Abrir no GitHub', onclick: () => call('openUrl', { url: g.webUrl }) }, icon('github')) : null,
           ),
           h('div', { style: { display: 'flex', gap: '6px', marginTop: '6px', flexWrap: 'wrap' } },

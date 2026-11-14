@@ -59,8 +59,9 @@ export async function status(root) {
     files.push({ path: path.join(top, file), rel: file, index: x, work: y, from, staged: x !== ' ' && x !== '?', untracked: x === '?' });
   }
   const remote = (await git(root, ['remote', 'get-url', 'origin'])).stdout.trim() || null;
+  const hasRemotes = !!remote || !!(await git(root, ['remote'])).stdout.trim();
   const overleaf = overleafUrl((await git(root, ['config', '--get', 'remote.overleaf.url'])).stdout.trim());
-  return { repo: true, top, branch, upstream, ahead, behind, files, remote, webUrl: webUrl(remote), overleaf };
+  return { repo: true, top, branch, upstream, ahead, behind, files, remote, hasRemotes, webUrl: webUrl(remote), overleaf };
 }
 
 function overleafUrl(value) {
