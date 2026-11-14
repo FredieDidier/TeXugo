@@ -3,195 +3,891 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TeXugo</title>
-<meta name="description" content="Editor LaTeX local para artigos, projetos, pareceres e slides.">
+<title>TeXugo: editor LaTeX</title>
+<meta name="description" content="Editor LaTeX gratuito para artigos, aulas e pareceres. Compila artigo e apêndice na ordem certa, explica cada ?? e ajuda a revisar, a trabalhar com coautores e a submeter.">
+<meta name="color-scheme" content="light dark">
+<meta property="og:title" content="TeXugo: editor LaTeX">
+<meta property="og:description" content="Bravo com os erros, manso com você. Editor LaTeX gratuito que roda no seu computador.">
+<meta property="og:image" content="https://frediedidier.github.io/TeXugo/capturas/editor.jpg">
 <link rel="icon" href="logo.svg">
 <style>
   :root {
-    --bg: #faf7f2; --fg: #2b2a27; --muted: #6b675f; --line: #e3ddd2; --card: #ffffff;
-    --accent: #b9741a; --accent-strong: #9a5f10; --on-accent: #ffffff; --tag: #f6e3c4;
+    --bg: #faf6ef;
+    --bg-2: #f3ece0;
+    --card: #ffffff;
+    --ink: #24211c;
+    --ink-2: #4a463e;
+    --muted: #6a6459;
+    --line: #e5dccd;
+    --line-2: #d8ccb8;
+    --accent: #9c5c0e;
+    --accent-hover: #844d0b;
+    --on-accent: #ffffff;
+    --accent-ink: #8a510c;
+    --amber: #e39a2f;
+    --amber-soft: #f7e6c9;
+    --ok: #2e7d4f;
+    --ok-soft: #dcefe2;
+    --shadow: 0 1px 2px rgba(60, 40, 10, 0.06), 0 12px 32px -12px rgba(60, 40, 10, 0.22);
+    --glow: rgba(233, 162, 59, 0.22);
+    --serif: ui-serif, "New York", "Iowan Old Style", Georgia, Cambria, "Times New Roman", serif;
+    --sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+    --wrap: 1120px;
+    --head: 60px;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --bg: #1b1e24; --fg: #e6e3dc; --muted: #a29e95; --line: #343843; --card: #23272f;
-      --accent: #e9a23b; --accent-strong: #f4b957; --on-accent: #1e2127; --tag: rgba(233, 162, 59, 0.18); }
+    :root:not([data-theme="light"]) {
+      --bg: #14161b;
+      --bg-2: #191c22;
+      --card: #1e2128;
+      --ink: #ece7dd;
+      --ink-2: #cdc7bb;
+      --muted: #a59f94;
+      --line: #2c3039;
+      --line-2: #3a3f4a;
+      --accent: #eaa43d;
+      --accent-hover: #f4b957;
+      --on-accent: #1d1a14;
+      --accent-ink: #f1b65a;
+      --amber: #eaa43d;
+      --amber-soft: rgba(234, 164, 61, 0.16);
+      --ok: #6cc28e;
+      --ok-soft: rgba(108, 194, 142, 0.14);
+      --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 40px -14px rgba(0, 0, 0, 0.6);
+      --glow: rgba(234, 164, 61, 0.12);
+    }
   }
+  :root[data-theme="dark"] {
+    --bg: #14161b; --bg-2: #191c22; --card: #1e2128; --ink: #ece7dd; --ink-2: #cdc7bb; --muted: #a59f94; --line: #2c3039; --line-2: #3a3f4a;
+    --accent: #eaa43d; --accent-hover: #f4b957; --on-accent: #1d1a14; --accent-ink: #f1b65a; --amber: #eaa43d; --amber-soft: rgba(234, 164, 61, 0.16);
+    --ok: #6cc28e; --ok-soft: rgba(108, 194, 142, 0.14); --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 16px 40px -14px rgba(0, 0, 0, 0.6); --glow: rgba(234, 164, 61, 0.12);
+  }
+
   * { box-sizing: border-box; }
-  body { margin: 0; background: var(--bg); color: var(--fg); font: 17px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  main { max-width: 760px; margin: 0 auto; padding: 40px 16px 64px; }
-  header { display: flex; align-items: center; gap: 16px; }
-  header img { width: 72px; height: 72px; }
-  h1 { margin: 0; font: 600 40px/1.1 Georgia, "Times New Roman", serif; }
-  .lang { margin-left: auto; font-size: 15px; }
-  .lang button { background: none; border: 0; color: var(--accent-strong); cursor: pointer; font: inherit; padding: 4px; }
-  .lang button[aria-pressed="true"] { color: var(--fg); font-weight: 600; cursor: default; }
-  .lead { font-size: 19px; margin: 24px 0 8px; }
-  h2 { font-size: 20px; margin: 40px 0 12px; }
-  ul { padding-left: 20px; }
-  li { margin: 6px 0; }
-  .downloads { display: grid; gap: 10px; margin: 16px 0; }
-  .dl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
-  .dl.mine { border-color: var(--accent); }
-  .dl a { margin-left: auto; background: var(--accent); color: var(--on-accent); padding: 8px 16px; border-radius: 8px; text-decoration: none; font-weight: 600; }
-  .dl a[aria-disabled="true"] { opacity: .5; pointer-events: none; }
-  .tag { font-size: 13px; background: var(--tag); padding: 2px 8px; border-radius: 99px; }
-  .muted { color: var(--muted); font-size: 15px; }
-  .screenshots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .screenshots > :first-child { grid-column: 1 / -1; }
-  figure { margin: 0; }
-  figure img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
-  figcaption { margin-top: 6px; }
-  @media (max-width: 580px) {
-    .screenshots { grid-template-columns: minmax(0, 1fr); }
+  html { scroll-behavior: smooth; scroll-padding-top: calc(var(--head) + 64px); -webkit-text-size-adjust: 100%; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 17px/1.6 var(--sans); overflow-x: hidden; }
+  [lang="en"] .pt, [lang="pt-BR"] .en { display: none !important; }
+  a { color: var(--accent-ink); text-underline-offset: 3px; }
+  code, .mono { font-family: var(--mono); font-size: 0.88em; }
+  kbd { font-family: var(--mono); font-size: 0.82em; border: 1px solid var(--line-2); border-bottom-width: 2px; border-radius: 6px; padding: 0 0.35em; background: var(--card); }
+  img, video { display: block; max-width: 100%; height: auto; }
+  .wrap { max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
+  .skip { position: absolute; left: -999px; top: 8px; background: var(--card); padding: 8px 12px; border-radius: 8px; z-index: 50; }
+  .skip:focus { left: 8px; }
+  :focus-visible { outline: 2px solid var(--amber); outline-offset: 3px; border-radius: 6px; }
+
+  /* the ?? chip, as the app shows it */
+  .qq { font-family: var(--mono); font-size: 0.82em; font-weight: 600; background: var(--amber-soft); color: var(--accent-ink); padding: 0.05em 0.4em; border-radius: 6px; white-space: nowrap; }
+
+  /* ------------------------------------------------------------ header */
+  .top { position: sticky; top: 0; z-index: 30; height: var(--head); background: var(--bg); background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px); border-bottom: 1px solid transparent; transition: border-color 0.2s; }
+  .top.scrolled { border-bottom-color: var(--line); }
+  .top .wrap { height: 100%; display: flex; align-items: center; gap: 20px; }
+  .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); font: 600 21px/1 var(--serif); letter-spacing: -0.01em; }
+  .brand img { width: 32px; height: 32px; }
+  .nav { display: flex; gap: 4px; margin-left: 12px; }
+  .nav a { color: var(--ink-2); text-decoration: none; font-size: 15px; padding: 6px 10px; border-radius: 8px; }
+  .nav a:hover { background: var(--bg-2); color: var(--ink); }
+  .top .right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+  .lang { display: flex; font-size: 14px; border: 1px solid var(--line-2); border-radius: 999px; padding: 2px; }
+  .lang button { background: none; border: 0; color: var(--muted); cursor: pointer; font: inherit; padding: 4px 10px; border-radius: 999px; }
+  .lang button[aria-pressed="true"] { background: var(--ink); color: var(--bg); cursor: default; }
+
+  .btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font: 600 16px/1 var(--sans); padding: 14px 20px; border-radius: 12px; border: 1px solid transparent; cursor: pointer; transition: background 0.15s, transform 0.15s; white-space: nowrap; }
+  .btn svg { width: 18px; height: 18px; flex: none; }
+  .btn.primary { background: var(--accent); color: var(--on-accent); }
+  .btn.primary:hover { background: var(--accent-hover); }
+  .btn.ghost { color: var(--ink); border-color: var(--line-2); background: var(--card); }
+  .btn.ghost:hover { border-color: var(--ink-2); }
+  .btn.sm { font-size: 14px; padding: 9px 14px; border-radius: 10px; }
+  .btn[aria-disabled="true"] { opacity: 0.5; pointer-events: none; }
+
+  /* -------------------------------------------------------------- hero */
+  .hero { position: relative; padding: 72px 0 40px; text-align: center; }
+  .hero::before { content: ""; position: absolute; inset: -120px 0 auto; height: 720px; background: radial-gradient(60% 55% at 50% 30%, var(--glow), transparent 70%); pointer-events: none; z-index: -1; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); background: var(--card); border: 1px solid var(--line); padding: 6px 14px; border-radius: 999px; }
+  .eyebrow b { color: var(--accent-ink); font-weight: 600; }
+  h1 { font: 500 clamp(40px, 7vw, 80px)/1.04 var(--serif); letter-spacing: -0.025em; margin: 26px auto 0; text-wrap: balance; }
+  h1 em { font-style: italic; color: var(--accent-ink); }
+  h1 .line { display: block; }
+  .lead { font-size: clamp(18px, 2.2vw, 21px); line-height: 1.55; color: var(--ink-2); max-width: 680px; margin: 26px auto 0; text-wrap: pretty; }
+  .cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 32px; }
+  .fine { font-size: 14px; color: var(--muted); margin-top: 16px; }
+  .hero .shot { margin-top: 56px; }
+
+  /* ---------------------------------------------- video frames (shots) */
+  .shot { position: relative; margin: 0 auto; max-width: var(--w, 100%); }
+  .frame { position: relative; border-radius: 14px; overflow: hidden; background: var(--card); border: 1px solid var(--line-2); box-shadow: var(--shadow); }
+  .frame video, .frame img { width: 100%; }
+  .frame.window .lights { position: absolute; top: 1.667%; left: 0.972%; display: flex; gap: 9.7%; width: 6%; pointer-events: none; }
+  .frame.window .lights i { flex: none; width: 13.9%; aspect-ratio: 1; border-radius: 50%; background: #ff5f57; }
+  .frame.window .lights i:nth-child(2) { background: #febc2e; }
+  .frame.window .lights i:nth-child(3) { background: #28c840; }
+  .play { position: absolute; right: 12px; bottom: 12px; width: 38px; height: 38px; border-radius: 50%; border: 0; background: rgba(20, 18, 14, 0.62); color: #fff; display: grid; place-items: center; cursor: pointer; opacity: 0; transition: opacity 0.2s; }
+  .play svg { width: 16px; height: 16px; }
+  .frame:hover .play, .play:focus-visible, .frame.paused .play { opacity: 1; }
+  .shot figcaption { font-size: 15px; color: var(--muted); margin: 14px auto 0; max-width: 760px; text-align: center; text-wrap: pretty; }
+
+  /* ------------------------------------------------------------ sections */
+  section { padding: 88px 0; }
+  .kicker { font: 600 13px/1 var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent-ink); }
+  h2 { font: 500 clamp(30px, 4.4vw, 46px)/1.08 var(--serif); letter-spacing: -0.02em; margin: 14px 0 0; text-wrap: balance; }
+  h3 { font: 600 19px/1.3 var(--sans); margin: 0; }
+  .section-head { max-width: 720px; }
+  .section-head p { color: var(--ink-2); font-size: 18px; margin: 16px 0 0; }
+  .center { text-align: center; margin-left: auto; margin-right: auto; }
+
+  /* who it is for */
+  .who { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; margin-top: 40px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 28px; }
+  .card .ico { width: 40px; height: 40px; border-radius: 10px; background: var(--amber-soft); color: var(--accent-ink); display: grid; place-items: center; margin-bottom: 18px; }
+  .card .ico svg { width: 22px; height: 22px; }
+  .card p { color: var(--ink-2); margin: 8px 0 0; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+  .tags span { font-size: 13px; background: var(--bg-2); border: 1px solid var(--line); padding: 3px 10px; border-radius: 999px; color: var(--ink-2); }
+  .note { text-align: center; color: var(--muted); margin-top: 24px; font-size: 16px; }
+
+  /* tour */
+  #recursos { padding-top: 40px; }
+  .chapters { position: sticky; top: var(--head); z-index: 20; background: var(--bg); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+  .chapters ol { list-style: none; margin: 0 auto; padding: 10px 24px; max-width: var(--wrap); display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+  .chapters ol::-webkit-scrollbar { display: none; }
+  .chapters a { display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--ink-2); font-size: 15px; padding: 7px 12px; border-radius: 999px; white-space: nowrap; border: 1px solid transparent; }
+  .chapters a span { font: 600 12px/1 var(--mono); color: var(--muted); }
+  .chapters a:hover { background: var(--bg-2); }
+  .chapters a[aria-current="true"] { background: var(--card); border-color: var(--line-2); color: var(--ink); }
+  .chapters a[aria-current="true"] span { color: var(--accent-ink); }
+  .chapter { padding: 88px 0 0; }
+  .chapter-text { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 24px 64px; align-items: end; margin-bottom: 40px; }
+  .chapter-text p { color: var(--ink-2); font-size: 18px; margin: 16px 0 0; text-wrap: pretty; }
+  .points { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .points li { position: relative; padding-left: 28px; color: var(--ink-2); font-size: 16px; }
+  .points li::before { content: ""; position: absolute; left: 2px; top: 0.5em; width: 14px; height: 8px; border-left: 2px solid var(--ok); border-bottom: 2px solid var(--ok); transform: rotate(-45deg); }
+
+  .grid4 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .grid4 .card { padding: 24px; }
+  .grid4 h3 { font-size: 18px; }
+
+  /* more */
+  .more { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 40px; }
+  .more .card { padding: 22px; }
+  .more h3 { font-size: 16px; }
+  .more p { font-size: 15px; }
+
+  /* privacy band */
+  .local { background: var(--bg-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .local .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 48px; align-items: center; }
+  .local ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+  .local li { display: flex; gap: 12px; align-items: flex-start; color: var(--ink-2); }
+  .local li svg { width: 22px; height: 22px; flex: none; color: var(--accent-ink); margin-top: 2px; }
+
+  /* download */
+  .downloads { display: grid; gap: 10px; margin-top: 32px; }
+  .dl { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+  .dl.mine { border-color: var(--amber); box-shadow: 0 0 0 3px var(--amber-soft); }
+  .dl .os { display: flex; align-items: center; gap: 10px; font-weight: 600; min-width: 110px; }
+  .dl .os svg { width: 20px; height: 20px; color: var(--ink-2); }
+  .dl .what { color: var(--muted); font-size: 15px; }
+  .dl .btn { margin-left: auto; }
+  .tag { font-size: 12px; font-weight: 600; background: var(--amber-soft); color: var(--accent-ink); padding: 3px 9px; border-radius: 999px; }
+  .status { color: var(--muted); font-size: 15px; margin: 18px 0 0; }
+  .steps { margin-top: 40px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; }
+  details { border-bottom: 1px solid var(--line); }
+  details:first-of-type { border-top: 1px solid var(--line); }
+  summary { cursor: pointer; font-weight: 600; padding: 16px 32px 16px 0; list-style: none; position: relative; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: ""; position: absolute; right: 6px; top: 50%; width: 9px; height: 9px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: translateY(-70%) rotate(45deg); transition: transform 0.2s; }
+  details[open] summary::after { transform: translateY(-30%) rotate(-135deg); }
+  details > :not(summary) { color: var(--ink-2); margin: 0 0 16px; }
+  details ol { padding-left: 22px; }
+  details li { margin: 6px 0; }
+  details figure { margin: 0 0 16px; }
+  details figure img { border-radius: 10px; border: 1px solid var(--line); }
+  details figcaption { font-size: 14px; color: var(--muted); margin-top: 6px; }
+  .req { list-style: none; padding: 0; margin: 14px 0 0; display: grid; gap: 10px; }
+  .req li { color: var(--ink-2); }
+  .req b { color: var(--ink); }
+
+  /* faq */
+  .faq { display: grid; grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr); gap: 56px; align-items: start; }
+
+  /* closing */
+  .closing { text-align: center; padding: 104px 0; position: relative; }
+  .closing::before { content: ""; position: absolute; inset: 0; background: radial-gradient(50% 60% at 50% 60%, var(--glow), transparent 70%); z-index: -1; }
+  .closing img { width: 72px; height: 72px; margin: 0 auto 24px; }
+  footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
+  footer .wrap { display: flex; gap: 12px 24px; flex-wrap: wrap; align-items: center; }
+  footer nav { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-left: auto; }
+  footer a { color: var(--muted); }
+  footer a:hover { color: var(--ink); }
+
+  /* reveal on scroll (only when the script runs, never with reduced motion) */
+  .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .js .reveal.in { opacity: 1; transform: none; }
+  @media (prefers-reduced-motion: reduce) { .js .reveal { opacity: 1; transform: none; transition: none; } }
+
+  @media (max-width: 920px) {
+    .nav { display: none; }
+    .chapter-text, .local .wrap, .steps, .faq { grid-template-columns: minmax(0, 1fr); gap: 28px; }
+    .more { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
-  details { border-top: 1px solid var(--line); padding: 10px 0; }
-  summary { cursor: pointer; font-weight: 600; }
-  a { color: var(--accent-strong); }
-  footer { margin-top: 48px; border-top: 1px solid var(--line); padding-top: 16px; }
-  [lang="en"] .pt, [lang="pt-BR"] .en { display: none; }
+  @media (max-width: 620px) {
+    .wrap { padding: 0 16px; }
+    .chapters ol { padding: 8px 16px; }
+    .top .btn.sm { display: none; }
+    .hero { padding-top: 48px; }
+    .who, .grid4, .more { grid-template-columns: minmax(0, 1fr); }
+    section { padding: 64px 0; }
+    .chapter { padding-top: 64px; }
+    .dl .btn { margin-left: 0; width: 100%; justify-content: center; }
+    .frame { border-radius: 10px; }
+    .play { opacity: 1; width: 34px; height: 34px; right: 8px; bottom: 8px; }
+  }
 </style>
 </head>
 <body>
-<main>
-  <header>
-    <img src="logo.svg" alt="">
-    <h1>TeXugo</h1>
-    <div class="lang"><button data-l="pt-BR">Português</button> · <button data-l="en">English</button></div>
-  </header>
+<a class="skip" href="#conteudo"><span class="pt">Pular para o conteúdo</span><span class="en">Skip to content</span></a>
 
-  <p class="lead pt">Editor LaTeX local. Várias abas, cada uma com o seu botão Compilar, e um PDF sem <code>??</code>.</p>
-  <p class="lead en">A local LaTeX editor. Many tabs, each with its own Compile button, and a PDF with no <code>??</code>.</p>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v12"/><path d="m6 11 6 6 6-6"/><path d="M5 20h14"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></symbol>
+  <symbol id="i-paper" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/></symbol>
+  <symbol id="i-class" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><path d="m8 9 3 3 5-5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6 8-6s8 2 8 6"/><path d="m3 3 18 18"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3.5 6 1 1 2-2M3.5 12l1 1 2-2M3.5 18l1 1 2-2"/></symbol>
+  <symbol id="i-apple" viewBox="0 0 24 24" fill="currentColor"><path d="M16.4 12.6c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.8-1.7 0-3.3 1-4.1 2.5-1.8 3.1-.5 7.6 1.3 10.1.9 1.2 1.9 2.6 3.2 2.5 1.3-.1 1.8-.8 3.3-.8s2 .8 3.3.8c1.4 0 2.3-1.2 3.1-2.5 1-1.4 1.4-2.8 1.4-2.9 0 0-2.9-1.1-2.9-4ZM14 5.1c.7-.9 1.2-2 1-3.1-1 0-2.2.7-2.9 1.5-.6.7-1.2 1.9-1 3 1.1.1 2.2-.6 2.9-1.4Z"/></symbol>
+  <symbol id="i-win" viewBox="0 0 24 24" fill="currentColor"><path d="M3 5.5 10 4.5v7H3zM11 4.3 21 3v8.5H11zM3 12.5h7v7l-7-1zM11 12.5h10V21l-10-1.4z"/></symbol>
+  <symbol id="i-linux" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="m7 9 3 2-3 2M12 14h4"/><path d="M8 21h8"/></symbol>
+</svg>
 
-  <ul class="pt">
-    <li>Os arquivos ficam no seu computador e a compilação usa o seu TeX.</li>
-    <li>Cada <code>??</code> vem com o motivo; projetos com <code>\externaldocument</code> compilam na ordem certa.</li>
-    <li>Git com coautores: sincronizar num clique, comentários no texto, o que mudou desde a sua última visita.</li>
-    <li>Revisão: parecer, resposta aos pareceristas, ZIP de submissão que compila sozinho, pacote de replicação.</li>
-  </ul>
-  <ul class="en">
-    <li>Your files stay on your computer and builds use your own TeX.</li>
-    <li>Every <code>??</code> comes with its reason; projects with <code>\externaldocument</code> build in the right order.</li>
-    <li>Git with coauthors: one-click sync, comments in the text, what changed since your last visit.</li>
-    <li>Review: referee reports, responses to referees, a submission ZIP that compiles on its own, a replication package.</li>
-  </ul>
-
-  <h2><span class="pt">Baixar</span><span class="en">Download</span></h2>
-  <p class="muted" id="status"><span class="pt">Procurando a versão mais recente…</span><span class="en">Looking for the latest version…</span></p>
-  <div class="downloads">
-    <div class="dl" data-os="mac" data-file="mac-arm64.dmg"><strong>Mac</strong><span>Apple Silicon (M1–M5)</span><a aria-disabled="true"><span class="pt">Baixar</span><span class="en">Download</span></a></div>
-    <div class="dl" data-os="mac" data-file="mac-x64.dmg"><strong>Mac</strong><span>Intel</span><a aria-disabled="true"><span class="pt">Baixar</span><span class="en">Download</span></a></div>
-    <div class="dl" data-os="win" data-file="windows-x64-setup.exe"><strong>Windows</strong><span>10 / 11, 64 bits</span><span class="tag"><span class="pt">experimental</span><span class="en">experimental</span></span><a aria-disabled="true"><span class="pt">Baixar</span><span class="en">Download</span></a></div>
-    <div class="dl" data-os="linux" data-file="linux-x86_64.AppImage"><strong>Linux</strong><span>AppImage, x86-64</span><span class="tag"><span class="pt">experimental</span><span class="en">experimental</span></span><a aria-disabled="true"><span class="pt">Baixar</span><span class="en">Download</span></a></div>
+<header class="top" id="top">
+  <div class="wrap">
+    <a class="brand" href="#"><img src="logo.svg" alt="" width="32" height="32">TeXugo</a>
+    <nav class="nav" aria-label="Seções">
+      <a href="#para-quem"><span class="pt">Para quem</span><span class="en">Who it is for</span></a>
+      <a href="#recursos"><span class="pt">O que faz</span><span class="en">What it does</span></a>
+      <a href="#baixar"><span class="pt">Baixar</span><span class="en">Download</span></a>
+      <a href="#perguntas"><span class="pt">Perguntas</span><span class="en">Questions</span></a>
+    </nav>
+    <div class="right">
+      <div class="lang" role="group" aria-label="Idioma / Language"><button data-l="pt-BR" lang="pt-BR">PT</button><button data-l="en" lang="en">EN</button></div>
+      <a class="btn primary sm" href="#baixar" data-dl><svg aria-hidden="true"><use href="#i-down"/></svg><span class="pt">Baixar</span><span class="en">Download</span></a>
+    </div>
   </div>
-  <p class="muted"><span class="pt">Todas as versões: </span><span class="en">All versions: </span><a href="https://github.com/FredieDidier/TeXugo/releases">GitHub Releases</a>.
-    <span class="pt">No Mac, para saber o chip: menu Apple → Sobre Este Mac.</span><span class="en">On a Mac, to see the chip: Apple menu → About This Mac.</span></p>
+</header>
 
-  <h2><span class="pt">O TeXugo em uso</span><span class="en">TeXugo in use</span></h2>
-  <div class="screenshots">
-    <figure>
-      <a class="pt" href="capturas/editor.jpg" aria-labelledby="shot-editor"><img src="capturas/editor.jpg" alt="" loading="lazy" width="2960" height="1744"></a>
-      <a class="en" href="capturas/en/editor.jpg" aria-labelledby="shot-editor"><img src="capturas/en/editor.jpg" alt="" loading="lazy" width="2960" height="1752"></a>
-      <figcaption class="muted" id="shot-editor"><span class="pt">Editor LaTeX, estrutura do artigo e PDF compilado.</span><span class="en">LaTeX editor, paper outline, and compiled PDF.</span></figcaption>
-    </figure>
-    <figure>
-      <a class="pt" href="capturas/referencias.jpg" aria-labelledby="shot-refs"><img src="capturas/referencias.jpg" alt="" loading="lazy" width="2960" height="1744"></a>
-      <a class="en" href="capturas/en/referencias.jpg" aria-labelledby="shot-refs"><img src="capturas/en/referencias.jpg" alt="" loading="lazy" width="2960" height="1752"></a>
-      <figcaption class="muted" id="shot-refs"><span class="pt">Referências bibliográficas ao lado do texto.</span><span class="en">Bibliographic references alongside the text.</span></figcaption>
-    </figure>
-    <figure>
-      <a class="pt" href="capturas/revisao.jpg" aria-labelledby="shot-review"><img src="capturas/revisao.jpg" alt="" loading="lazy" width="2960" height="1744"></a>
-      <a class="en" href="capturas/en/revisao.jpg" aria-labelledby="shot-review"><img src="capturas/en/revisao.jpg" alt="" loading="lazy" width="2960" height="1752"></a>
-      <figcaption class="muted" id="shot-review"><span class="pt">Painel de revisão e submissão.</span><span class="en">Review and submission panel.</span></figcaption>
-    </figure>
+<main id="conteudo">
+  <div class="hero">
+    <div class="wrap">
+      <span class="eyebrow"><b><span class="pt">Gratuito</span><span class="en">Free</span></b><span class="pt">Editor LaTeX para Mac, com Windows e Linux em teste</span><span class="en">LaTeX editor for the Mac, with Windows and Linux in testing</span></span>
+      <h1><span class="pt"><span class="line">Bravo com os erros,</span> <em class="line">manso com você.</em></span><span class="en"><span class="line">Fierce with errors,</span> <em class="line">gentle with you.</em></span></h1>
+      <p class="lead pt">O TeXugo é um editor LaTeX para quem escreve artigos, aulas e pareceres. Ele compila o artigo e o apêndice na ordem certa, diz por que apareceu um <span class="qq">??</span> e ajuda a revisar o texto, a trabalhar com coautores e a preparar a submissão. Os seus arquivos ficam no seu computador.</p>
+      <p class="lead en">TeXugo is a LaTeX editor for people who write papers, lectures and referee reports. It builds the paper and its appendix in the right order, tells you why a <span class="qq">??</span> appeared, and helps you revise the text, work with coauthors and get ready to submit. Your files stay on your computer.</p>
+      <div class="cta">
+        <a class="btn primary" href="#baixar" data-dl><svg aria-hidden="true"><use href="#i-down"/></svg><span data-dl-label><span class="pt">Baixar</span><span class="en">Download</span></span></a>
+        <a class="btn ghost" href="#recursos"><svg aria-hidden="true"><use href="#i-play"/></svg><span class="pt">Ver em ação</span><span class="en">See it work</span></a>
+      </div>
+      <p class="fine"><span class="pt">Código aberto, licença MIT. Sem conta e sem assinatura.</span><span class="en">Open source, MIT license. No account, no subscription.</span></p>
+      <figure class="shot" style="--w: 1120px">
+        <div class="frame window">
+          <video muted playsinline loop preload="none" width="1920" height="1120" data-v="compilar" poster="videos/pt/compilar.webp"></video>
+          <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+        </div>
+        <figcaption><span class="pt">O texto cita uma tabela do artigo e outra do apêndice. O PDF feito do jeito comum mostra <span class="qq">??</span>. Um clique em Compilar, e o TeXugo compila os dois documentos até cada referência ter o seu número.</span><span class="en">The text cites a table in the paper and another in the appendix. The PDF made the usual way shows <span class="qq">??</span>. One click on Compile, and TeXugo builds both documents until every reference has its number.</span></figcaption>
+      </figure>
+    </div>
   </div>
 
-  <h2><span class="pt">Primeira abertura</span><span class="en">First launch</span></h2>
-  <p class="pt">O TeXugo é gratuito e não tem assinatura paga da Apple nem da Microsoft. Por isso o sistema pergunta uma vez, na primeira abertura de cada versão.</p>
-  <p class="en">TeXugo is free and is not signed with a paid Apple or Microsoft certificate, so the system asks once, the first time each version opens.</p>
-  <details open>
-    <summary>Mac</summary>
-    <ol class="pt">
-      <li>Abra o <code>.dmg</code> e arraste o TeXugo para Aplicativos.</li>
-      <li>Abra o TeXugo. O macOS avisa que não pode verificar o app; clique em <b>OK</b>.</li>
-      <li>Vá a Ajustes do Sistema → Privacidade e Segurança, desça até a mensagem sobre o TeXugo e clique em <b>Abrir Mesmo Assim</b>. Confirme com a sua senha.</li>
-    </ol>
-    <ol class="en">
-      <li>Open the <code>.dmg</code> and drag TeXugo to Applications.</li>
-      <li>Open TeXugo. macOS says it cannot verify the app; click <b>OK</b>.</li>
-      <li>Go to System Settings → Privacy &amp; Security, scroll to the message about TeXugo and click <b>Open Anyway</b>. Confirm with your password.</li>
-    </ol>
-    <figure>
-      <a class="pt" href="capturas/primeira-abertura-mac.jpg" aria-labelledby="shot-mac"><img src="capturas/primeira-abertura-mac.jpg" alt="" loading="lazy" width="2960" height="1744"></a>
-      <a class="en" href="capturas/en/primeira-abertura-mac.jpg" aria-labelledby="shot-mac"><img src="capturas/en/primeira-abertura-mac.jpg" alt="" loading="lazy" width="2960" height="1752"></a>
-      <figcaption class="muted" id="shot-mac"><span class="pt">Verificação da instalação ao abrir o TeXugo no Mac.</span><span class="en">Installation check when TeXugo first opens on a Mac.</span></figcaption>
-    </figure>
-  </details>
-  <details>
-    <summary>Windows</summary>
-    <p class="pt">Ao rodar o instalador, o SmartScreen mostra "O Windows protegeu o computador". Clique em <b>Mais informações</b> e depois em <b>Executar assim mesmo</b>. A instalação é só para o seu usuário e não pede administrador.</p>
-    <p class="en">When you run the installer, SmartScreen shows "Windows protected your PC". Click <b>More info</b>, then <b>Run anyway</b>. It installs for your user only and does not ask for an administrator.</p>
-  </details>
-  <details>
-    <summary>Linux</summary>
-    <p class="pt">Torne o arquivo executável (<code>chmod +x TeXugo-*.AppImage</code>) e abra-o.</p>
-    <p class="en">Make the file executable (<code>chmod +x TeXugo-*.AppImage</code>) and open it.</p>
-  </details>
+  <section id="para-quem">
+    <div class="wrap">
+      <div class="section-head center reveal">
+        <span class="kicker"><span class="pt">Para quem</span><span class="en">Who it is for</span></span>
+        <h2><span class="pt">Para quem escreve em LaTeX, sem brigar com ele</span><span class="en">For people who write in LaTeX and would rather not fight it</span></h2>
+        <p><span class="pt">Comece por um dos 12 modelos, que incluem também carta e documento em branco, ou abra a pasta do projeto que você já tem.</span><span class="en">Start from one of the 12 templates, a letter and a blank document among them, or open the project folder you already have.</span></p>
+      </div>
+      <div class="who">
+        <article class="card reveal">
+          <div class="ico"><svg aria-hidden="true"><use href="#i-paper"/></svg></div>
+          <h3><span class="pt">Pesquisa</span><span class="en">Research</span></h3>
+          <p class="pt">Artigos com apêndice online, no formato do periódico, e o que vem depois: parecer, resposta aos pareceristas, pacote de replicação.</p>
+          <p class="en">Papers with an online appendix, in the journal's format, and what comes after: referee reports, responses to referees, replication packages.</p>
+          <div class="tags pt"><span>Artigo</span><span>Artigo + apêndice</span><span>Resposta aos pareceristas</span><span>Parecer</span><span>Projeto de pesquisa</span><span>Relatório</span></div>
+          <div class="tags en"><span>Paper</span><span>Paper + appendix</span><span>Response to referees</span><span>Referee report</span><span>Research proposal</span><span>Report</span></div>
+        </article>
+        <article class="card reveal">
+          <div class="ico"><svg aria-hidden="true"><use href="#i-class"/></svg></div>
+          <h3><span class="pt">Ensino</span><span class="en">Teaching</span></h3>
+          <p class="pt">Slides em Beamer com botão Apresentar, ementas, provas com pontos somados e gabarito, listas com as soluções só na versão do professor.</p>
+          <p class="en">Beamer slides with a Present button, syllabi, exams that add up their points and print an answer key, problem sets with solutions only in the instructor's copy.</p>
+          <div class="tags pt"><span>Slides</span><span>Ementa</span><span>Prova</span><span>Lista de exercícios</span></div>
+          <div class="tags en"><span>Slides</span><span>Syllabus</span><span>Exam</span><span>Problem set</span></div>
+        </article>
+      </div>
+      <p class="note reveal"><span class="pt">Formatos de periódico prontos: padrão, espaço duplo, AEA, Elsevier, Econometrica, APA 7 e duas colunas (IEEE).</span><span class="en">Journal formats included: standard, double spaced, AEA, Elsevier, Econometrica, APA 7 and two columns (IEEE).</span></p>
+    </div>
+  </section>
 
-  <h2><span class="pt">Requisitos</span><span class="en">Requirements</span></h2>
-  <ul class="pt">
-    <li><b>TeX</b>: MacTeX no Mac, TeX Live ou MiKTeX no Windows, TeX Live no Linux. Indispensável.</li>
-    <li><b>Git</b>, para versões e coautores. Opcional.</li>
-    <li><b>Claude Code</b>, para as ações de IA. <b>LanguageTool</b>, para o corretor. Opcionais.</li>
-  </ul>
-  <ul class="en">
-    <li><b>TeX</b>: MacTeX on a Mac, TeX Live or MiKTeX on Windows, TeX Live on Linux. Required.</li>
-    <li><b>Git</b>, for versions and coauthors. Optional.</li>
-    <li><b>Claude Code</b>, for the AI actions. <b>LanguageTool</b>, for the checker. Optional.</li>
-  </ul>
-  <p class="muted pt">Na primeira abertura, o TeXugo mostra o que encontrou e o que falta.</p>
-  <p class="muted en">On first launch, TeXugo shows what it found and what is missing.</p>
+  <section id="recursos" aria-labelledby="recursos-h">
+    <div class="wrap">
+      <div class="section-head center reveal">
+        <span class="kicker"><span class="pt">O que faz</span><span class="en">What it does</span></span>
+        <h2 id="recursos-h"><span class="pt">Do primeiro rascunho à submissão</span><span class="en">From first draft to submission</span></h2>
+        <p><span class="pt">Os vídeos são do TeXugo de verdade, abrindo um projeto de exemplo.</span><span class="en">The videos show the real TeXugo, working on an example project.</span></p>
+      </div>
+    </div>
+    <nav class="chapters" aria-label="Capítulos">
+      <ol>
+        <li><a href="#escrever"><span>01</span><b class="pt">Escrever</b><b class="en">Write</b></a></li>
+        <li><a href="#corrigir"><span>02</span><b class="pt">Corrigir</b><b class="en">Fix</b></a></li>
+        <li><a href="#revisar"><span>03</span><b class="pt">Revisar</b><b class="en">Revise</b></a></li>
+        <li><a href="#citar"><span>04</span><b class="pt">Citar</b><b class="en">Cite</b></a></li>
+        <li><a href="#coautores"><span>05</span><b class="pt">Coautores</b><b class="en">Coauthors</b></a></li>
+        <li><a href="#submeter"><span>06</span><b class="pt">Submeter</b><b class="en">Submit</b></a></li>
+        <li><a href="#mais"><span>+</span><b class="pt">E mais</b><b class="en">And more</b></a></li>
+      </ol>
+    </nav>
 
-  <footer class="muted">
-    <span class="pt"><a href="https://github.com/FredieDidier/TeXugo/blob/main/PRIVACIDADE.md">Privacidade</a> · <a href="https://github.com/FredieDidier/TeXugo/blob/main/LICENSE">Licença MIT</a> · <a href="https://github.com/FredieDidier/TeXugo/blob/main/THIRD-PARTY-NOTICES.txt">Avisos de terceiros</a> · <a href="https://github.com/FredieDidier/TeXugo">Código</a> · <a href="https://github.com/FredieDidier/TeXugo/issues/new/choose">Relatar um problema</a></span>
-    <span class="en"><a href="https://github.com/FredieDidier/TeXugo/blob/main/PRIVACY.md">Privacy</a> · <a href="https://github.com/FredieDidier/TeXugo/blob/main/LICENSE">MIT License</a> · <a href="https://github.com/FredieDidier/TeXugo/blob/main/THIRD-PARTY-NOTICES.txt">Third-party notices</a> · <a href="https://github.com/FredieDidier/TeXugo">Source</a> · <a href="https://github.com/FredieDidier/TeXugo/issues/new/choose">Report a problem</a></span>
-  </footer>
+    <div class="wrap">
+      <article class="chapter" id="escrever">
+        <div class="chapter-text reveal">
+          <div>
+            <span class="kicker">01 · <span class="pt">Escrever</span><span class="en">Write</span></span>
+            <h2><span class="pt">O PDF acompanha o que você digita</span><span class="en">The PDF follows your typing</span></h2>
+            <p class="pt">Ligue a prévia ao vivo e o PDF muda enquanto você escreve, sem salvar. Dentro de uma fórmula, a equação aparece desenhada logo acima do cursor, com as macros do seu projeto.</p>
+            <p class="en">Turn on the live preview and the PDF changes as you write, without saving. Inside a formula, the equation is drawn right above the cursor, using your project's own macros.</p>
+          </div>
+          <ul class="points pt">
+            <li>Autocompletar de <code>\ref</code>, <code>\cite</code> e ambientes, com os rótulos e as chaves do projeto</li>
+            <li>SyncTeX: <kbd>⌘J</kbd> leva do texto ao PDF, e um clique duplo no PDF volta ao texto</li>
+            <li>Várias abas, cada uma com o seu botão Compilar, e Compilar tudo para o que está aberto</li>
+          </ul>
+          <ul class="points en">
+            <li>Completion for <code>\ref</code>, <code>\cite</code> and environments, from the project's labels and keys</li>
+            <li>SyncTeX: <kbd>⌘J</kbd> jumps from the text to the PDF, and a double click in the PDF jumps back</li>
+            <li>Many tabs, each with its own Compile button, and Compile all for everything open</li>
+          </ul>
+        </div>
+        <figure class="shot reveal" style="--w: 1150px">
+          <div class="frame"><video muted playsinline loop preload="none" width="1600" height="1088" data-v="ao-vivo" poster="videos/pt/ao-vivo.webp"></video></div>
+          <figcaption><span class="pt">A chave “ao vivo” liga a prévia; a frase nova e a equação chegam ao PDF sem salvar.</span><span class="en">The “live” switch turns the preview on; the new sentence and the equation reach the PDF without saving.</span></figcaption>
+        </figure>
+      </article>
+
+      <article class="chapter" id="corrigir">
+        <div class="chapter-text reveal">
+          <div>
+            <span class="kicker">02 · <span class="pt">Corrigir</span><span class="en">Fix</span></span>
+            <h2><span class="pt">Cada <span class="qq">??</span> vem com o motivo</span><span class="en">Every <span class="qq">??</span> comes with its reason</span></h2>
+            <p class="pt">O painel Problemas lista as referências e citações sem destino e diz a causa provável: um rótulo que não existe, um rótulo que está em outro documento, uma chave que não está em nenhum <code>.bib</code>. Um clique leva à linha.</p>
+            <p class="en">The Problems panel lists the references and citations that point nowhere and gives the likely cause: a label that does not exist, a label that lives in another document, a key that is in no <code>.bib</code> file. One click takes you to the line.</p>
+          </div>
+          <ul class="points pt">
+            <li>Erros do LaTeX com uma dica em português e a linha certa</li>
+            <li>Médico do TeX: descobre o pacote que falta e o instala com um clique</li>
+            <li>A linha do tempo da compilação mostra cada passada e o motivo dela</li>
+          </ul>
+          <ul class="points en">
+            <li>LaTeX errors with a plain-language hint and the right line</li>
+            <li>TeX Doctor: finds the package that is missing and installs it with one click</li>
+            <li>The build timeline shows every pass and the reason for it</li>
+          </ul>
+        </div>
+        <figure class="shot reveal" style="--w: 1150px">
+          <div class="frame"><video muted playsinline loop preload="none" width="1600" height="1082" data-v="problemas" poster="videos/pt/problemas.webp"></video></div>
+          <figcaption><span class="pt">Uma referência a uma figura que não existe: o PDF mostra <span class="qq">??</span>, e o painel diz que não há esse rótulo no projeto.</span><span class="en">A reference to a figure that does not exist: the PDF shows <span class="qq">??</span>, and the panel says there is no such label in the project.</span></figcaption>
+        </figure>
+      </article>
+
+      <article class="chapter" id="revisar">
+        <div class="chapter-text reveal">
+          <div>
+            <span class="kicker">03 · <span class="pt">Revisar</span><span class="en">Revise</span></span>
+            <h2><span class="pt">Um segundo leitor, ao lado do texto</span><span class="en">A second reader beside your text</span></h2>
+            <p class="pt">O corretor gramatical roda no seu computador, em português e inglês, e entende LaTeX: comandos, fórmulas e citações não viram erro. O detector de vícios aponta, sem IA e sem internet, os tiques de texto escrito por IA.</p>
+            <p class="en">The grammar checker runs on your computer, in Portuguese and English, and understands LaTeX: commands, formulas and citations are not flagged. The writing-tic detector points out, with no AI and no internet, the habits of AI-written text.</p>
+          </div>
+          <ul class="points pt">
+            <li>Passe o mouse para ver o motivo; um clique aplica a correção</li>
+            <li>Com o agente de IA que você já usa (Claude Code, Codex, Gemini CLI ou OpenCode): revisar, encurtar, traduzir, polir. Você aceita ou descarta cada mudança</li>
+            <li>Parecer do agente no padrão do periódico que você indicar, com cada ponto ligado ao trecho</li>
+          </ul>
+          <ul class="points en">
+            <li>Hover to see the reason; one click applies the fix</li>
+            <li>With the AI agent you already use (Claude Code, Codex, Gemini CLI or OpenCode): revise, shorten, translate, polish. You accept or discard every change</li>
+            <li>A referee report from the agent, in the style of the journal you name, each point tied to its passage</li>
+          </ul>
+        </div>
+        <figure class="shot reveal" style="--w: 880px">
+          <div class="frame"><video muted playsinline loop preload="none" width="1600" height="880" data-v="escrita" poster="videos/pt/escrita.webp"></video></div>
+          <figcaption><span class="pt">Roxo pontilhado: um vício de escrita, com o motivo e a fonte. Azul ondulado: gramática, com a correção num clique.</span><span class="en">Dotted purple: a writing tic, with the reason and its source. Wavy blue: grammar, with the fix one click away.</span></figcaption>
+        </figure>
+      </article>
+
+      <article class="chapter" id="citar">
+        <div class="chapter-text reveal">
+          <div>
+            <span class="kicker">04 · <span class="pt">Citar</span><span class="en">Cite</span></span>
+            <h2><span class="pt">Do DOI à citação, num passo</span><span class="en">From DOI to citation in one step</span></h2>
+            <p class="pt">Cole um DOI, um link do artigo ou parte do título. O TeXugo busca no Crossref, no OpenAlex e no arXiv, grava a entrada limpa no <code>.bib</code> e cita onde está o cursor.</p>
+            <p class="en">Paste a DOI, a link to the paper or part of its title. TeXugo searches Crossref, OpenAlex and arXiv, writes a clean entry into your <code>.bib</code> and cites it at the cursor.</p>
+          </div>
+          <ul class="points pt">
+            <li>Verificar no Crossref: DOI que leva a outro trabalho, ano ou páginas faltando, com a correção pronta</li>
+            <li>Importar do Zotero sem configurar nada</li>
+            <li>Passe o mouse sobre uma citação para ver título, autores e links</li>
+          </ul>
+          <ul class="points en">
+            <li>Check against Crossref: a DOI that leads to another work, a missing year or pages, with the fix ready</li>
+            <li>Import from Zotero with nothing to configure</li>
+            <li>Hover over a citation to see its title, authors and links</li>
+          </ul>
+        </div>
+        <figure class="shot reveal" style="--w: 1150px">
+          <div class="frame"><video muted playsinline loop preload="none" width="1600" height="1056" data-v="referencia" poster="videos/pt/referencia.webp"></video></div>
+          <figcaption><span class="pt">O DOI vira uma entrada no <code>.bib</code> e uma citação no texto; o cartão mostra a referência.</span><span class="en">The DOI becomes an entry in the <code>.bib</code> and a citation in the text; the card shows the reference.</span></figcaption>
+        </figure>
+      </article>
+
+      <article class="chapter" id="coautores">
+        <div class="chapter-text reveal">
+          <div>
+            <span class="kicker">05 · <span class="pt">Coautores</span><span class="en">Coauthors</span></span>
+            <h2><span class="pt">O que mudou, marcado no PDF</span><span class="en">What changed, marked in the PDF</span></h2>
+            <p class="pt">Escolha um commit do Git, ou a pasta ou o ZIP que veio de um coautor (inclusive exportado do Overleaf). O TeXugo gera o PDF com o texto novo sublinhado em azul e o apagado riscado em vermelho, pronto para mandar a quem revisa.</p>
+            <p class="en">Pick a Git commit, or the folder or ZIP a coauthor sent (an Overleaf export works too). TeXugo builds the PDF with new text underlined in blue and deleted text struck through in red, ready to send to whoever reviews it.</p>
+          </div>
+          <ul class="points pt">
+            <li>Comentários no texto que vão junto no commit; os coautores respondem e resolvem</li>
+            <li>Novidades desde a sua última visita: quem mudou o quê, seção por seção</li>
+            <li>Versões enviadas: o retorno de cada pessoa é lido contra a versão que ela recebeu</li>
+          </ul>
+          <ul class="points en">
+            <li>Comments in the text that travel with the commit; coauthors reply and resolve them</li>
+            <li>News since your last visit: who changed what, section by section</li>
+            <li>Sent versions: each reader's feedback is read against the version they received</li>
+          </ul>
+        </div>
+        <figure class="shot reveal" style="--w: 1120px">
+          <div class="frame window">
+            <video muted playsinline loop preload="none" width="1920" height="1120" data-v="comparar" poster="videos/pt/comparar.webp"></video>
+            <span class="lights" aria-hidden="true"><i></i><i></i><i></i></span>
+          </div>
+          <figcaption><span class="pt">Aba Revisão, Comparar com outra versão, o primeiro commit: o PDF ao lado traz cada mudança marcada.</span><span class="en">Review tab, Compare with another version, the first commit: the PDF beside the text shows every change marked.</span></figcaption>
+        </figure>
+      </article>
+
+      <article class="chapter" id="submeter">
+        <div class="chapter-text reveal">
+          <div>
+            <span class="kicker">06 · <span class="pt">Submeter</span><span class="en">Submit</span></span>
+            <h2><span class="pt">Antes de enviar, a conferência que o periódico faria</span><span class="en">Before you send it, the checks the journal would run</span></h2>
+          </div>
+          <p class="pt" style="margin:0">Tudo na aba Revisão, com o número de pendências em aberto.</p>
+          <p class="en" style="margin:0">All in the Review tab, with the number of open items.</p>
+        </div>
+        <div class="grid4">
+          <div class="card reveal">
+            <div class="ico"><svg aria-hidden="true"><use href="#i-down"/></svg></div>
+            <h3><span class="pt">ZIP que compila sozinho</span><span class="en">A ZIP that builds on its own</span></h3>
+            <p class="pt">Leva o <code>.bbl</code> no lugar do <code>.bib</code>, traz os arquivos de fora da pasta e, antes de dizer que está pronto, compila o ZIP numa pasta vazia, como o arXiv faz.</p>
+            <p class="en">It ships the <code>.bbl</code> instead of the <code>.bib</code>, brings in files from outside the folder and, before calling it ready, builds the ZIP in an empty folder, as arXiv does.</p>
+          </div>
+          <div class="card reveal">
+            <div class="ico"><svg aria-hidden="true"><use href="#i-user"/></svg></div>
+            <h3><span class="pt">Anonimato e fontes</span><span class="en">Anonymity and fonts</span></h3>
+            <p class="pt">Para revisão duplo-cega: nomes, e-mails, agradecimentos, links do GitHub e o autor nos metadados do PDF. E as fontes Type 3 ou não embutidas que muitas revistas recusam.</p>
+            <p class="en">For double-blind review: names, e-mails, acknowledgments, GitHub links and the author in the PDF metadata. And the Type 3 or unembedded fonts many journals reject.</p>
+          </div>
+          <div class="card reveal">
+            <div class="ico"><svg aria-hidden="true"><use href="#i-list"/></svg></div>
+            <h3><span class="pt">Pacote de replicação</span><span class="en">Replication package</span></h3>
+            <p class="pt">O checklist que o Data Editor da revista vai rodar, no padrão DCAS, com o rascunho do README e cada tabela ligada ao script que a gera.</p>
+            <p class="en">The checklist the journal's Data Editor will run, on the DCAS standard, with a draft README and each table tied to the script that writes it.</p>
+          </div>
+          <div class="card reveal">
+            <div class="ico"><svg aria-hidden="true"><use href="#i-paper"/></svg></div>
+            <h3><span class="pt">Resposta aos pareceristas</span><span class="en">Response to referees</span></h3>
+            <p class="pt">Cole os pareceres: o seu agente de IA separa cada comentário, rascunha a resposta e diz onde o artigo mudou desde a versão submetida.</p>
+            <p class="en">Paste the reports: your AI agent splits every comment, drafts the reply and says where the paper changed since the submitted version.</p>
+          </div>
+        </div>
+      </article>
+
+      <article class="chapter" id="mais">
+        <div class="section-head reveal">
+          <span class="kicker">+ · <span class="pt">E mais</span><span class="en">And more</span></span>
+          <h2><span class="pt">O resto do dia a dia</span><span class="en">The rest of the daily work</span></h2>
+        </div>
+        <div class="more">
+          <div class="card reveal"><h3><span class="pt">Slides em Beamer</span><span class="en">Beamer slides</span></h3><p class="pt">Botão Apresentar e um modo em que o PDF segue o cursor.</p><p class="en">A Present button, and a mode where the PDF follows the cursor.</p></div>
+          <div class="card reveal"><h3><span class="pt">PDF em outra janela</span><span class="en">PDF in its own window</span></h3><p class="pt">Para o segundo monitor, com SyncTeX entre as janelas, e editor dividido.</p><p class="en">For a second monitor, with SyncTeX across windows, plus a split editor.</p></div>
+          <div class="card reveal"><h3><span class="pt">Git sem mistério</span><span class="en">Git made plain</span></h3><p class="pt">Commit sem mensagem obrigatória, Sincronizar num clique e quem escreveu cada trecho.</p><p class="en">Commits without a required message, one-click Sync, and who wrote each passage.</p></div>
+          <div class="card reveal"><h3><span class="pt">Overleaf</span><span class="en">Overleaf</span></h3><p class="pt">Sincronização pelo Git do Overleaf, para quem tem o plano que inclui Git. Experimental.</p><p class="en">Sync through Overleaf's Git integration, for plans that include it. Experimental.</p></div>
+          <div class="card reveal"><h3><span class="pt">Biblioteca de papers</span><span class="en">Paper library</span></h3><p class="pt">Os PDFs que você lê, guardados uma vez, com busca no texto de todos.</p><p class="en">The PDFs you read, stored once, with full-text search across all of them.</p></div>
+          <div class="card reveal"><h3><span class="pt">Colar tabela</span><span class="en">Paste a table</span></h3><p class="pt">Células do Excel, do Numbers ou do Google Sheets viram uma tabela <code>booktabs</code>.</p><p class="en">Cells from Excel, Numbers or Google Sheets become a <code>booktabs</code> table.</p></div>
+          <div class="card reveal"><h3><span class="pt">Terminal e agentes</span><span class="en">Terminal and agents</span></h3><p class="pt">Terminais na pasta do projeto; o Claude Code vê a seleção e os erros da compilação.</p><p class="en">Terminals in the project folder; Claude Code sees your selection and the build errors.</p></div>
+          <div class="card reveal"><h3><span class="pt">Português e inglês</span><span class="en">Portuguese and English</span></h3><p class="pt">A interface inteira, e os modelos saem no idioma escolhido.</p><p class="en">The whole interface, and the templates come out in the language you choose.</p></div>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <section class="local" id="privacidade">
+    <div class="wrap">
+      <div class="reveal">
+        <span class="kicker"><span class="pt">Privacidade</span><span class="en">Privacy</span></span>
+        <h2><span class="pt">Os seus arquivos ficam no seu computador</span><span class="en">Your files stay on your computer</span></h2>
+        <p class="pt" style="color:var(--ink-2);font-size:18px">A compilação usa o seu próprio TeX. Os recursos que falam com a internet estão listados, um a um, com o que vai em cada caso e como evitar.</p>
+        <p class="en" style="color:var(--ink-2);font-size:18px">Builds use your own TeX. The features that talk to the internet are listed one by one, with what each sends and how to avoid it.</p>
+        <p><a class="pt" href="https://github.com/FredieDidier/TeXugo/blob/main/PRIVACIDADE.md">Ler a página de privacidade</a><a class="en" href="https://github.com/FredieDidier/TeXugo/blob/main/PRIVACY.md">Read the privacy page</a></p>
+      </div>
+      <ul class="reveal">
+        <li><svg aria-hidden="true"><use href="#i-lock"/></svg><span><span class="pt">Sem servidor do TeXugo, sem conta, sem estatísticas de uso.</span><span class="en">No TeXugo server, no account, no usage statistics.</span></span></li>
+        <li><svg aria-hidden="true"><use href="#i-lock"/></svg><span><span class="pt">O corretor gramatical roda no seu computador, a não ser que você escolha o servidor online.</span><span class="en">The grammar checker runs on your computer, unless you choose the online server.</span></span></li>
+        <li><svg aria-hidden="true"><use href="#i-lock"/></svg><span><span class="pt">A IA é a do agente que você instalou, com a sua conta. O TeXugo não tem chave própria nem intermedia a conversa.</span><span class="en">The AI is the agent you installed, under your account. TeXugo has no key of its own and does not sit in the middle.</span></span></li>
+      </ul>
+    </div>
+  </section>
+
+  <section id="baixar">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="kicker"><span class="pt">Baixar</span><span class="en">Download</span></span>
+        <h2><span class="pt">Baixe e instale</span><span class="en">Download and install</span></h2>
+      </div>
+      <p class="status" id="status"><span class="pt">Procurando a versão mais recente…</span><span class="en">Looking for the latest version…</span></p>
+      <div class="downloads">
+        <div class="dl" data-os="mac" data-file="mac-arm64.dmg"><span class="os"><svg aria-hidden="true"><use href="#i-apple"/></svg>Mac</span><span class="what">Apple Silicon (M1–M5)</span><a class="btn primary sm" aria-disabled="true"><svg aria-hidden="true"><use href="#i-down"/></svg><span class="pt">Baixar</span><span class="en">Download</span></a></div>
+        <div class="dl" data-os="mac" data-file="mac-x64.dmg"><span class="os"><svg aria-hidden="true"><use href="#i-apple"/></svg>Mac</span><span class="what">Intel</span><a class="btn primary sm" aria-disabled="true"><svg aria-hidden="true"><use href="#i-down"/></svg><span class="pt">Baixar</span><span class="en">Download</span></a></div>
+        <div class="dl" data-os="win" data-file="windows-x64-setup.exe"><span class="os"><svg aria-hidden="true"><use href="#i-win"/></svg>Windows</span><span class="what"><span class="pt">10 e 11, 64 bits</span><span class="en">10 and 11, 64-bit</span></span><span class="tag">experimental</span><a class="btn primary sm" aria-disabled="true"><svg aria-hidden="true"><use href="#i-down"/></svg><span class="pt">Baixar</span><span class="en">Download</span></a></div>
+        <div class="dl" data-os="linux" data-file="linux-x86_64.AppImage"><span class="os"><svg aria-hidden="true"><use href="#i-linux"/></svg>Linux</span><span class="what">AppImage, x86-64</span><span class="tag">experimental</span><a class="btn primary sm" aria-disabled="true"><svg aria-hidden="true"><use href="#i-down"/></svg><span class="pt">Baixar</span><span class="en">Download</span></a></div>
+      </div>
+      <p class="status"><span class="pt">Todas as versões: </span><span class="en">All versions: </span><a href="https://github.com/FredieDidier/TeXugo/releases">GitHub Releases</a>. <span class="pt">No Mac, para saber o chip: menu Apple → Sobre Este Mac.</span><span class="en">On a Mac, to see the chip: Apple menu → About This Mac.</span></p>
+
+      <div class="steps">
+        <div class="reveal">
+          <h3><span class="pt">Primeira abertura</span><span class="en">First launch</span></h3>
+          <p class="pt" style="color:var(--ink-2)">O TeXugo é gratuito e não tem assinatura paga da Apple nem da Microsoft. Por isso o sistema pergunta uma vez, na primeira abertura de cada versão.</p>
+          <p class="en" style="color:var(--ink-2)">TeXugo is free and is not signed with a paid Apple or Microsoft certificate, so the system asks once, the first time each version opens.</p>
+          <details open>
+            <summary>Mac</summary>
+            <ol class="pt">
+              <li>Abra o <code>.dmg</code> e arraste o TeXugo para Aplicativos.</li>
+              <li>Abra o TeXugo. O macOS avisa que não pode verificar o app; clique em <b>OK</b>.</li>
+              <li>Vá a Ajustes do Sistema → Privacidade e Segurança, desça até a mensagem sobre o TeXugo e clique em <b>Abrir Mesmo Assim</b>. Confirme com a sua senha.</li>
+            </ol>
+            <ol class="en">
+              <li>Open the <code>.dmg</code> and drag TeXugo to Applications.</li>
+              <li>Open TeXugo. macOS says it cannot verify the app; click <b>OK</b>.</li>
+              <li>Go to System Settings → Privacy &amp; Security, scroll to the message about TeXugo and click <b>Open Anyway</b>. Confirm with your password.</li>
+            </ol>
+          </details>
+          <details>
+            <summary>Windows</summary>
+            <p class="pt">Ao rodar o instalador, o SmartScreen mostra “O Windows protegeu o computador”. Clique em <b>Mais informações</b> e depois em <b>Executar assim mesmo</b>. A instalação é só para o seu usuário e não pede administrador.</p>
+            <p class="en">When you run the installer, SmartScreen shows “Windows protected your PC”. Click <b>More info</b>, then <b>Run anyway</b>. It installs for your user only and does not ask for an administrator.</p>
+          </details>
+          <details>
+            <summary>Linux</summary>
+            <p class="pt">Torne o arquivo executável (<code>chmod +x TeXugo-*.AppImage</code>) e abra-o.</p>
+            <p class="en">Make the file executable (<code>chmod +x TeXugo-*.AppImage</code>) and open it.</p>
+          </details>
+        </div>
+        <div class="reveal">
+          <h3><span class="pt">O que precisa estar instalado</span><span class="en">What needs to be installed</span></h3>
+          <ul class="req pt">
+            <li><b>TeX</b>: MacTeX no Mac, TeX Live ou MiKTeX no Windows, TeX Live no Linux. Indispensável.</li>
+            <li><b>Git</b>, para versões e coautores. Opcional.</li>
+            <li><b>LanguageTool</b>, para o corretor. Opcional; no Mac, o TeXugo instala com um clique pelo Homebrew.</li>
+            <li><b>Um agente de IA</b> (Claude Code, Codex, Gemini CLI ou OpenCode), para os recursos de IA. Opcional.</li>
+          </ul>
+          <ul class="req en">
+            <li><b>TeX</b>: MacTeX on a Mac, TeX Live or MiKTeX on Windows, TeX Live on Linux. Required.</li>
+            <li><b>Git</b>, for versions and coauthors. Optional.</li>
+            <li><b>LanguageTool</b>, for the checker. Optional; on a Mac, TeXugo installs it with one click through Homebrew.</li>
+            <li><b>An AI agent</b> (Claude Code, Codex, Gemini CLI or OpenCode), for the AI features. Optional.</li>
+          </ul>
+          <figure style="margin:24px 0 0">
+            <img class="pt" src="capturas/primeira-abertura-mac.jpg" alt="Tela Verificar instalação do TeXugo, com TeX, Git, Claude Code e LanguageTool encontrados." loading="lazy" width="2960" height="1744" style="border-radius:12px;border:1px solid var(--line)">
+            <img class="en" src="capturas/en/primeira-abertura-mac.jpg" alt="TeXugo's Check installation screen, with TeX, Git, Claude Code and LanguageTool found." loading="lazy" width="2960" height="1752" style="border-radius:12px;border:1px solid var(--line)">
+            <figcaption style="font-size:14px;color:var(--muted);margin-top:8px"><span class="pt">Na primeira abertura, o TeXugo mostra o que encontrou e o que falta.</span><span class="en">On first launch, TeXugo shows what it found and what is missing.</span></figcaption>
+          </figure>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="perguntas" style="padding-top:24px">
+    <div class="wrap faq">
+      <div class="section-head reveal">
+        <span class="kicker"><span class="pt">Perguntas</span><span class="en">Questions</span></span>
+        <h2><span class="pt">Perguntas frequentes</span><span class="en">Common questions</span></h2>
+        <p><span class="pt">Outra dúvida? </span><span class="en">Something else? </span><a href="https://github.com/FredieDidier/TeXugo/issues/new/choose"><span class="pt">Pergunte no GitHub</span><span class="en">Ask on GitHub</span></a>.</p>
+      </div>
+      <div class="reveal">
+        <details>
+          <summary><span class="pt">Quanto custa?</span><span class="en">How much does it cost?</span></summary>
+          <p class="pt">Nada. O TeXugo é gratuito e de código aberto, sob a licença MIT. Não há versão paga nem assinatura.</p>
+          <p class="en">Nothing. TeXugo is free and open source, under the MIT license. There is no paid version and no subscription.</p>
+        </details>
+        <details>
+          <summary><span class="pt">Preciso pagar por alguma IA?</span><span class="en">Do I need to pay for an AI?</span></summary>
+          <p class="pt">Não. Os recursos de IA são opcionais e usam o agente que você já tiver (Claude Code, Codex, Gemini CLI ou OpenCode), com a sua conta. O TeXugo não vem com modelo. O corretor gramatical e o detector de vícios funcionam sem IA.</p>
+          <p class="en">No. The AI features are optional and use the agent you already have (Claude Code, Codex, Gemini CLI or OpenCode), under your account. TeXugo ships no model. The grammar checker and the writing-tic detector work without AI.</p>
+        </details>
+        <details>
+          <summary><span class="pt">Os meus arquivos vão para a nuvem?</span><span class="en">Do my files go to the cloud?</span></summary>
+          <p class="pt">Não. Eles ficam no seu disco e a compilação é local. Só os recursos opcionais falam com serviços de fora, como a busca de referências e os agentes de IA; a <a href="https://github.com/FredieDidier/TeXugo/blob/main/PRIVACIDADE.md">página de privacidade</a> diz o que vai em cada caso.</p>
+          <p class="en">No. They stay on your disk and builds are local. Only optional features talk to outside services, such as reference search and the AI agents; the <a href="https://github.com/FredieDidier/TeXugo/blob/main/PRIVACY.md">privacy page</a> says what each one sends.</p>
+        </details>
+        <details>
+          <summary><span class="pt">Funciona sem internet?</span><span class="en">Does it work offline?</span></summary>
+          <p class="pt">Sim. Escrever, compilar, o corretor no seu computador e o detector de vícios funcionam sem rede. Precisam de internet a busca e a verificação de referências, os agentes de IA, o Git com remoto e a instalação de pacotes pelo Médico do TeX.</p>
+          <p class="en">Yes. Writing, building, the on-device checker and the writing-tic detector work with no network. Reference search and checking, the AI agents, Git with a remote and installing packages with the TeX Doctor need the internet.</p>
+        </details>
+        <details>
+          <summary><span class="pt">Meus coautores usam o Overleaf. Dá para trabalhar junto?</span><span class="en">My coauthors use Overleaf. Can we work together?</span></summary>
+          <p class="pt">Dá. Comparar com outra versão e Versões enviadas leem o ZIP exportado do Overleaf. Com a integração Git do Overleaf, que faz parte dos planos pagos dele, o projeto sincroniza pelo painel Git do TeXugo; essa sincronização ainda é experimental.</p>
+          <p class="en">Yes. Compare with another version and Sent versions read the ZIP exported from Overleaf. With Overleaf's Git integration, part of its paid plans, the project syncs from TeXugo's Git panel; that sync is still experimental.</p>
+        </details>
+        <details>
+          <summary><span class="pt">Já tenho um projeto. Preciso mudar alguma coisa?</span><span class="en">I already have a project. Do I need to change anything?</span></summary>
+          <p class="pt">Não. Abra a pasta, ou clone o repositório do GitHub direto como projeto novo. O TeXugo acha os documentos principais e o que cada um inclui.</p>
+          <p class="en">No. Open the folder, or clone the GitHub repository straight into a new project. TeXugo finds the main documents and what each one includes.</p>
+        </details>
+        <details>
+          <summary><span class="pt">Por que o Mac avisa na primeira abertura?</span><span class="en">Why does the Mac warn me on first launch?</span></summary>
+          <p class="pt">Porque o TeXugo não tem a assinatura paga da Apple. O sistema pergunta uma vez por versão; os passos estão em <a href="#baixar">Baixar</a>.</p>
+          <p class="en">Because TeXugo is not signed with Apple's paid certificate. The system asks once per version; the steps are under <a href="#baixar">Download</a>.</p>
+        </details>
+        <details>
+          <summary><span class="pt">E no Windows e no Linux?</span><span class="en">What about Windows and Linux?</span></summary>
+          <p class="pt">Os instaladores são gerados e testados automaticamente nos três sistemas, mas ainda não foram usados em computadores reais com Windows e Linux. Por isso aparecem como experimentais. <a href="https://github.com/FredieDidier/TeXugo/issues/new/choose">Relatar um problema</a> ajuda muito.</p>
+          <p class="en">The installers are built and tested automatically on all three systems, but have not yet been used on real Windows and Linux computers. That is why they are marked experimental. <a href="https://github.com/FredieDidier/TeXugo/issues/new/choose">Reporting a problem</a> helps a lot.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <section class="closing">
+    <div class="wrap reveal">
+      <img src="logo.svg" alt="" width="72" height="72">
+      <h2><span class="pt">Abra o seu artigo. Clique em Compilar.</span><span class="en">Open your paper. Click Compile.</span></h2>
+      <div class="cta">
+        <a class="btn primary" href="#baixar" data-dl><svg aria-hidden="true"><use href="#i-down"/></svg><span data-dl-label><span class="pt">Baixar</span><span class="en">Download</span></span></a>
+      </div>
+      <p class="fine"><span class="pt">Gratuito, de código aberto, em português e inglês.</span><span class="en">Free, open source, in Portuguese and English.</span></p>
+    </div>
+  </section>
 </main>
+
+<footer>
+  <div class="wrap">
+    <span><b style="font-family:var(--serif);color:var(--ink)">TeXugo</b> · <span class="pt">Bravo com os erros, manso com você.</span><span class="en">Fierce with errors, gentle with you.</span></span>
+    <nav class="pt" aria-label="Links">
+      <a href="https://github.com/FredieDidier/TeXugo/blob/main/PRIVACIDADE.md">Privacidade</a>
+      <a href="https://github.com/FredieDidier/TeXugo/blob/main/LICENSE">Licença MIT</a>
+      <a href="https://github.com/FredieDidier/TeXugo/blob/main/THIRD-PARTY-NOTICES.txt">Avisos de terceiros</a>
+      <a href="https://github.com/FredieDidier/TeXugo">Código</a>
+      <a href="https://github.com/FredieDidier/TeXugo/issues/new/choose">Relatar um problema</a>
+    </nav>
+    <nav class="en" aria-label="Links">
+      <a href="https://github.com/FredieDidier/TeXugo/blob/main/PRIVACY.md">Privacy</a>
+      <a href="https://github.com/FredieDidier/TeXugo/blob/main/LICENSE">MIT License</a>
+      <a href="https://github.com/FredieDidier/TeXugo/blob/main/THIRD-PARTY-NOTICES.txt">Third-party notices</a>
+      <a href="https://github.com/FredieDidier/TeXugo">Source</a>
+      <a href="https://github.com/FredieDidier/TeXugo/issues/new/choose">Report a problem</a>
+    </nav>
+  </div>
+</footer>
+
 <script>
-  // Language: the button pressed, then the one remembered, then the browser's.
-  const root = document.documentElement;
-  const setLang = (l) => {
-    root.lang = l;
-    document.querySelectorAll('.lang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === l)));
-    try { localStorage.setItem('texugo-site-lang', l); } catch (e) {}
-  };
-  let saved = null;
-  try { saved = localStorage.getItem('texugo-site-lang'); } catch (e) {}
-  setLang(saved || (/^pt/i.test(navigator.language) ? 'pt-BR' : 'en'));
-  document.querySelectorAll('.lang button').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.l)));
+(() => {
+    const root = document.documentElement;
+    root.classList.add('js');
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)');
+    const en = () => root.lang === 'en';
 
-  // This visitor's system comes first and is outlined.
-  const ua = navigator.userAgent;
-  const os = /Windows/.test(ua) ? 'win' : /Mac/.test(ua) ? 'mac' : /Linux|X11/.test(ua) ? 'linux' : '';
-  const list = document.querySelector('.downloads');
-  [...list.children].filter((d) => d.dataset.os === os).reverse().forEach((d) => { d.classList.add('mine'); list.prepend(d); });
-
-  // The buttons point at the files of the latest published release.
-  const status = document.getElementById('status');
-  const say = (pt, en) => { status.innerHTML = `<span class="pt">${pt}</span><span class="en">${en}</span>`; };
-  fetch('https://api.github.com/repos/FredieDidier/TeXugo/releases/latest', { headers: { accept: 'application/vnd.github+json' } })
-    .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-    .then((rel) => {
-      const v = String(rel.tag_name || '').replace(/^v/, '');
-      say(`Versão ${v}.`, `Version ${v}.`);
-      document.querySelectorAll('.dl').forEach((d) => {
-        const asset = (rel.assets || []).find((a) => a.name.endsWith(d.dataset.file));
-        const a = d.querySelector('a');
-        if (asset) { a.href = asset.browser_download_url; a.removeAttribute('aria-disabled'); }
+    // ---------------------------------------------------------------- videos
+    // Each video loads only when it comes into view, plays while visible and
+    // pauses off screen (see update below). With reduced motion nothing plays
+    // on its own: the poster shows the final state and the button plays it.
+    const VIDEO_LABEL = {
+      compilar: ['Vídeo: um clique em Compilar troca os ?? do PDF pelos números das tabelas.', 'Video: one click on Compile replaces the ?? in the PDF with the table numbers.'],
+      'ao-vivo': ['Vídeo: com a prévia ao vivo ligada, uma frase e uma equação aparecem no PDF enquanto são digitadas.', 'Video: with the live preview on, a sentence and an equation appear in the PDF as they are typed.'],
+      problemas: ['Vídeo: uma referência a uma figura inexistente; o painel Problemas explica o ?? e leva à linha.', 'Video: a reference to a figure that does not exist; the Problems panel explains the ?? and goes to the line.'],
+      escrita: ['Vídeo: o mouse sobre um vício de escrita mostra o motivo; sobre um erro de concordância, a correção, aplicada com um clique.', 'Video: hovering a writing tic shows the reason; hovering a grammar error shows the fix, applied with one click.'],
+      referencia: ['Vídeo: um DOI colado vira entrada no .bib e citação no texto.', 'Video: a pasted DOI becomes a .bib entry and a citation in the text.'],
+      comparar: ['Vídeo: comparar com o primeiro commit gera um PDF com o texto novo em azul e o apagado em vermelho.', 'Video: comparing with the first commit builds a PDF with new text in blue and deleted text in red.'],
+    };
+    const videos = [...document.querySelectorAll('video[data-v]')];
+    const src = (v) => `videos/${en() ? 'en' : 'pt'}/${v.dataset.v}`;
+    const userPaused = new WeakSet();
+    const icon = (name) => `<svg aria-hidden="true"><use href="#i-${name}"/></svg>`;
+    const syncButton = (v) => {
+      const b = v.parentElement.querySelector('.play');
+      const playing = !v.paused;
+      v.parentElement.classList.toggle('paused', !playing);
+      b.innerHTML = icon(playing ? 'pause' : 'play');
+      b.setAttribute('aria-label', playing ? (en() ? 'Pause video' : 'Pausar vídeo') : en() ? 'Play video' : 'Reproduzir vídeo');
+    };
+    const load = (v) => {
+      const want = src(v) + '.mp4';
+      if (v.dataset.loaded !== want) {
+        v.src = want;
+        v.dataset.loaded = want;
+      }
+    };
+    const tryPlay = (v) => {
+      load(v);
+      const p = v.play();
+      if (p) p.catch(() => syncButton(v));
+    };
+    videos.forEach((v) => {
+      v.poster = src(v) + '.webp';
+      const b = document.createElement('button');
+      b.className = 'play';
+      b.type = 'button';
+      v.parentElement.append(b);
+      b.addEventListener('click', () => {
+        if (v.paused) (userPaused.delete(v), tryPlay(v));
+        else (userPaused.add(v), v.pause());
       });
-    })
-    .catch(() => {
-      say('Não foi possível consultar a versão mais recente. Os arquivos estão em GitHub Releases.', 'Could not look up the latest version. The files are on GitHub Releases.');
-      document.querySelectorAll('.dl a').forEach((a) => { a.href = 'https://github.com/FredieDidier/TeXugo/releases/latest'; a.removeAttribute('aria-disabled'); });
+      v.addEventListener('click', () => b.click());
+      v.addEventListener('play', () => syncButton(v));
+      v.addEventListener('pause', () => syncButton(v));
+      syncButton(v);
     });
+    const relabelVideos = () =>
+      videos.forEach((v) => {
+        v.setAttribute('aria-label', VIDEO_LABEL[v.dataset.v][en() ? 1 : 0]);
+        v.poster = src(v) + '.webp';
+        if (v.dataset.loaded) {
+          const was = !v.paused;
+          load(v);
+          if (was) tryPlay(v);
+        }
+        syncButton(v);
+      });
+
+    // -------------------------------------------------------------- language
+    // The button pressed, then the one remembered, then the browser's.
+    const setLang = (l) => {
+      root.lang = l;
+      document.querySelectorAll('.lang button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === l)));
+      document.title = l === 'en' ? 'TeXugo: LaTeX editor' : 'TeXugo: editor LaTeX';
+      try { localStorage.setItem('texugo-site-lang', l); } catch (e) {}
+      relabelVideos();
+      labelDownload();
+    };
+
+    // -------------------------------------------------------------- download
+    // This visitor's system comes first and is outlined; the main buttons
+    // point at its file in the latest published release.
+    const ua = navigator.userAgent;
+    const os = /Windows/.test(ua) ? 'win' : /iPhone|iPad|Android/.test(ua) ? '' : /Mac/.test(ua) ? 'mac' : /Linux|X11/.test(ua) ? 'linux' : '';
+    const OS_NAME = { mac: 'Mac', win: 'Windows', linux: 'Linux' };
+    const list = document.querySelector('.downloads');
+    [...list.children].filter((d) => d.dataset.os === os).reverse().forEach((d) => { d.classList.add('mine'); list.prepend(d); });
+    let mainAsset = null;
+    function labelDownload() {
+      document.querySelectorAll('[data-dl-label]').forEach((s) => {
+        s.textContent = os ? (en() ? `Download for ${OS_NAME[os]}` : `Baixar para ${OS_NAME[os]}`) : en() ? 'Download' : 'Baixar';
+      });
+      const st = document.getElementById('status');
+      if (st.dataset.pt) st.textContent = en() ? st.dataset.en : st.dataset.pt;
+    }
+    const say = (pt, enText) => {
+      const st = document.getElementById('status');
+      st.dataset.pt = pt;
+      st.dataset.en = enText;
+      st.textContent = en() ? enText : pt;
+    };
+    let saved = null;
+    try { saved = localStorage.getItem('texugo-site-lang'); } catch (e) {}
+    setLang(saved || (/^pt/i.test(navigator.language) ? 'pt-BR' : 'en'));
+    document.querySelectorAll('.lang button').forEach((b) => b.addEventListener('click', () => setLang(b.dataset.l)));
+
+    fetch('https://api.github.com/repos/FredieDidier/TeXugo/releases/latest', { headers: { accept: 'application/vnd.github+json' } })
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((rel) => {
+        const v = String(rel.tag_name || '').replace(/^v/, '');
+        say(`Versão ${v}.`, `Version ${v}.`);
+        document.querySelectorAll('.dl').forEach((d) => {
+          const asset = (rel.assets || []).find((a) => a.name.endsWith(d.dataset.file));
+          const a = d.querySelector('a');
+          if (asset) {
+            a.href = asset.browser_download_url;
+            a.removeAttribute('aria-disabled');
+          }
+        });
+        // The first file of this system (Apple Silicon on a Mac).
+        const mine = document.querySelector('.dl.mine a[href]');
+        if (mine) mainAsset = mine.href;
+        if (mainAsset) document.querySelectorAll('a[data-dl]').forEach((a) => (a.href = mainAsset));
+      })
+      .catch(() => {
+        say('Não foi possível consultar a versão mais recente. Os arquivos estão em GitHub Releases.', 'Could not look up the latest version. The files are on GitHub Releases.');
+        document.querySelectorAll('.dl a').forEach((a) => {
+          a.href = 'https://github.com/FredieDidier/TeXugo/releases/latest';
+          a.removeAttribute('aria-disabled');
+        });
+      });
+
+    // ------------------------------------------------------- page furniture
+    // One pass per frame on scroll, resize and load, so a scroll position the
+    // browser restores counts too: the header line, the blocks that fade in,
+    // which videos play, and the chapter in view.
+    const header = document.getElementById('top');
+    const pending = new Set(document.querySelectorAll('.reveal'));
+    const chapters = [...document.querySelectorAll('.chapter')];
+    const bar = document.querySelector('.chapters ol');
+    const links = [...bar.querySelectorAll('a')];
+    let current;
+    const update = () => {
+      const vh = innerHeight;
+      header.classList.toggle('scrolled', scrollY > 8);
+      for (const el of pending) if (el.getBoundingClientRect().top < vh * 0.94) (el.classList.add('in'), pending.delete(el));
+      // A video plays while at least a third of it is on screen.
+      for (const v of videos) {
+        const r = v.getBoundingClientRect();
+        const shown = Math.min(r.bottom, vh) - Math.max(r.top, 0);
+        if (shown > r.height * 0.35) {
+          if (v.paused && !reduce.matches && !userPaused.has(v)) tryPlay(v);
+        } else if (!v.paused) v.pause();
+      }
+      // The chapter across the middle of the window, kept visible in the bar.
+      const mid = vh * 0.45;
+      const at = chapters.find((c) => {
+        const r = c.getBoundingClientRect();
+        return r.top <= mid && r.bottom > mid;
+      });
+      const id = at ? at.id : null;
+      if (id === current) return;
+      current = id;
+      links.forEach((a) => a.setAttribute('aria-current', String(a.getAttribute('href') === '#' + id)));
+      const on = links.find((a) => a.getAttribute('href') === '#' + id);
+      if (!on) return;
+      const br = bar.getBoundingClientRect();
+      const lr = on.getBoundingClientRect();
+      if (lr.left < br.left || lr.right > br.right) bar.scrollBy({ left: lr.left - br.left - 16, behavior: reduce.matches ? 'auto' : 'smooth' });
+    };
+    let queued = false;
+    const soon = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => ((queued = false), update()));
+    };
+    addEventListener('scroll', soon, { passive: true });
+    addEventListener('resize', soon);
+    addEventListener('load', soon);
+    addEventListener('pageshow', soon);
+    update();
+})();
 </script>
 </body>
 </html>
