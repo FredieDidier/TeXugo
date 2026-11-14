@@ -96,7 +96,20 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
   const builds = new BuildManager();
   builds.stallSeconds = Number((state.settings || {}).stallSeconds) || 0;
   const clients = new Set();
-  const selfWrites = new Map(); // path -> time of our own last write, to mute echo
+  // path -> { mtime, size } of our own last write. The watcher mutes an
+  // event only while the file still looks exactly like that write, so a
+  // change by another program right after a save is never lost.
+  const selfWrites = new Map();
+  const isOwnEcho = (f) => {
+    const own = selfWrites.get(f);
+    if (!own) return false;
+    try {
+      const st = fs.statSync(f);
+      if (st.mtimeMs === own.mtime && st.size === own.size) return true;
+    } catch {}
+    selfWrites.delete(f);
+    return false;
+  };
 
   const broadcast = (msg) => {
     const data = JSON.stringify(msg);
@@ -157,7 +170,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
         pending.set(full, true);
         clearTimeout(timer);
         timer = setTimeout(() => {
-          const files = [...pending.keys()].filter((f) => !(selfWrites.get(f) > Date.now() - 1500));
+          const files = [...pending.keys()].filter((f) => !isOwnEcho(f));
           pending.clear();
           if (files.length) broadcast({ type: 'fs:change', root, files });
         }, 250);
@@ -304,9 +317,10 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
         // we loaded it. Refuse instead of silently overwriting their work.
         if (Math.abs(now - expectMtime) > 1) return { conflict: true, mtime: now };
       }
-      selfWrites.set(p, Date.now());
       writeKeepingLink(p, text);
-      return { mtime: fs.statSync(p).mtimeMs };
+      const st = fs.statSync(p);
+      selfWrites.set(p, { mtime: st.mtimeMs, size: st.size });
+      return { mtime: st.mtimeMs };
     },
     async createFile({ path: p, text = '', dir = false }) {
       p = mustAllow(p);

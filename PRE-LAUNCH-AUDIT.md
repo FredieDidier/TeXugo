@@ -9,6 +9,8 @@ Nenhum arquivo do repositório foi alterado. Este relatório é o único arquivo
 
 Marcados com ✅ e **CORRIGIDO** no título. Feitos em 11/11/2026, na passada de design, UX e acessibilidade (Claude Fable 5.2): **B1, B2, B3, I14, D1 e D6**. Cada um traz uma linha "Estado" com o que foi feito, como foi verificado e o que sobrou. O resto do relatório segue pendente.
 
+- ✅ **Achado e corrigido em 14/11/2026: mudança de fora perdida logo depois de salvar.** O observador de arquivos ignorava qualquer mudança num arquivo por 1,5 s depois de o próprio app salvá-lo; o que outro programa (Git, agente, outro editor) gravasse nesse intervalo não chegava à aba. Agora o servidor guarda data e tamanho da própria gravação e só cala o evento enquanto o arquivo continua igual a ela (`isOwnEcho` em `server/index.js`). Teste em `test/api.test.js`, visto falhar nos dois sentidos (mudança perdida; eco do próprio salvamento); a fumaça passa sem a espera de 1,7 s que precisava antes (três rodadas, 58 de 58). `npm test`: 162 de 162.
+
 ## Segunda passada de UX (11/11/2026)
 
 Feita no app Electron real, com perfil e projeto temporários (modelo *Artigo + apêndice*, textos neutros), em 1480×870, 1200×760, 1000×640 e 900×560, tema claro e escuro, português e inglês. Capturas por `capturePage`, teclado por eventos reais (`sendInputEvent`), contraste calculado sobre as cores computadas de cada texto visível, árvore de acessibilidade lida pelo protocolo do Chromium. **Nenhum bloqueador mudou de estado nesta passada.** Os achados novos levam a letra U; todos os listados abaixo estão corrigidos, com teste.

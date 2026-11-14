@@ -92,3 +92,34 @@ test('saving a linked file inside the home keeps the link', async (t) => {
   assert.ok(fs.lstatSync(link).isSymbolicLink());
   assert.equal(fs.readFileSync(target, 'utf8'), 'edited\n');
 });
+
+// The watcher mutes the echo of the app's own save, and only that: a change
+// from another program right after a save still reaches the page.
+test('own save is not echoed; an outside change right after it is', async () => {
+  const { WebSocket } = await import('ws');
+  const ws = new WebSocket(`ws://127.0.0.1:${srv.port}/ws?t=${srv.token}`, { headers: { origin: `http://127.0.0.1:${srv.port}` } });
+  await new Promise((r, j) => (ws.once('open', r), ws.once('error', j)));
+  const seen = [];
+  ws.on('message', (raw) => {
+    const m = JSON.parse(String(raw));
+    if (m.type === 'fs:change') seen.push(...m.files);
+  });
+  try {
+    const p = path.join(PROJ, 'echo.tex');
+    fs.writeFileSync(p, 'start\n');
+    await new Promise((r) => setTimeout(r, 600));
+    const count = () => seen.filter((f) => f === p).length;
+    const atSave = count();
+    const r1 = await api('read', { path: p });
+    const w = await api('write', { path: p, text: 'saved by the app\n', expectMtime: r1.body.data.mtime });
+    assert.equal(w.status, 200);
+    await new Promise((r) => setTimeout(r, 700));
+    assert.equal(count(), atSave, 'own save echoed');
+    const before = count();
+    fs.writeFileSync(p, 'changed by another program\n');
+    await new Promise((r) => setTimeout(r, 900));
+    assert.ok(count() > before, 'outside change within 1.5 s of a save was lost');
+  } finally {
+    ws.close();
+  }
+});
