@@ -1,16 +1,17 @@
-// Claude panel: a chat with the user's own Claude Code about the project,
-// in the sidebar. Claude reads and searches freely; every edit, new file or
-// command arrives here as a card to approve (edits as a diff) before it
-// happens. Messages carry the active file, the selection and the build
-// errors, so "fix this" and "fix the build" work without copying anything.
+// Agent panel: a chat with the user's own agent (Claude Code, Codex, Gemini
+// CLI or OpenCode) about the project, in the sidebar. The agent reads and
+// searches freely; every edit, new file or command arrives here as a card to
+// approve (edits as a diff) before it happens. Messages carry the active
+// file, the selection and the build errors, so "fix this" and "fix the
+// build" work without copying anything.
 import { Marked } from 'marked';
 import { call, on, native } from './api.js';
-import { h, clear, icon, toast, basename, relPath, joinPath } from './dom.js';
+import { h, clear, icon, toast, basename, relPath, joinPath, modal } from './dom.js';
 import { fileDiff } from './ide.js';
+import { tr } from './i18n.js';
 
-// What the panel and the Claude terminal run with. Default: Opus 5.5, medium.
-// The list itself lives in server/agent.js and arrives with `hello`
-// (setClaudeModels); this is only the fallback before it does.
+// Claude's models: the list lives in server/agents/claude.js and arrives
+// with `hello` (setClaudeModels); this is only the fallback before it does.
 export const CLAUDE_MODELS = [{ id: 'claude-opus-5-5', label: 'Opus 5.5' }];
 export function setClaudeModels(list) {
   if (Array.isArray(list) && list.length) CLAUDE_MODELS.splice(0, CLAUDE_MODELS.length, ...list);
@@ -22,12 +23,70 @@ export const CLAUDE_EFFORTS = [
   { id: 'xhigh', label: 'Extra' },
   { id: 'max', label: 'Máximo' },
 ];
-export function claudeChoice(S) {
+
+// The agents and what each offers, from the server (agentList). Until it
+// answers, only Claude. The other agents' models and efforts are known once
+// a conversation with them has opened.
+export const AGENTS = [{ id: 'claude', name: 'Claude', product: 'Claude Code', installed: true, panel: true, oneShot: true, models: CLAUDE_MODELS, efforts: CLAUDE_EFFORTS }];
+export async function loadAgents() {
+  const list = await call('agentList').catch(() => null);
+  if (!Array.isArray(list)) return AGENTS;
+  const claude = list.find((a) => a.id === 'claude');
+  if (claude && Array.isArray(claude.models) && claude.models.length) setClaudeModels(claude.models);
+  AGENTS.splice(0, AGENTS.length, ...list.map((a) => (a.id === 'claude' ? { ...a, models: CLAUDE_MODELS, efforts: CLAUDE_EFFORTS } : a)));
+  return AGENTS;
+}
+export const agentInfo = (id) => AGENTS.find((a) => a.id === id) || AGENTS.find((a) => a.id === 'claude') || AGENTS[0];
+export const modelsOf = (id) => agentInfo(id).models || [];
+export const effortsOf = (id) => agentInfo(id).efforts || [];
+export const agentName = (S) => agentInfo(agentChoice(S).agent).name;
+
+// What the panel, the agent's terminal and the actions on the text run
+// with. Claude: Opus 5.5, medium by default. Another agent: what was picked
+// for it, or its own default. `only` asks for one agent's choice (the
+// Claude Code terminal is Claude's whatever the panel shows).
+export function agentChoice(S, only) {
   const st = S.settings || {};
-  return {
-    model: CLAUDE_MODELS.some((m) => m.id === st.claudeModel) ? st.claudeModel : 'claude-opus-5-5',
-    effort: CLAUDE_EFFORTS.some((e) => e.id === st.claudeEffort) ? st.claudeEffort : 'medium',
-  };
+  const want = only || st.agent;
+  // An agent no longer installed falls back to Claude.
+  const agent = want && want !== 'claude' && AGENTS.some((a) => a.id === want && a.panel) ? want : 'claude';
+  if (agent === 'claude')
+    return {
+      agent,
+      model: CLAUDE_MODELS.some((m) => m.id === st.claudeModel) ? st.claudeModel : 'claude-opus-5-5',
+      effort: CLAUDE_EFFORTS.some((e) => e.id === st.claudeEffort) ? st.claudeEffort : 'medium',
+    };
+  const pickOf = (list, v) => (v && (!list.length || list.some((x) => x.id === v)) ? v : null);
+  return { agent, model: pickOf(modelsOf(agent), (st.agentModels || {})[agent]), effort: pickOf(effortsOf(agent), (st.agentEfforts || {})[agent]) };
+}
+
+// Where to get the agents that are not installed.
+export function installDialog() {
+  const missing = AGENTS.filter((a) => !a.installed || !a.panel);
+  modal({
+    title: 'Instalar outro agente',
+    body: h(
+      'div',
+      {},
+      h('p', { class: 'muted', style: { marginTop: 0 } }, 'Cada agente usa a sua própria conta. Instale pelo terminal e entre na conta uma vez; depois ele aparece no painel.'),
+      missing.length
+        ? missing.map((a) =>
+            h(
+              'div',
+              { style: { marginBottom: '14px' } },
+              h('b', {}, a.product),
+              h('pre', { class: 'agent-cmd' }, document.createTextNode(a.install)),
+              h(
+                'div',
+                { style: { display: 'flex', gap: '12px', alignItems: 'center' } },
+                h('button', { class: 'btn sm', onclick: () => navigator.clipboard?.writeText(a.install).then(() => toast('Comando copiado.', 'ok')) }, 'Copiar o comando'),
+                a.site ? h('a', { href: a.site, target: '_blank', rel: 'noopener' }, 'Site') : null,
+              ),
+            ),
+          )
+        : h('p', {}, 'Todos os agentes que o TeXugo conhece já estão instalados.'),
+    ),
+  });
 }
 
 const TOOL_PT = {
@@ -53,7 +112,6 @@ export class AgentPanel {
     this.input = h('textarea', {
       class: 'agent-input',
       rows: 3,
-      placeholder: 'Peça ao Claude: corrija o erro de compilação, revise a seleção, explique esta seção…',
       onkeydown: (e) => {
         if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
           e.preventDefault();
@@ -65,26 +123,15 @@ export class AgentPanel {
     this.attachEl = h('div', { class: 'agent-attachments' });
     this.withSel = h('input', { type: 'checkbox', checked: true });
     this.withErr = h('input', { type: 'checkbox', checked: true });
-    const choice = claudeChoice(S);
-    const pick = (key, list, value, title) =>
-      h(
-        'select',
-        {
-          class: 'agent-pick',
-          title,
-          onchange: (e) => {
-            S.settings[key] = e.target.value;
-            app.saveSettingsSoon && app.saveSettingsSoon();
-          },
-        },
-        list.map((x) => h('option', { value: x.id, selected: x.id === value }, x.label)),
-      );
-    this.modelSel = pick('claudeModel', CLAUDE_MODELS, choice.model, 'Modelo do Claude (vale para o painel e o terminal do Claude)');
-    this.effortSel = pick('claudeEffort', CLAUDE_EFFORTS, choice.effort, 'Esforço de raciocínio: quanto o Claude pensa antes de responder');
+    // Agent, model and effort; the model and effort lists are the chosen
+    // agent's, and the effort menu is gone for an agent without one.
+    this.agentSel = h('select', { class: 'agent-pick agent-which', 'aria-label': 'Agente', onchange: () => this.pickAgent(this.agentSel.value) });
+    this.picksEl = h('div', { class: 'agent-row agent-picks' });
     // One pinned line per Claude Code mod (jev-model-router says here what it chose).
     this.modStatus = new Map();
     this.modEl = h('div', { class: 'agent-mods' });
     this.sendBtn = h('button', { class: 'btn primary sm', onclick: () => (this.running ? this.stop() : this.send()) });
+    this.termBtn = h('button', { class: 'btn sm ghost', onclick: () => app.terminals.open(agentChoice(S).agent === 'claude' ? 'claude' : 'agent') }, icon('command'), 'Terminal');
     this.el = h(
       'div',
       { class: 'agent-panel' },
@@ -92,10 +139,10 @@ export class AgentPanel {
         'div',
         { class: 'side-head agent-head' },
         h('span', { class: 'term-kind claude' }, '✻'),
-        h('b', {}, 'Claude'),
+        this.agentSel,
         h('span', { style: { flex: 1 } }),
-        h('button', { class: 'btn sm ghost', title: 'Começa uma conversa nova', onclick: () => this.reset() }, icon('plus'), 'Nova'),
-        h('button', { class: 'btn sm ghost', title: 'Abrir o Claude Code completo no terminal', onclick: () => app.terminals.open('claude') }, icon('command'), 'Terminal'),
+        h('button', { class: 'icon-btn', title: 'Começa uma conversa nova', 'aria-label': 'Nova conversa', onclick: () => this.reset() }, icon('plus')),
+        this.termBtn,
       ),
       this.log,
       this.modEl,
@@ -103,7 +150,7 @@ export class AgentPanel {
         'div',
         { class: 'agent-compose' },
         this.attachEl,
-        h('div', { class: 'agent-row agent-picks' }, this.modelSel, this.effortSel),
+        this.picksEl,
         this.input,
         h(
           'div',
@@ -117,9 +164,59 @@ export class AgentPanel {
       ),
     );
     this.dropZone();
+    this.renderAgent();
     this.empty();
     this.setRunning(false);
     on('agent:event', (e) => this.S.project && e.root === this.S.project.root && this.event(e));
+    loadAgents().then(() => this.renderAgent());
+  }
+
+  get info() {
+    return agentInfo(agentChoice(this.S).agent);
+  }
+
+  // The picker of agents and the model and effort menus of the chosen one.
+  renderAgent() {
+    const S = this.S;
+    const choice = agentChoice(S);
+    const a = this.info;
+    clear(
+      this.agentSel,
+      AGENTS.map((x) => h('option', { value: x.id, selected: x.id === choice.agent, disabled: !x.panel }, x.panel ? x.name : `${x.name} (não instalado)`)),
+      AGENTS.some((x) => !x.panel) ? h('option', { value: '' }, 'Instalar outro agente…') : null,
+    );
+    const save = () => this.app.saveSettingsSoon && this.app.saveSettingsSoon();
+    const select = (list, value, title, set) =>
+      h('select', { class: 'agent-pick', title, onchange: (e) => (set(e.target.value), save()) }, list.map((x) => h('option', { value: x.id, selected: x.id === value }, x.label)));
+    const claude = choice.agent === 'claude';
+    const models = modelsOf(choice.agent);
+    const efforts = effortsOf(choice.agent);
+    const perAgent = (key) => (v) => (S.settings[key] = { ...(S.settings[key] || {}), [choice.agent]: v || null });
+    clear(
+      this.picksEl,
+      models.length
+        ? select(claude ? models : [{ id: '', label: 'Modelo padrão' }, ...models], choice.model || '', `Modelo do ${a.name} (vale para o painel e o terminal do ${a.name})`, claude ? (v) => (S.settings.claudeModel = v) : perAgent('agentModels'))
+        : h('span', { class: 'muted agent-pick-none' }, 'Modelo padrão do agente'),
+      efforts.length ? select(claude ? efforts : [{ id: '', label: 'Esforço padrão' }, ...efforts], choice.effort || '', `Esforço de raciocínio: quanto o ${a.name} pensa antes de responder`, claude ? (v) => (S.settings.claudeEffort = v) : perAgent('agentEfforts')) : null,
+    );
+    // Set as properties, so translated here (h() translates only what it builds).
+    this.input.placeholder = tr(`Peça ao ${a.name}: corrija o erro de compilação, revise a seleção, explique esta seção…`);
+    this.termBtn.title = tr(`Abrir o ${a.product} completo no terminal`);
+    this.el.querySelector('.term-kind').style.visibility = claude ? '' : 'hidden';
+    if (this.log.querySelector('.agent-hello')) this.empty();
+  }
+
+  pickAgent(id) {
+    if (!id) {
+      this.agentSel.value = agentChoice(this.S).agent;
+      return installDialog();
+    }
+    this.S.settings.agent = id;
+    this.app.saveSettingsSoon && this.app.saveSettingsSoon();
+    // Another agent is another conversation.
+    if (!this.log.querySelector('.agent-hello')) this.reset();
+    this.renderAgent();
+    this.app.renderActivity && this.app.renderActivity();
   }
 
   empty() {
@@ -128,7 +225,7 @@ export class AgentPanel {
       h(
         'div',
         { class: 'agent-hello muted' },
-        h('p', {}, 'Converse com o seu Claude Code sobre este projeto. Ele lê e busca os arquivos sozinho; cada edição ou comando aparece aqui para você aceitar antes.'),
+        h('p', {}, `Converse com o seu ${this.info.product} sobre este projeto. Ele lê e busca os arquivos sozinho; cada edição ou comando aparece aqui para você aceitar antes.`),
         h('p', {}, 'A mensagem leva o arquivo aberto, a seleção e os erros da última compilação.'),
       ),
     );
@@ -140,6 +237,7 @@ export class AgentPanel {
     this.running = r;
     clear(this.sendBtn, r ? [icon('stop'), 'Parar'] : [icon('up'), 'Enviar']);
     this.el.classList.toggle('busy', r);
+    this.agentSel.disabled = r;
     this.waiting = !!this.log.querySelector('.agent-perm:not(.allowed):not(.denied):not(.closed)');
     this.app.renderActivity && this.app.renderActivity();
   }
@@ -252,9 +350,9 @@ export class AgentPanel {
     this.renderAttachments();
     this.add(h('div', { class: 'agent-msg user' }, document.createTextNode(text), att.length ? h('div', { class: 'agent-attach' }, '+ ' + att.join(', ')) : null));
     this.setRunning(true);
-    this.thinking = this.add(h('div', { class: 'agent-thinking muted' }, h('span', { class: 'status-dot building' }), ' Claude está trabalhando…'));
+    this.thinking = this.add(h('div', { class: 'agent-thinking muted' }, h('span', { class: 'status-dot building' }), ` ${this.info.name} está trabalhando…`));
     try {
-      await call('agentSend', { root: this.S.project.root, text: ctx + text, ...claudeChoice(this.S) });
+      await call('agentSend', { root: this.S.project.root, text: ctx + text, ...agentChoice(this.S) });
     } catch (err) {
       this.setRunning(false);
       this.thinking?.remove();
@@ -278,7 +376,16 @@ export class AgentPanel {
       if (!e.running) this.thinking?.remove();
       return;
     }
-    if (e.kind === 'init') return;
+    if (e.kind === 'init') {
+      // An ACP agent says which models and efforts it offers.
+      const a = AGENTS.find((x) => x.id === e.agent);
+      if (a && e.agent !== 'claude' && Array.isArray(e.models)) {
+        a.models = e.models;
+        a.efforts = e.efforts || [];
+        this.renderAgent();
+      }
+      return;
+    }
     if (e.kind === 'mod-status') {
       if (e.text) this.modStatus.set(e.plugin, e.text);
       else this.modStatus.delete(e.plugin);
@@ -311,8 +418,8 @@ export class AgentPanel {
     return h(
       'div',
       { class: 'agent-tool', onclick: file && /\.\w+$/.test(file) ? () => this.app.openFile(joinPath(this.S.project.root, file)) : null },
-      icon(e.name === 'Bash' ? 'command' : /Edit|Write/.test(e.name) ? 'edit' : e.name === 'Grep' || e.name === 'WebSearch' ? 'search' : 'file'),
-      h('span', {}, TOOL_PT[e.name] || e.name),
+      icon(e.icon || (e.name === 'Bash' ? 'command' : /Edit|Write/.test(e.name) ? 'edit' : e.name === 'Grep' || e.name === 'WebSearch' ? 'search' : 'file')),
+      h('span', {}, e.label || TOOL_PT[e.name] || e.name),
       what ? h('code', {}, document.createTextNode(String(what).slice(0, 90))) : null,
     );
   }
@@ -339,7 +446,7 @@ export class AgentPanel {
     const btns = h(
       'div',
       { class: 'agent-perm-actions' },
-      noteBox,
+      e.noteable === false ? null : noteBox,
       h('span', { style: { flex: 1 } }),
       h('button', { class: 'btn sm', onclick: () => answer(false) }, 'Recusar'),
       h('button', { class: 'btn sm primary', onclick: () => answer(true) }, icon('check'), e.path ? 'Aceitar' : 'Permitir'),

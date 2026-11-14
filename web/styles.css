@@ -581,6 +581,9 @@ body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-d
 .agent-modlog { font: 11px/1.4 var(--mono); color: var(--faint); margin: 2px 0; }
 .agent-picks { gap: 6px; font-size: 12px; margin-bottom: 6px; }
 .agent-picks .agent-pick { max-width: none; flex: 1; min-width: 0; }
+/* The agent picker gives way before the header's buttons do. */
+.agent-head .agent-which { flex: 0 1 auto; min-width: 0; max-width: 110px; }
+.agent-head .btn { flex-shrink: 0; }
 
 /* Aba Referências */
 .refs-chips { display: flex; gap: 4px; margin-top: 6px; flex-wrap: wrap; }

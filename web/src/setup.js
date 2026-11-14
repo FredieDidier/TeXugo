@@ -114,6 +114,9 @@ function gitRow(st, done) {
 
 function agentRow(st) {
   if (st.agent.ok) return row('ok', 'Agente de IA (opcional)', 'Claude Code instalado: o painel do Claude e as ações de IA funcionam.');
+  // Another agent is enough: the panel's picker chooses it.
+  const others = st.agent.others || [];
+  if (others.length) return row('ok', 'Agente de IA (opcional)', `${others.join(', ')} instalado: escolha o agente no topo do painel; as ações de IA usam o mesmo.`);
   const cmd = st.platform === 'win32' ? 'irm https://claude.ai/install.ps1 | iex' : 'curl -fsSL https://claude.ai/install.sh | bash';
   return row('optional', 'Agente de IA (opcional)', ['O Claude Code não foi encontrado. Para usar o painel do Claude, rode no terminal ', code(cmd), ' e entre na sua conta com ', code('claude'), '.'], h('button', { class: 'btn sm', onclick: () => navigator.clipboard?.writeText(cmd).then(() => toast('Comando copiado.', 'ok', 2000)) }, icon('clipboard'), 'Copiar comando'));
 }

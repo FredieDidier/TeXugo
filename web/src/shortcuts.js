@@ -2,6 +2,7 @@
 // the same thing (menu, button, icon), with a search. Opened with ⌘? (⇧⌘/),
 // the Ajuda menu, the command palette and the home screen.
 import { h, clear, icon, modal } from './dom.js';
+import { tr } from './i18n.js';
 
 // [what it does, shortcut or '', where else]
 export const SECTIONS = [
@@ -98,17 +99,18 @@ export const SECTIONS = [
       ['Vícios de escrita (tiques de IA)', '', 'Contador “vícios” na barra de status; aba Revisão'],
       ['Revisar estilo (ChkTeX) / contar palavras', '', 'Aba Revisão'],
       ['Médico do TeX (pacotes que faltam)', '', 'Seta ao lado de Compilar'],
-      ['Verificar instalação (TeX, Git, Claude, corretor)', '', 'Ajuda → Verificar instalação; paleta'],
+      ['Verificar instalação (TeX, Git, agente de IA, corretor)', '', 'Ajuda → Verificar instalação; paleta'],
     ],
   },
   {
-    title: 'Claude',
+    title: 'Agente',
     rows: [
-      ['Conversar com o Claude sobre o projeto', '', 'Ícone ✻ na barra da esquerda'],
-      ['Perguntar ao Claude sobre o trecho selecionado', '', 'Barra da seleção: ✻ Claude'],
+      ['Conversar com o agente sobre o projeto', '', 'Ícone ✻ na barra da esquerda'],
+      ['Escolher o agente (Claude Code, Codex, Gemini CLI, OpenCode)', '', 'Topo do painel do agente'],
+      ['Perguntar ao agente sobre o trecho selecionado', '', 'Barra da seleção: ✻ Claude'],
       ['Reescrever a seleção (polir, encurtar, traduzir…)', '', 'Botão direito na seleção; barra da seleção'],
-      ['Escolher modelo e esforço', '', 'Menus embaixo, no painel Claude'],
-      ['Claude Code completo no terminal', '', 'Botão Terminal no painel Claude'],
+      ['Escolher modelo e esforço', '', 'Menus embaixo, no painel do agente'],
+      ['O agente completo no terminal', '', 'Botão Terminal no painel do agente'],
     ],
   },
 ];
@@ -120,7 +122,10 @@ export function shortcutsDialog() {
   const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
   const render = () => {
     const words = norm(q.value).split(/\s+/).filter(Boolean);
-    const match = (r) => words.every((w) => norm(r.join(' ')).includes(w));
+    const match = (r) => {
+      const searchable = norm([...r, ...r.map(tr)].join(' '));
+      return words.every((w) => searchable.includes(w));
+    };
     const secs = SECTIONS.map((s) => ({ ...s, rows: s.rows.filter(match) })).filter((s) => s.rows.length);
     clear(
       list,

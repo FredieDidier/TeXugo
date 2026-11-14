@@ -46,7 +46,7 @@ export class Terminals {
     this.seq = 0;
   }
 
-  create({ cwd, kind = 'shell', cols = 100, rows = 30, env = {}, title, claudeArgs = [] }) {
+  create({ cwd, kind = 'shell', cols = 100, rows = 30, env = {}, title, claudeArgs = [], command = [] }) {
     const P = loadPty();
     const { shell, login } = userShell();
     const dir = cwd && fs.existsSync(cwd) ? cwd : os.homedir();
@@ -54,10 +54,12 @@ export class Terminals {
     // Terminal.app. Claude Code runs inside that shell: quitting it leaves a
     // usable prompt instead of a dead tab.
     // claudeArgs are fixed flags (--model id --effort level), checked by
-    // claudeFlags, so quoting each one is enough.
-    const flags = claudeArgs.map((a) => `'${String(a).replace(/'/g, '')}'`).join(' ');
-    // Windows: cmd.exe /k keeps the prompt after Claude Code quits.
-    const args = IS_WIN ? (kind === 'claude' ? ['/k', `claude ${claudeArgs.map((a) => String(a).replace(/[^\w.=-]/g, '')).join(' ')}`] : []) : kind === 'claude' ? ['-l', '-i', '-c', `claude ${flags}; exec "$SHELL" -l`] : login;
+    // claudeFlags; another agent's command is its program and plain ids
+    // (server/agents/others.js). Quoting each word is enough.
+    const prog = kind === 'claude' ? ['claude', ...claudeArgs] : kind === 'agent' ? command : null;
+    const flags = prog && prog.map((a) => `'${String(a).replace(/'/g, '')}'`).join(' ');
+    // Windows: cmd.exe /k keeps the prompt after the agent quits.
+    const args = IS_WIN ? (prog ? ['/k', prog.map((a) => String(a).replace(/[^\w.=:/@-]/g, '')).join(' ')] : []) : prog ? ['-l', '-i', '-c', `${flags}; exec "$SHELL" -l`] : login;
     const p = P.spawn(shell, args, {
       name: 'xterm-256color',
       cols,

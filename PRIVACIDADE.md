@@ -10,7 +10,8 @@ Alguns recursos, todos opcionais, falam com serviços de fora. A tabela diz quai
 
 | Para onde | Quando | O que vai | Como evitar |
 |---|---|---|---|
-| Anthropic, pelo **seu** Claude Code | Ações de IA no texto, painel do Claude, parecer, resposta aos pareceristas | O trecho escolhido e o contexto em volta. No parecer vai o paper inteiro, e na resposta vão os pareceres que você colar. Vai também tudo o que o agente ler no projeto | Não usar os recursos de IA |
+| Anthropic, pelo **seu** Claude Code | Ações de IA no texto, painel do agente, parecer, resposta aos pareceristas, com o Claude escolhido no painel | O trecho escolhido e o contexto em volta. No parecer vai o paper inteiro, e na resposta vão os pareceres que você colar. Vai também tudo o que o agente ler no projeto | Não usar os recursos de IA |
+| OpenAI, Google ou o provedor que você configurou, pelo **seu** Codex, Gemini CLI ou OpenCode | Os mesmos recursos, quando um desses agentes é o escolhido no painel | O mesmo que no Claude Code. O OpenCode, conforme a configuração dele, também lê as skills do Claude Code da sua pasta pessoal e as manda ao modelo | Escolher outro agente, ou não usar os recursos de IA |
 | Crossref (`api.crossref.org`) | Adicionar referência, verificar referências | O DOI, o título e o primeiro autor de cada entrada | Não usar esses dois recursos |
 | OpenAlex (`api.openalex.org`) | Os mesmos | O título | O mesmo |
 | arXiv (`export.arxiv.org`) | Adicionar referência pelo identificador do arXiv | O identificador | O mesmo |
@@ -24,7 +25,7 @@ Alguns recursos, todos opcionais, falam com serviços de fora. A tabela diz quai
 
 As consultas a Crossref, OpenAlex e arXiv mandam o cabeçalho `User-Agent: TeXugo (LaTeX editor; https://github.com/FredieDidier/TeXugo)`. Ele identifica o app, não a pessoa que o usa.
 
-As ações de IA usam o Claude Code que **você** instalou e com a **sua** conta. O TeXugo não tem chave própria nem intermedia a conversa. O que a Anthropic faz com o que recebe segue a política da sua conta Claude.
+As ações de IA usam o agente que **você** instalou (Claude Code, Codex, Gemini CLI ou OpenCode) e com a **sua** conta. O TeXugo não tem chave própria nem intermedia a conversa. O que cada empresa faz com o que recebe segue a política da sua conta nela; os modelos gratuitos do OpenCode podem guardar o que recebem.
 
 ## O que fica no computador
 

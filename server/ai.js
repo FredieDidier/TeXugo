@@ -1,16 +1,15 @@
-// AI writing actions on a selection, run through the user's own Claude Code
-// in headless mode (claude -p). It runs in the project folder, so the user's
-// installed skills and project settings apply. Claude only gets the Read and
-// Skill tools: it can read the project and load a writing skill, never edit a
-// file. The editor shows the result as a diff the user accepts or discards.
+// AI writing actions on a selection, run through the user's own agent
+// (Claude Code, Codex, Gemini CLI or OpenCode) in its non-interactive,
+// read-only mode (server/agents). It runs in the project folder, so the
+// user's installed skills and project settings apply; it can read the
+// project, never edit a file. The editor shows the result as a diff the user
+// accepts or discards.
 import { serverLang } from './lang.js';
-import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { toolEnv, which, winSpawn } from './util.js';
-import { claudeFlags } from './agent.js';
-import { claudeSourceFlags } from './trust.js';
-import { killTree } from './platform.js';
+import { oneShot, cancelAi } from './agents/adapter.js';
+
+export { cancelAi };
 
 export const ACTIONS = {
   revisar: 'Revise the passage: fix grammar, wording, clarity and any claim the wording overstates. Keep the meaning, the structure and the length roughly the same.',
@@ -30,23 +29,6 @@ no trailing "-ing" clause commenting on the sentence, no inflated words (crucial
 underscore, landscape, tapestry, robust as praise, genuinely, quietly). In Portuguese, no comma before the
 final "e" of a list, no Title Case in headings, no "vale ressaltar", "desempenha um papel crucial", "Além disso,"
 at every sentence, no calques from English (endereçar, assumir que). Keep the author's terms and numbers.`;
-
-// One action at a time per project (the 30-minute response to referees in
-// one paper does not block a quick revision in another window).
-const current = new Map(); // project root -> child
-
-export function cancelAi(root) {
-  let any = false;
-  for (const [r, child] of current) {
-    if (root && r !== root) continue;
-    try {
-      killTree(child);
-    } catch {}
-    current.delete(r);
-    any = true;
-  }
-  return any;
-}
 
 function styleFile(root, file) {
   // Optional per-project style: estilo.md or style.md at the project root or
@@ -84,47 +66,15 @@ export function buildPrompt({ action, text, before = '', after = '', file, root,
     .join('\n\n');
 }
 
-// One headless Claude Code run in the project folder, read-only tools.
-// Returns the final text. Used by the selection actions, the referee review
-// and the response to referees.
-export async function runClaude(prompt, opts) {
-  const claude = await which('claude');
-  if (!claude) throw new Error('Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash (e entre na sua conta com "claude" no Terminal).');
-  const key = opts.root || '';
-  if (current.has(key)) throw new Error('Já há uma ação de IA em andamento neste projeto.');
-  const out = await new Promise((resolve) => {
-    const [cmd, cargs, copts] = winSpawn(claude, ['-p', '--output-format', 'json', '--tools', opts.tools || 'Skill,Read', '--no-session-persistence', ...claudeSourceFlags(opts.root), ...claudeFlags(opts)], toolEnv());
-    const child = spawn(cmd, cargs, { cwd: opts.root, env: toolEnv(), ...copts });
-    current.set(key, child);
-    let stdout = '';
-    let stderr = '';
-    const timer = setTimeout(() => killTree(child), opts.timeout || 300000);
-    child.stdout.on('data', (d) => (stdout += d));
-    child.stderr.on('data', (d) => (stderr += d));
-    child.on('error', (err) => resolve({ code: -1, stdout, stderr: String(err) }));
-    child.on('close', (code, signal) => {
-      clearTimeout(timer);
-      if (current.get(key) === child) current.delete(key);
-      resolve({ code, signal, stdout, stderr });
-    });
-    child.stdin.end(prompt);
-  });
-  if (out.signal === 'SIGTERM' && !out.stdout) throw new Error('Cancelado (ou passou do tempo).');
-  let data;
-  try {
-    data = JSON.parse(out.stdout);
-  } catch {
-    const msg = (out.stderr || out.stdout || '').trim().split('\n').slice(-3).join(' ');
-    throw new Error(/log ?in|auth|credential/i.test(msg) ? 'O Claude Code não está logado. Abra o Terminal, rode "claude" e entre na sua conta.' : 'O Claude Code falhou: ' + (msg || `código ${out.code}`));
-  }
-  if (data.is_error) throw new Error('O Claude Code respondeu com erro: ' + String(data.result || '').slice(0, 300));
-  return String(data.result || '');
-}
+// One read-only run of the chosen agent in the project folder. Returns the
+// final text. Used by the selection actions, the referee review and the
+// response to referees.
+export const runAgent = oneShot;
 
 export async function rewrite(opts) {
   const prompt = buildPrompt(opts);
   const t0 = Date.now();
-  const result = await runClaude(prompt, opts);
+  const result = await runAgent(prompt, opts);
   const res = result;
   const m = res.match(/<texugo>\n?([\s\S]*?)\n?<\/texugo>/);
   if (!m) throw new Error('A resposta veio sem o trecho reescrito. Tente de novo.');

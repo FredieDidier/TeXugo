@@ -1,5 +1,5 @@
 // "Revisar como parecerista": the whole paper (every \input file, with line
-// numbers) goes to the user's own Claude Code, read-only, which writes a
+// numbers) goes to the user's own agent (Claude Code or another), read-only, which writes a
 // referee report as JSON. Each point quotes the passage it is about; the
 // quote, not the line Claude reports, places the point in the source, so a
 // click lands on the right line. Saved in .texugo/review for later.
@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { readText } from './util.js';
 import { includeClosure } from './project.js';
-import { runClaude } from './ai.js';
+import { runAgent } from './ai.js';
 
 const MAX = 600000; // characters of source sent
 
@@ -87,12 +87,12 @@ export function parseReport(result) {
   return data;
 }
 
-export async function review({ root, doc, journal, focus, lang, model, effort }) {
+export async function review({ root, doc, journal, focus, lang, agent, model, effort }) {
   const docDir = path.dirname(doc);
   const src = sources(doc);
   const prompt = buildReviewPrompt({ doc, journal, focus, lang, text: src.text });
   const t0 = Date.now();
-  const result = await runClaude(prompt, { root, model, effort, timeout: 30 * 60000 });
+  const result = await runAgent(prompt, { root, agent, model, effort, timeout: 30 * 60000 });
   const data = parseReport(result);
   const order = { major: 0, minor: 1, typo: 2 };
   const points = data.points

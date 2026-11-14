@@ -6,8 +6,8 @@ import { detect, kindOf, CATEGORIES, SOURCES } from './core.js';
 import { getLang } from '../i18n.js';
 
 // Shared switches, set from the settings; onResult tells the app a view's
-// hits changed (status bar count).
-export const viciosConfig = { enabled: true, lang: 'auto', onResult: null };
+// hits changed (status bar count); agentName names the agent that replaces.
+export const viciosConfig = { enabled: true, lang: 'auto', onResult: null, agentName: () => 'Claude' };
 
 const setHits = StateEffect.define();
 const refreshEffect = StateEffect.define();
@@ -114,8 +114,9 @@ const tooltip = hoverTooltip((view, pos) => {
       if (viciosConfig.onReplace) {
         const b = document.createElement('button');
         b.className = 'btn sm vicio-tip-replace';
-        b.textContent = getLang() === 'en' ? '✻ Replace with Claude' : '✻ Trocar com o Claude';
-        b.title = getLang() === 'en' ? 'Claude rewrites only the flagged words of this sentence; you accept or discard' : 'O Claude troca só o trecho sublinhado desta frase; você aceita ou descarta';
+        const who = viciosConfig.agentName();
+        b.textContent = getLang() === 'en' ? `✻ Replace with ${who}` : `✻ Trocar com o ${who}`;
+        b.title = getLang() === 'en' ? `${who} rewrites only the flagged words of this sentence; you accept or discard` : `O ${who} troca só o trecho sublinhado desta frase; você aceita ou descarta`;
         const from = Math.min(...here.map((x) => x.from));
         const to = Math.max(...here.map((x) => x.to));
         b.onmousedown = (e) => (e.preventDefault(), view.dispatch({ effects: closeHoverTooltips }), viciosConfig.onReplace(view, from, to));

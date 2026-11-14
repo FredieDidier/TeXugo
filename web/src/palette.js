@@ -11,7 +11,7 @@ import { markDialog, feedbackDialog } from './sent.js';
 import { fuzzyScore, bestScore } from './fuzzy.js';
 
 // Areas of the palette, in the order they are listed when nothing is typed.
-const AREAS = ['Compilar', 'Editar', 'Escrita', 'Projeto e arquivos', 'Referências', 'Coautores', 'Revisão e submissão', 'Claude', 'Janela e ajuda'];
+const AREAS = ['Compilar', 'Editar', 'Escrita', 'Projeto e arquivos', 'Referências', 'Coautores', 'Revisão e submissão', 'Agente', 'Janela e ajuda'];
 
 function commands(app, S) {
   const t = app.activeTab();
@@ -73,14 +73,14 @@ function commands(app, S) {
     { a: 'Editar', t: 'Colar tabela (Excel, CSV) como LaTeX', kw: 'csv planilha excel numbers sheets booktabs tabular', i: 'outline', run: () => app.pasteTable() },
     { a: 'Editar', t: 'Formatar documento', kw: 'latexindent indentar', k: '⌥⇧F', i: 'wrap', run: () => app.tools.formatDoc(app, S) },
     { a: 'Compilar', t: 'Médico do TeX (pacotes, instalação)', i: 'info', run: () => app.tools.texDoctor(app, S) },
-    { a: 'Ajuda', t: 'Verificar instalação (TeX, Git, Claude, corretor)', kw: 'setup instalar instalação git identidade primeira abertura', i: 'checkCircle', run: () => setupDialog(app, S) },
+    { a: 'Ajuda', t: 'Verificar instalação (TeX, Git, agente de IA, corretor)', kw: 'setup instalar instalação git identidade primeira abertura', i: 'checkCircle', run: () => setupDialog(app, S) },
     { a: 'Ajuda', t: 'Procurar atualizações', kw: 'update versão nova atualizar baixar release', i: 'external', run: () => updateDialog(app, S, { force: true }) },
     { a: 'Revisão e submissão', t: 'Exportar ZIP para submissão', kw: 'arxiv', i: 'down', run: () => app.tools.exportZip(app, S) },
     ...AI_ACTIONS.map((a) => ({ a: 'Escrita', t: `IA: ${a.label} (seleção)`, kw: 'claude ia ai reescrever ' + a.hint, i: 'edit', run: () => runAiAction(app, S, a.id) })),
     { a: 'Janela e ajuda', t: 'Abrir terminal na pasta do projeto', k: '⌃`', kw: 'shell zsh bash console', i: 'command', run: () => app.terminals.open('shell') },
-    { a: 'Claude', t: 'Claude: conversar sobre o projeto', kw: 'chat agente ia ai claude perguntar', i: 'claude', run: () => app.sidebar.show('claude') },
-    { a: 'Claude', t: 'Claude Code (ligado ao TeXugo)', kw: 'claude agente ia ai terminal', i: 'command', run: () => app.terminals.open('claude') },
-    { a: 'Claude', t: 'Perguntar ao Claude sobre a seleção', kw: 'claude at mention arroba', i: 'command', run: () => app.mentionInClaude() },
+    { a: 'Agente', t: 'Agente: conversar sobre o projeto', kw: 'chat agente ia ai claude codex gemini opencode perguntar', i: 'claude', run: () => app.sidebar.show('claude') },
+    { a: 'Agente', t: 'Claude Code (ligado ao TeXugo)', kw: 'claude agente ia ai terminal', i: 'command', run: () => app.terminals.open('claude') },
+    { a: 'Agente', t: 'Perguntar ao agente sobre a seleção', kw: 'claude at mention arroba', i: 'command', run: () => app.mentionInClaude() },
     { a: 'Escrita', t: 'Vícios de escrita (tiques de IA)', kw: 'ia ai detector humanizar estilo travessão', i: 'edit', run: () => app.tools.viciosReport(app, S) },
     { a: 'Revisão e submissão', t: 'Checar antes de submeter (anonimato, fontes Type 3)', kw: 'double-blind blind pdffonts', i: 'eye', run: () => app.tools.blindCheck(app, S) },
     { a: 'Escrita', t: 'Revisar estilo', kw: 'chktex lint', i: 'check', run: () => app.tools.chktex(app, S) },

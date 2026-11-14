@@ -19,7 +19,7 @@ import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
 import { LiveManager, overlayPath, realPath } from './live.js';
 import { Grammar } from './grammar.js';
-import { isInside, dataDir, run, which, toolEnv, writeKeepingLink, refreshTools, linkTargetOk, perlProblem } from './util.js';
+import { isInside, dataDir, run, which, toolEnv, writeKeepingLink, refreshTools, linkTargetOk, perlProblem, realPath as filesystemPath } from './util.js';
 import { listTemplates, createFromTemplate } from './templates.js';
 import { exportZip, blindCheck } from './submission.js';
 import * as replication from './replication.js';
@@ -27,7 +27,8 @@ import { journalById } from './replication-journals.js';
 import * as ai from './ai.js';
 import { Terminals } from './terminal.js';
 import { IdeBridge } from './ide.js';
-import { Agents, claudeFlags, MODEL_LIST } from './agent.js';
+import { Agents, listAgents, agentById } from './agents/adapter.js';
+import { claudeFlags, MODEL_LIST } from './agents/claude.js';
 import * as doctor from './doctor.js';
 import * as refs from './refs.js';
 import * as compare from './compare.js';
@@ -155,7 +156,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     return out;
   };
   const ide = new IdeBridge({ broadcast, askUi, diagnostics, allowed });
-  const agents = new Agents(broadcast);
+  const agents = new Agents(broadcast, { catalog: (state.agentCatalog ||= {}), saveCatalog: () => saveState(state) });
 
   function watch(root) {
     if (watchers.has(root)) return;
@@ -216,7 +217,7 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       return {
         tex: { ok: !!(latexmk && (pdflatex || xelatex || lualatex)) && !perl, latexmk: !!latexmk, engine: !!(pdflatex || xelatex || lualatex), version, perl, hint: texInstallHint(), url: texInstallUrl() },
         git: { ok: !!git, name: await ident('user.name'), email: await ident('user.email') },
-        agent: { ok: !!claude },
+        agent: { ok: !!claude, others: (await listAgents()).filter((a) => a.id !== 'claude' && a.installed).map((a) => a.name) },
         grammar: await grammar.status(),
         platform: process.platform,
       };
@@ -454,6 +455,20 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       const r = await sync.inverse(args);
       const ov = live.overlayFor(args.pdf);
       if (ov && r.ok) r.file = realPath(ov.dirs, ov.doc, r.file);
+      // SyncTeX can report the physical path even when the project was
+      // opened through an alias. Return the path used by the editor tabs.
+      if (r.ok && !allowed(r.file)) {
+        const file = filesystemPath(r.file);
+        for (const root of openProjects) {
+          const physicalRoot = filesystemPath(root);
+          if (!isInside(physicalRoot, file)) continue;
+          const projectFile = path.join(root, path.relative(physicalRoot, file));
+          if (allowed(projectFile)) {
+            r.file = projectFile;
+            break;
+          }
+        }
+      }
       return r;
     },
     // Live preview of `doc` with the unsaved buffers [{ path, text }].
@@ -654,13 +669,19 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       return doctor.formatLatex(text, mustAllow(p));
     },
     // Terminals and the Claude Code bridge.
-    async termCreate({ root, kind, cols, rows, model, effort }) {
+    async termCreate({ root, kind, cols, rows, agent, model, effort }) {
       mustAllow(root);
       let env = {};
       if (kind === 'claude') {
         await ide.start();
         ide.setFolders([...openProjects]);
         env = ide.env();
+      }
+      // Another agent's own program, with the model chosen in the panel.
+      if (kind === 'agent') {
+        const a = agentById(agent);
+        if (a.id === 'claude' || !a.tui) throw httpError(400, 'Agente sem terminal.');
+        return terminals.create({ cwd: root, kind, cols, rows, title: a.product, command: a.tui({ model, effort }) });
       }
       return terminals.create({ cwd: root, kind, cols, rows, env, claudeArgs: kind === 'claude' ? claudeFlags({ model, effort }) : [] });
     },
@@ -688,11 +709,14 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       if (fn) fn(answer);
       return true;
     },
-    // Claude chat panel.
-    async agentSend({ root, text, model, effort }) {
+    // Agent panel: Claude Code or another installed agent.
+    async agentList() {
+      return listAgents(state.agentCatalog);
+    },
+    async agentSend({ root, text, agent, model, effort }) {
       mustAllow(root);
       if (!text || !text.trim()) throw httpError(400, 'Mensagem vazia.');
-      return agents.send(path.resolve(root), text, { model, effort });
+      return agents.send(path.resolve(root), text, { agent, model, effort });
     },
     async agentAnswer({ root, reqId, allow, note }) {
       return agents.answer(path.resolve(mustAllow(root)), reqId, !!allow, note);
@@ -703,11 +727,11 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async agentReset({ root }) {
       return agents.reset(path.resolve(mustAllow(root)));
     },
-    async aiRewrite({ root, path: p, action, text, before, after, hints, lang, model, effort }) {
+    async aiRewrite({ root, path: p, action, text, before, after, hints, lang, agent, model, effort }) {
       mustAllow(p);
       mustAllow(root);
       if (!text || text.length > 12000) throw httpError(400, 'Selecione um trecho de até 12 mil caracteres.');
-      return ai.rewrite({ root, file: p, action, text, before, after, hints: hints || [], lang, model, effort });
+      return ai.rewrite({ root, file: p, action, text, before, after, hints: hints || [], lang, agent, model, effort });
     },
     async aiCancel({ root } = {}) {
       return ai.cancelAi(root);
@@ -755,15 +779,15 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       return refcheck.applyFixes(mustAllow(bib), Array.isArray(fixes) ? fixes : []);
     },
     // Referee-style review of the whole paper by the user's Claude Code.
-    async reviewRun({ root, doc, journal, focus, lang, model, effort }) {
+    async reviewRun({ root, doc, journal, focus, lang, agent, model, effort }) {
       mustAllow(root);
-      return reviewer.review({ root, doc: path.resolve(mustAllow(doc)), journal, focus, lang, model, effort });
+      return reviewer.review({ root, doc: path.resolve(mustAllow(doc)), journal, focus, lang, agent, model, effort });
     },
-    async respondReferees({ root, doc, reports, source, lang, model, effort }) {
+    async respondReferees({ root, doc, reports, source, lang, agent, model, effort }) {
       mustAllow(root);
       if (!reports || reports.length < 40) throw httpError(400, 'Cole os pareceres.');
       if (source && !['git', 'path'].includes(source.kind)) throw httpError(400, 'Versão inválida.');
-      return rr.respond({ root, doc: path.resolve(mustAllow(doc)), reports: String(reports).slice(0, 200000), source, lang, model, effort });
+      return rr.respond({ root, doc: path.resolve(mustAllow(doc)), reports: String(reports).slice(0, 200000), source, lang, agent, model, effort });
     },
     // PDF annotations: a received annotated PDF is copied into the project
     // (so the viewer may read it); which notes are resolved is kept beside it.

@@ -10,6 +10,7 @@ import { h, clear, icon, basename, relPath, toast, dirname, sepOf } from './dom.
 import { viciosOf } from './vicios/cm.js';
 import { reviewDialog, loadLastReview } from './review.js';
 import { responseDialog } from './rr.js';
+import { agentChoice, agentInfo } from './agent.js';
 import { annotationsDialog } from './annotations.js';
 import { compareDialog } from './compare.js';
 import { summary } from './news.js';
@@ -159,7 +160,7 @@ export async function renderRevisao(app, S, el) {
 
   // ---------------------------------------------------------- referees
   const rv = S.review && S.review.doc === doc ? S.review : null;
-  let reviewStatus = 'O seu Claude Code lê o paper inteiro e escreve um parecer, cada ponto ligado à linha.';
+  let reviewStatus = `O seu ${agentInfo(agentChoice(S).agent).product} lê o paper inteiro e escreve um parecer, cada ponto ligado à linha.`;
   let reviewOpen = 0;
   if (rv && rv.status === 'running') reviewStatus = 'Escrevendo o parecer…';
   else if (rv && rv.status === 'error') reviewStatus = 'O último parecer falhou: ' + rv.error;
@@ -172,7 +173,7 @@ export async function renderRevisao(app, S, el) {
   const referees = [
     row(
       'review',
-      'Parecer do Claude',
+      'Parecer do agente',
       reviewStatus,
       [rv && (rv.report || rv.status === 'running') ? btn('Ver', () => app.bottom.show('parecer'), !!reviewOpen || rv.status === 'running') : null, rv && rv.status === 'running' ? null : btn(rv && rv.report ? 'Novo parecer…' : 'Revisar como parecerista…', () => reviewDialog(app, S))].filter(Boolean),
       { cls: reviewOpen ? 'open' : '' },
@@ -180,7 +181,7 @@ export async function renderRevisao(app, S, el) {
     row(
       'letter',
       'Resposta aos pareceristas',
-      response ? `response.tex ${ago(response)}` : 'Cole os pareceres: o Claude escreve o response.tex, cada comentário ligado ao que mudou.',
+      response ? `response.tex ${ago(response)}` : 'Cole os pareceres: o agente escreve o response.tex, cada comentário ligado ao que mudou.',
       [response ? btn('Abrir response.tex', () => app.openFile(`${docDir}response.tex`)) : null, btn(response ? 'Nova resposta…' : 'Escrever a resposta…', () => responseDialog(app, S))].filter(Boolean),
     ),
   ];

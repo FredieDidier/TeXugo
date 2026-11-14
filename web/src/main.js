@@ -20,7 +20,7 @@ import { viciosConfig, viciosOf } from './vicios/cm.js';
 import { AI_ACTIONS, runAiAction, focusedTarget, replaceFlagged } from './ai.js';
 import { TerminalPanel } from './terminal.js';
 import { setupIde, mentionInClaude } from './ide.js';
-import { AgentPanel, setClaudeModels } from './agent.js';
+import { AgentPanel, setClaudeModels, agentChoice, agentInfo } from './agent.js';
 import { setBaseline } from './changes.js';
 import { installFocusTips } from './focustip.js';
 import { installRecovery } from './recovery.js';
@@ -1533,7 +1533,7 @@ function renderActivity() {
     ['refs', 'book', 'Referências: o .bib do projeto, citar, verificar no Crossref'],
     ['revisao', 'clipboard', 'Revisão: anotações e versões dos coautores, parecer, resposta aos pareceristas e checagens antes de enviar'],
     ['git', 'git', 'Git e GitHub'],
-    ['claude', 'claude', 'Claude: converse com o seu Claude Code sobre o projeto'],
+    ['claude', 'claude', `Agente: converse com o seu ${agentInfo(agentChoice(S).agent).product} sobre o projeto`],
   ];
   clear(
     app.activity,
@@ -2003,6 +2003,7 @@ async function boot() {
   setClaudeModels(S.hello.models);
   viciosConfig.enabled = S.settings.vicios !== false;
   viciosConfig.onReplace = (view, from, to) => replaceFlagged(app, S, view, from, to);
+  viciosConfig.agentName = () => agentInfo(agentChoice(S).agent).name;
   document.body.classList.toggle('no-change-marks', S.settings.changeMarks === false);
   mathPreview.on = S.settings.mathPreview !== false;
   viciosConfig.onResult = (view) => view === app.view && renderStatusSoon();

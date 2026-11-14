@@ -1,6 +1,6 @@
 // "Resposta aos pareceristas": from the reports the user pastes and the
 // changes made since the submitted version (a Git commit or the files that
-// were sent), the user's Claude Code splits the reports into comments,
+// were sent), the user's agent (Claude Code or another) splits the reports into comments,
 // drafts a reply to each and says where the paper changed. TeXugo writes a
 // response.tex in the format of its "Resposta aos pareceristas" template,
 // each change tied to the current source line and, when the PDF has
@@ -10,7 +10,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { readText } from './util.js';
 import { includeClosure } from './project.js';
-import { runClaude } from './ai.js';
+import { runAgent } from './ai.js';
+import { agentById } from './agents/adapter.js';
 import { wordDiff } from './compare.js';
 import { anchor } from './review.js';
 import * as sync from './synctex.js';
@@ -85,8 +86,8 @@ function sectionAt(file, line) {
   return null;
 }
 
-const PREAMBLE = `% !TEX program = pdflatex
-% Response to the editor and referees, drafted by TeXugo with Claude from
+const PREAMBLE = (by) => `% !TEX program = pdflatex
+% Response to the editor and referees, drafted by TeXugo with ${by} from
 % the reports and the changes since the submitted version. Each change
 % carries a comment with its source line (⌘-click it to open the line).
 \\documentclass[11pt]{article}
@@ -119,8 +120,8 @@ const PREAMBLE = `% !TEX program = pdflatex
 // purpose (\cite, \% already escaped) passes through.
 export const pct = (t) => String(t ?? '').replace(/(?<!\\)%/g, '\\%').replace(/\r?\n+/g, ' ');
 
-export function toLatex(data, { title }) {
-  const out = [PREAMBLE, '\\begin{document}', '\\begin{center}', '{\\Large\\bfseries Response to the Editor and Referees}\\\\[4pt]', '``' + escapeTex(title) + "''\\\\[2pt]", '\\today', '\\end{center}', '', 'Dear Editor,', '', data.intro || '', ''];
+export function toLatex(data, { title, by = 'Claude' }) {
+  const out = [PREAMBLE(by), '\\begin{document}', '\\begin{center}', '{\\Large\\bfseries Response to the Editor and Referees}\\\\[4pt]', '``' + escapeTex(title) + "''\\\\[2pt]", '\\today', '\\end{center}', '', 'Dear Editor,', '', data.intro || '', ''];
   if (data.main_changes && data.main_changes.length) {
     out.push('The main changes are:', '\\begin{enumerate}[nosep]', ...data.main_changes.map((c) => `  \\item ${pct(c)}`), '\\end{enumerate}', '');
   }
@@ -141,12 +142,12 @@ export function toLatex(data, { title }) {
   return out.join('\n');
 }
 
-export async function respond({ root, doc, reports, source, lang, model, effort }) {
+export async function respond({ root, doc, reports, source, lang, agent, model, effort }) {
   const docDir = path.dirname(doc);
   const diff = source ? await wordDiff(doc, source) : null;
   const src = numberedSources(doc);
   const prompt = buildPrompt({ doc, reports, diff, sources: src.text, lang });
-  const result = await runClaude(prompt, { root, model, effort, timeout: 30 * 60000 });
+  const result = await runAgent(prompt, { root, agent, model, effort, timeout: 30 * 60000 });
   const data = parseJson(result);
   // Tie each change to its line, section and, with SyncTeX, PDF page.
   const built = outputs(doc);
@@ -178,6 +179,6 @@ export async function respond({ root, doc, reports, source, lang, model, effort 
   const title = ((readText(doc) || '').match(/\\title\s*(?:\[[^\]]*\])?\s*\{([^}]*)\}/) || [])[1] || path.basename(doc, '.tex');
   let target = path.join(docDir, 'response.tex');
   for (let i = 2; fs.existsSync(target); i++) target = path.join(docDir, `response-${i}.tex`);
-  fs.writeFileSync(target, toLatex(data, { title: title.replace(/\\\\|\\thanks\{.*$/g, ' ').trim() }));
+  fs.writeFileSync(target, toLatex(data, { title: title.replace(/\\\\|\\thanks\{.*$/g, ' ').trim(), by: agentById(agent).name }));
   return { file: target, comments: n, todo, changedFiles: diff ? diff.changedFiles : [], since: diff ? diff.label : null, pages: hasSync };
 }

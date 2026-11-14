@@ -6,7 +6,7 @@ import { h, icon, toast, modal, basename } from './dom.js';
 import { detect, kindOf } from './vicios/core.js';
 import { hitInfo } from './vicios/cm.js';
 import { wordDiff } from './diff.js';
-import { claudeChoice } from './agent.js';
+import { agentChoice, agentInfo } from './agent.js';
 
 export const AI_ACTIONS = [
   { id: 'trocar', label: 'Trocar o trecho marcado', hint: 'Só o que o detector de vícios sublinhou muda' },
@@ -48,7 +48,8 @@ export async function runAiAction(app, S, action, target = focusedTarget(app)) {
   const act = AI_ACTIONS.find((a) => a.id === action);
   if (!tab || tab.binary || !view) return toast('Abra um arquivo de texto.', 'warn');
   const sel = view.state.selection.main;
-  if (sel.empty) return toast('Selecione o trecho que o Claude deve reescrever.', 'warn');
+  const who = agentInfo(agentChoice(S).agent);
+  if (sel.empty) return toast(`Selecione o trecho que o ${who.name} deve reescrever.`, 'warn');
   const doc = view.state.doc;
   const raw = doc.sliceString(sel.from, sel.to);
   // Leading and trailing white space stays outside the rewrite.
@@ -72,7 +73,7 @@ export async function runAiAction(app, S, action, target = focusedTarget(app)) {
   let cancelled = false;
   const wait = modal({
     title: [icon('edit'), ` ${act.label}`],
-    body: h('div', {}, h('p', {}, h('span', { class: 'status-dot building' }), ' O Claude Code está reescrevendo o trecho selecionado…'), h('p', { class: 'muted' }, 'Roda na pasta do projeto, com a sua conta e as suas skills. Leva de 10 segundos a um minuto.')),
+    body: h('div', {}, h('p', {}, h('span', { class: 'status-dot building' }), ` O ${who.product} está reescrevendo o trecho selecionado…`), h('p', { class: 'muted' }, 'Roda na pasta do projeto, com a sua conta e as suas skills. Leva de 10 segundos a um minuto.')),
     footer: [h('button', { class: 'btn', onclick: () => ((cancelled = true), call('aiCancel', { root: S.project && S.project.root }), wait.close()) }, 'Cancelar')],
     onClose: () => {
       if (!cancelled) {
@@ -83,7 +84,7 @@ export async function runAiAction(app, S, action, target = focusedTarget(app)) {
   });
   let r;
   try {
-    r = await call('aiRewrite', { root: S.project.root, path: tab.path, action, text, before, after, hints, lang, ...claudeChoice(S) });
+    r = await call('aiRewrite', { root: S.project.root, path: tab.path, action, text, before, after, hints, lang, ...agentChoice(S) });
   } catch (err) {
     if (!cancelled) {
       wait.close();
@@ -94,14 +95,14 @@ export async function runAiAction(app, S, action, target = focusedTarget(app)) {
   if (cancelled) return;
   cancelled = true;
   wait.close();
-  if (r.text === text) return toast('O Claude não mudou nada nesse trecho.', 'info');
-  showDiff(app, { view, tab, from, to, text, r, act });
+  if (r.text === text) return toast(`O ${who.name} não mudou nada nesse trecho.`, 'info');
+  showDiff(app, { view, tab, from, to, text, r, act, who });
 }
 
-function showDiff(app, { view, tab, from, to, text, r, act }) {
+function showDiff(app, { view, tab, from, to, text, r, act, who }) {
   const accept = () => {
     if (view.state.doc.sliceString(from, to) !== text) {
-      toast('O trecho mudou enquanto o Claude trabalhava. Selecione de novo e repita.', 'warn', 7000);
+      toast(`O trecho mudou enquanto o ${who.name} trabalhava. Selecione de novo e repita.`, 'warn', 7000);
       return;
     }
     view.dispatch({ changes: { from, to, insert: r.text }, selection: { anchor: from, head: from + r.text.length }, userEvent: 'input.ai', scrollIntoView: true });

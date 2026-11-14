@@ -300,10 +300,22 @@ app.whenReady().then(async () => {
       check('B3: commit saves the open tabs first', (await until(`return !document.querySelector('.tab.dirty');`, 6000)) && (await committed()));
     }
 
-    // ---- Claude panel: attach files with the button or by dragging them in
-    await activity('Claude');
-    check('Claude panel has an attach-files button', await js(`return !!document.querySelector('.agent-panel .agent-files-btn');`));
-    check('Claude panel: the send button fits inside the panel', await js(`const p = document.querySelector('.agent-panel').getBoundingClientRect(); return [...document.querySelectorAll('.agent-compose .agent-row > *')].every((c) => c.getBoundingClientRect().right <= p.right + 0.5);`));
+    // ---- Agent panel: the picker of agents (item 4), then attachments
+    await activity('Agente');
+    // The list arrives from the server; the agents that are not installed
+    // are shown disabled, with a way to install them.
+    await until(`return document.querySelectorAll('.agent-which option').length >= 4;`, 8000);
+    const agents = await js(`return [...document.querySelectorAll('.agent-which option')].map((o) => ({ v: o.value, t: o.textContent, off: o.disabled }));`);
+    check('agent panel: a picker with Claude, Codex, Gemini and OpenCode', ['claude', 'codex', 'gemini', 'opencode'].every((id) => agents.some((o) => o.v === id)), agents);
+    check('agent panel: an agent that is not installed is disabled and says so', agents.filter((o) => o.v && o.off).every((o) => /não instalado/.test(o.t)), agents);
+    if (agents.some((o) => o.v === '')) {
+      await js(`const s = document.querySelector('.agent-which'); s.value = ''; s.dispatchEvent(new Event('change')); return true;`);
+      check('agent panel: "Instalar outro agente" shows the install commands', await until(`return document.querySelector('.modal-title')?.innerText.includes('Instalar outro agente') && !!document.querySelector('.modal .agent-cmd');`, 3000));
+      await key('Escape');
+      check('agent panel: the picker stays on the agent in use', await js(`return document.querySelector('.agent-which').value === 'claude';`));
+    }
+    check('agent panel has an attach-files button', await js(`return !!document.querySelector('.agent-panel .agent-files-btn');`));
+    check('agent panel: the send button fits inside the panel', await js(`const p = document.querySelector('.agent-panel').getBoundingClientRect(); return [...document.querySelectorAll('.agent-compose .agent-row > *')].every((c) => c.getBoundingClientRect().right <= p.right + 0.5);`));
     const dropped = path.join(TMP, 'dados de campo.csv');
     fs.writeFileSync(dropped, 'a,b\n1,2\n');
     const box = await js(`const r = document.querySelector('.agent-log').getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) };`);

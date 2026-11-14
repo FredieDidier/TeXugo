@@ -3,7 +3,7 @@
 // "Parecer" tab of the bottom panel, each tied to its line in the source.
 import { call } from './api.js';
 import { h, clear, icon, basename, relPath, toast, modal } from './dom.js';
-import { claudeChoice, CLAUDE_MODELS, CLAUDE_EFFORTS } from './agent.js';
+import { agentChoice, agentInfo, modelsOf, effortsOf } from './agent.js';
 import { getLang, locale } from './i18n.js';
 
 const REC = { reject: 'rejeitar', 'major revision': 'revisão maior', 'minor revision': 'revisão menor', accept: 'aceitar' };
@@ -16,18 +16,19 @@ export function reviewDialog(app, S) {
   if (S.review && S.review.status === 'running') return app.bottom.show('parecer');
   const journal = h('input', { value: S.settings.reviewJournal || '', placeholder: 'Ex.: AEJ: Applied Economics, Journal of Development Economics' });
   const focus = h('textarea', { rows: 3, placeholder: 'Opcional. Ex.: a estratégia de identificação e a inferência; se a introdução vende demais o resultado', style: { width: '100%' } });
-  const choice = claudeChoice(S);
-  const label = (list, id) => (list.find((x) => x.id === id) || {}).label || id;
+  const choice = agentChoice(S);
+  const who = agentInfo(choice.agent);
+  const label = (list, id) => (id ? (list.find((x) => x.id === id) || {}).label || id : 'padrão');
   const m = modal({
     title: [icon('review'), ` Revisar ${basename(doc)} como parecerista`],
     wide: true,
     body: h(
       'div',
       {},
-      h('p', { class: 'muted', style: { marginTop: 0 } }, 'O seu Claude Code lê o paper inteiro (com os \\input) e escreve um parecer: resumo, recomendação e cada comentário ligado à linha do texto. Ele só lê; nada é alterado.'),
+      h('p', { class: 'muted', style: { marginTop: 0 } }, `O seu ${who.product} lê o paper inteiro (com os \\input) e escreve um parecer: resumo, recomendação e cada comentário ligado à linha do texto. Ele só lê; nada é alterado.`),
       h('div', { class: 'field' }, h('label', {}, 'Periódico (o padrão de exigência)'), journal),
       h('div', { class: 'field' }, h('label', {}, 'Foco'), focus),
-      h('p', { class: 'faint', style: { fontSize: '12px' } }, `Modelo ${label(CLAUDE_MODELS, choice.model)}, esforço ${label(CLAUDE_EFFORTS, choice.effort).toLowerCase()} (troque no painel Claude). Um paper longo leva alguns minutos; você pode continuar trabalhando.`),
+      h('p', { class: 'faint', style: { fontSize: '12px' } }, `Modelo ${label(modelsOf(choice.agent), choice.model)}, esforço ${label(effortsOf(choice.agent), choice.effort).toLowerCase()} (troque no painel do agente). Um paper longo leva alguns minutos; você pode continuar trabalhando.`),
     ),
     footer: [
       h('button', { class: 'btn', onclick: () => m.close() }, 'Cancelar'),
@@ -56,7 +57,7 @@ async function run(app, S, doc, { journal, focus }) {
   app.refreshRevisao && app.refreshRevisao();
   const tick = setInterval(() => S.review && S.review.status === 'running' && app.bottom.view === 'parecer' && app.bottom.render(), 1000);
   try {
-    const report = await call('reviewRun', { root: S.project.root, doc, journal, focus, lang: getLang() === 'en' ? 'en' : 'pt', ...claudeChoice(S) });
+    const report = await call('reviewRun', { root: S.project.root, doc, journal, focus, lang: getLang() === 'en' ? 'en' : 'pt', ...agentChoice(S) });
     S.review = { status: 'done', doc, report };
     toast(`Parecer pronto: ${report.points.length} pontos.`, 'ok');
   } catch (err) {
@@ -87,7 +88,7 @@ export function renderReviewPanel(app, S, body) {
     const s = Math.round((Date.now() - r.start) / 1000);
     return clear(
       body,
-      h('div', { class: 'pad' }, h('span', { class: 'status-dot building' }), ` O Claude está lendo ${basename(r.doc)} e escrevendo o parecer… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}  `, h('button', { class: 'btn sm', onclick: () => call('aiCancel', { root: S.project && S.project.root }) }, 'Cancelar')),
+      h('div', { class: 'pad' }, h('span', { class: 'status-dot building' }), ` O ${agentInfo(agentChoice(S).agent).name} está lendo ${basename(r.doc)} e escrevendo o parecer… ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}  `, h('button', { class: 'btn sm', onclick: () => call('aiCancel', { root: S.project && S.project.root }) }, 'Cancelar')),
     );
   }
   if (r.status === 'error') return clear(body, h('div', { class: 'pad' }, h('div', { class: 'qq-banner' }, icon('warn'), h('div', {}, r.error)), h('button', { class: 'btn sm', onclick: () => reviewDialog(app, S) }, 'Tentar de novo')));
@@ -139,8 +140,8 @@ export function renderReviewPanel(app, S, body) {
           }),
           h('span', { class: 'kind ' + KIND[p.kind].cls }, KIND[p.kind].label),
           h('div', { class: 'txt' }, h('b', {}, p.title), ' ', p.comment, p.suggestion ? h('div', { class: 'sug' }, 'Sugestão: ', p.suggestion) : null),
-          h('span', { class: 'where', title: p.exact ? 'Trecho achado no texto' : 'Linha informada pelo Claude (trecho não achado)' }, `${relPath(S.project.root, p.file)}:${p.line}${p.exact ? '' : ' ~'}`),
-          h('button', { class: 'btn sm ghost', title: 'Levar este ponto ao painel Claude', onclick: (e) => (e.stopPropagation(), ask(p)) }, icon('claude')),
+          h('span', { class: 'where', title: p.exact ? 'Trecho achado no texto' : 'Linha informada pelo agente (trecho não achado)' }, `${relPath(S.project.root, p.file)}:${p.line}${p.exact ? '' : ' ~'}`),
+          h('button', { class: 'btn sm ghost', title: 'Levar este ponto ao painel do agente', onclick: (e) => (e.stopPropagation(), ask(p)) }, icon('claude')),
         ),
       ),
     ),
