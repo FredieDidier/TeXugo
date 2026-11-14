@@ -69,3 +69,12 @@ test('issue form link carries the version and the system', async () => {
   const form = fs.readFileSync(new URL('../.github/ISSUE_TEMPLATE/problema.yml', import.meta.url), 'utf8');
   for (const id of ['versao', 'sistema']) assert.match(form, new RegExp(`^\\s+id: ${id}$`, 'm'));
 });
+
+test('the release files electron-builder makes are each picked for their system', () => {
+  const names = ['TeXugo-0.1.0-mac-arm64.dmg', 'TeXugo-0.1.0-mac-x64.dmg', 'TeXugo-0.1.0-windows-x64-setup.exe', 'TeXugo-0.1.0-linux-x86_64.AppImage'];
+  const assets = names.map((name) => ({ name, browser_download_url: 'https://github.com/x/' + name }));
+  assert.equal(pickAsset(assets, 'darwin', 'arm64').name, names[0]);
+  assert.equal(pickAsset(assets, 'darwin', 'x64').name, names[1]);
+  assert.equal(pickAsset(assets, 'win32', 'x64').name, names[2]);
+  assert.equal(pickAsset(assets, 'linux', 'x64').name, names[3]);
+});

@@ -1,0 +1,76 @@
+# Installers for the three systems (item 9 of PRE-LAUNCH-AUDIT.md).
+# No paid signing (B5): the Mac app is signed ad hoc, the Windows installer
+# is unsigned. Run through scripts/dist.mjs, which builds the page and the
+# third-party notices first.
+appId: br.fredie.texugo
+productName: TeXugo
+copyright: Copyright (c) Fredie Didier
+artifactName: TeXugo-${version}-${arch}.${ext}
+
+directories:
+  output: out/dist
+  buildResources: build
+
+# The app stays a plain folder (Resources/app), as the hand-made bundle had
+# it: node-pty spawns its helper from disk, and the server reads its own
+# files by path.
+asar: false
+# node-pty ships N-API binaries, which Electron loads as Node does; on Linux
+# `npm ci` already compiled it.
+npmRebuild: false
+# Also sets the Electron fuses; see the hook.
+afterPack: scripts/after-pack.cjs
+
+files:
+  - electron/**
+  - server/**
+  - dist/**
+  - "!dist/app.js.map"
+  - build/**
+  - LICENSE
+  - THIRD-PARTY-NOTICES.txt
+  - package.json
+  # katex is bundled into dist/ by esbuild; only ws and node-pty run from
+  # node_modules.
+  - "!node_modules/katex/**"
+  - "!node_modules/node-pty/{src,deps,scripts,third_party,typings,*.gyp,binding.gyp}/**"
+
+extraResources:
+  - from: node_modules/electron/dist/LICENSE
+    to: LICENSE.electron.txt
+  - from: node_modules/electron/dist/LICENSES.chromium.html
+    to: LICENSES.chromium.html
+
+mac:
+  category: public.app-category.productivity
+  icon: build/icon.icns
+  # Signed ad hoc by the afterPack hook; electron-builder signs nothing.
+  identity: null
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+dmg:
+  artifactName: TeXugo-${version}-mac-${arch}.${ext}
+
+win:
+  icon: build/icon.png
+  target:
+    - target: nsis
+      arch: [x64]
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  artifactName: TeXugo-${version}-windows-${arch}-setup.${ext}
+
+linux:
+  icon: build/icon.png
+  category: Office
+  target:
+    - target: AppImage
+      arch: [x64]
+appImage:
+  artifactName: TeXugo-${version}-linux-${arch}.${ext}
+
+publish: null
