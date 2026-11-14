@@ -152,6 +152,19 @@ app.whenReady().then(async () => {
       const chip = await until(`return !document.querySelector('.status-dot.building') && !!document.querySelector('.doc-bar .chip.undefined');`, 90000);
       check('B4: the PDF goes to the out_dir of the latexmkrc', chip && fs.existsSync(path.join(PROJ, 'build', 'paper.pdf')) && !fs.existsSync(path.join(PROJ, 'build', 'paper.dvi')), fs.existsSync(path.join(PROJ, 'build')) && fs.readdirSync(path.join(PROJ, 'build')));
       check('B4: the log in that folder is read: one ??, not "zero ??"', (await js(`return [...document.querySelectorAll('.doc-bar .chip')].map((c) => c.innerText.trim()).filter((t) => /\\?\\?/.test(t)).join('|');`)) === '1 ??', await js(`return document.querySelector('.doc-bar')?.innerText;`));
+
+      // A failing BibTeX says why in the Problems panel, read from the .blg.
+      const paperTex = path.join(PROJ, 'paper.tex');
+      const paperSrc = fs.readFileSync(paperTex, 'utf8');
+      fs.writeFileSync(paperTex, paperSrc.replace('\\bibliography{references}', '\\bibliography{missing-refs}'));
+      await sleep(800);
+      await focusEditor();
+      await key('Enter', [MOD]);
+      await until(`return !document.querySelector('.status-dot.building') && !!document.querySelector('.doc-bar .chip.err, .doc-bar .chip.error');`, 90000);
+      await js(`[...document.querySelectorAll('button, [role=tab]')].find((b) => b.innerText.trim().startsWith('Problemas'))?.click(); return true;`);
+      check('BibTeX: the Problems panel names the missing .bib', await until(`return document.body.innerText.includes('não achei o arquivo de referências missing-refs');`, 5000), await js(`return document.querySelector('.doc-bar')?.innerText;`));
+      fs.writeFileSync(paperTex, paperSrc);
+      await sleep(800);
     }
 
     // ---- outline of the whole document, from the main file
@@ -184,6 +197,10 @@ app.whenReady().then(async () => {
     await type(' EDITED-AFTER-RENAME');
     await key('s', [MOD]);
     check('I14: saving after the rename writes to the new path', await until(`return !document.querySelector('.tab.dirty');`, 4000) && fs.readFileSync(path.join(PROJ, 'parts', 'body.tex'), 'utf8').includes('EDITED-AFTER-RENAME'));
+    // A file changed outside the app inside a subfolder reloads its clean
+    // tab: the project watcher sees subfolders on every system.
+    fs.appendFileSync(path.join(PROJ, 'parts', 'body.tex'), '\nCHANGED-OUTSIDE-IN-A-SUBFOLDER\n');
+    check('a change outside the app in a subfolder reloads the tab', await until(`return document.querySelector('.editor-host .cm-content').innerText.includes('CHANGED-OUTSIDE-IN-A-SUBFOLDER') && !document.querySelector('.tab.dirty');`, 6000));
 
     // ---- D6: an error stays until closed
     await js(`const row = [...document.querySelectorAll('.tree-row')].find((r) => r.innerText.trim() === 'notes.md') || [...document.querySelectorAll('.tree-row')].find((r) => r.innerText.includes('preamble.tex')); row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 80, clientY: 90 })); await new Promise((r) => setTimeout(r, 200)); [...document.querySelectorAll('.menu .mi')].find((m) => m.innerText.includes('Renomear')).click(); await new Promise((r) => setTimeout(r, 300)); document.querySelector('.modal input').value = 'paper.tex'; return true;`);
