@@ -1,0 +1,38 @@
+Dear Dr. Author,
+
+Thank you for submitting "Bike-Share Docks and Short Car Trips". I have now received two reports, which you will find below. Both referees see value in the question, and both raise concerns that I would like you to address in a revision.
+
+Best regards,
+The Editor
+
+Referee 1
+
+The paper estimates the effect of bike-share docks on short car trips using a staggered rollout across 31 districts. The question is useful and the data are unusual. My comments follow.
+
+1. Standard errors are clustered by sensor, but the docks were assigned by district. Please cluster by district. With only 31 districts, a wild cluster bootstrap would be more convincing.
+
+2. If docks replace car trips, the decline should be concentrated near the docks. Please show how the effect varies with the distance between a sensor and the nearest dock.
+
+3. Sensors were added during the sample period. Please show that the result does not come from changes in sensor coverage, for example by keeping only the sensors that were in place from the start.
+
+4. Why is a short trip defined as one under three kilometres? Please explain the choice of this threshold.
+
+5. The council may have opened docks first where demand for cycling was growing. How did the council decide which districts went into each wave?
+
+6. There is a repeated word ("The the") in the second paragraph of the introduction.
+
+Referee 2
+
+This is a clearly written paper on a policy that many cities are adopting. I have the following comments.
+
+1. The main estimate is reported only in logs. Please translate it into car trips per 1,000 residents and day, so that readers can judge its size.
+
+2. A placebo test would strengthen the design, for example one that moves every opening date one year earlier, to months when no dock existed.
+
+3. Docks near district borders may also reduce car trips in the neighbouring districts, which would bias the estimate towards zero. Please discuss or test for spillovers across district borders.
+
+4. Could the decline in short car trips be offset by more taxi or ride-hailing trips? The sensors may not distinguish private cars from taxis.
+
+5. With staggered adoption and effects that may change over time, two-way fixed effects estimates can be biased. Please report an estimator that is robust to heterogeneous treatment effects.
+
+6. Table 1 has no note saying what the standard errors in parentheses are clustered on.

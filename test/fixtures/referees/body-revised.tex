@@ -1,0 +1,52 @@
+\section{Introduction}\label{sec:intro}
+Cities install bike-share docks in the hope that residents will cycle instead of driving short distances, yet the evidence on whether docks replace car trips is thin. This paper studies the staggered opening of 84 docks across the 31 districts of Riverton, an invented mid-sized city, between 2019 and 2022. Car trips are measured by a network of road sensors that count vehicles every hour and classify each trip by its length.
+
+Districts that received docks saw short car trips, those under three kilometres, fall by about 6 percent within a year of the opening, while longer trips did not change. Table~\ref{tab:main} reports the main estimate. The comparison follows the difference-in-differences logic of \citet{card1994minimum}, and Appendix Table~\ref{tab:robust} shows that the estimate survives alternative samples. The data are described in the online appendix (\ref{app:data}).
+
+The result matters for transport budgets. A dock costs far less than a bus line, and a city that knows how many car trips a dock removes can compare the two on the same scale.
+
+\section{Setting and data}\label{sec:data}
+The city council opened the docks in four waves, each announced six months in advance. A district received its first dock in one of the waves or by the end of 2022 had none. The council published the list of districts in each wave but not the criteria used to rank them.
+
+The traffic data come from 412 road sensors. Each sensor records the vehicles that pass it, and a trip is the path of a vehicle between two sensors on the same day; the length of the trip is the road distance between the first and the last sensor that saw it. The sample runs from January 2018 to December 2022. The outcome is the number of car trips shorter than three kilometres per 1,000 residents and day, aggregated to the district and month. Sensors were added over the period, so Section~\ref{sec:robust} also reports the estimate with the 356 sensors installed before 2018.
+
+\section{Empirical strategy}\label{sec:strategy}
+The main specification is
+\begin{equation}
+  y_{dt} = \alpha_d + \gamma_t + \beta\, D_{dt} + \varepsilon_{dt},
+\end{equation}
+where $y_{dt}$ is the log of short car trips in district $d$ and month $t$, $\alpha_d$ and $\gamma_t$ are district and month fixed effects, and $D_{dt}$ equals one from the month a district receives its first dock. Standard errors are clustered by district, the level at which docks were assigned. With only 31 districts, the p-values come from a wild cluster bootstrap with 9,999 replications.
+
+The identifying assumption is that, without the docks, short car trips in districts of early and late waves would have followed parallel paths. Figure~\ref{fig:event} in the appendix plots the coefficients by month relative to the opening.
+
+A second design compares sensors just inside and just outside the 300-metre walking radius of a dock, in the spirit of a regression discontinuity \citep{imbens2008regression}.
+
+\section{Results}\label{sec:results}
+\begin{table}[h]
+  \centering
+  \caption{Main estimate}\label{tab:main}
+  \begin{tabular}{lcc}
+    \toprule
+    & Short trips (log) & Long trips (log) \\
+    \midrule
+    Treated $\times$ post & $-0.061$ & 0.004 \\
+                          & (0.024) & (0.020) \\
+    \midrule
+    Districts & 31 & 31 \\
+    District-months & 1,860 & 1,860 \\
+    \bottomrule
+  \end{tabular}
+
+  \smallskip
+  {\footnotesize Standard errors clustered by district in parentheses.}
+\end{table}
+
+Short car trips fall by 6.1 log points after a district receives its first dock, and the estimate is precise. Before the openings, a district recorded on average 231 short car trips per 1,000 residents and day, so the estimate amounts to about 14 fewer short car trips per 1,000 residents and day. Trips longer than three kilometres do not move, which is what one would expect if cyclists replace only the trips a bicycle can make.
+
+The comparison around the walking radius gives a similar picture: sensors inside the radius record a decline of 7.4 percent relative to sensors just outside it.
+
+\section{Robustness}\label{sec:robust}
+Dropping 2020, when the pandemic changed travel everywhere, leaves the estimate at $-0.058$. Restricting the sample to the central districts gives $-0.066$. Keeping only the 356 sensors installed before 2018, so that coverage does not change over the period, gives $-0.063$. All three are in Appendix Table~\ref{tab:robust}, and a placebo that moves every opening one year earlier is in Appendix~\ref{app:placebo}.
+
+\section{Conclusion}\label{sec:conclusion}
+Bike-share docks reduce short car trips in the districts that receive them. The effect is modest in percentage terms but large relative to the cost of a dock, and it is confined to the trips a bicycle can replace.
