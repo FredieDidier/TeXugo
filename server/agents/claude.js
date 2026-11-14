@@ -209,14 +209,19 @@ export const claude = {
     const bin = await which('claude');
     if (!bin) throw new Error('Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash (e entre na sua conta com "claude" no Terminal).');
     const out = await spawnTool(bin, ['-p', '--output-format', 'json', '--tools', opts.tools || 'Skill,Read', '--no-session-persistence', ...claudeSourceFlags(opts.root), ...claudeFlags(opts)], prompt, opts);
+    const notLogged = 'O Claude Code não está logado. Abra o Terminal, rode "claude" e entre na sua conta.';
     let data;
     try {
       data = JSON.parse(out.stdout);
     } catch {
       const msg = (out.stderr || out.stdout || '').trim().split('\n').slice(-3).join(' ');
-      throw new Error(/log ?in|auth|credential/i.test(msg) ? 'O Claude Code não está logado. Abra o Terminal, rode "claude" e entre na sua conta.' : 'O Claude Code falhou: ' + (msg || `código ${out.code}`));
+      throw new Error(/log ?in|auth|credential/i.test(msg) ? notLogged : 'O Claude Code falhou: ' + (msg || `código ${out.code}`));
     }
-    if (data.is_error) throw new Error('O Claude Code respondeu com erro: ' + String(data.result || '').slice(0, 300));
+    // An expired login also comes this way: a JSON result marked as an error.
+    if (data.is_error) {
+      const msg = String(data.result || '');
+      throw new Error(/authenticat|log ?in|credential/i.test(msg) ? notLogged : 'O Claude Code respondeu com erro: ' + msg.slice(0, 300));
+    }
     return String(data.result || '');
   },
 };
