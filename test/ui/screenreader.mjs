@@ -61,12 +61,22 @@ app.whenReady().then(async () => {
       wc.sendInputEvent({ type: 'keyUp', keyCode, modifiers });
       await sleep(150);
     };
-    // What would be announced for the focused element.
+    // What would be announced for the focused element. The status bar is
+    // rebuilt when the word count or the Git state changes, and the app moves
+    // the focus to the new copy of the item; if that happens between reading
+    // the focused element and asking for its accessibility node, the node
+    // belongs to an element no longer in the page, so the reading is redone.
     const focused = async () => {
-      const { result } = await cdp.sendCommand('Runtime.evaluate', { expression: 'document.activeElement' });
-      if (!result.objectId) return null;
-      const { nodes } = await cdp.sendCommand('Accessibility.getPartialAXTree', { objectId: result.objectId, fetchRelatives: false });
-      const n = nodes[0] || {};
+      let n = {};
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const { result } = await cdp.sendCommand('Runtime.evaluate', { expression: 'document.activeElement' });
+        if (!result.objectId) return null;
+        const { nodes } = await cdp.sendCommand('Accessibility.getPartialAXTree', { objectId: result.objectId, fetchRelatives: false });
+        n = nodes[0] || {};
+        const { result: still } = await cdp.sendCommand('Runtime.callFunctionOn', { objectId: result.objectId, functionDeclaration: 'function () { return this.isConnected && this === document.activeElement; }', returnByValue: true });
+        if (still.value) break;
+        await sleep(100);
+      }
       const props = Object.fromEntries((n.properties || []).map((p) => [p.name, p.value?.value]));
       const where = await js(`const e = document.activeElement; return (e.className && typeof e.className === 'string' ? '.' + e.className.trim().split(/\\s+/)[0] : e.tagName.toLowerCase()) + (e.closest('[role=dialog]') ? ' (dialog)' : '');`);
       return { role: n.role?.value || '', name: (n.name?.value || '').trim(), ignored: !!n.ignored, props, where };
