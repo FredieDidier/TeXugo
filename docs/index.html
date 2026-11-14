@@ -35,6 +35,14 @@
   .dl a[aria-disabled="true"] { opacity: .5; pointer-events: none; }
   .tag { font-size: 13px; background: var(--tag); padding: 2px 8px; border-radius: 99px; }
   .muted { color: var(--muted); font-size: 15px; }
+  .screenshots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .screenshots > :first-child { grid-column: 1 / -1; }
+  figure { margin: 0; }
+  figure img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; }
+  figcaption { margin-top: 6px; }
+  @media (max-width: 580px) {
+    .screenshots { grid-template-columns: minmax(0, 1fr); }
+  }
   details { border-top: 1px solid var(--line); padding: 10px 0; }
   summary { cursor: pointer; font-weight: 600; }
   a { color: var(--accent-strong); }
@@ -77,6 +85,22 @@
   <p class="muted"><span class="pt">Todas as versões: </span><span class="en">All versions: </span><a href="https://github.com/FredieDidier/TeXugo/releases">GitHub Releases</a>.
     <span class="pt">No Mac, para saber o chip: menu Apple → Sobre Este Mac.</span><span class="en">On a Mac, to see the chip: Apple menu → About This Mac.</span></p>
 
+  <h2><span class="pt">O TeXugo em uso</span><span class="en">TeXugo in use</span></h2>
+  <div class="screenshots">
+    <figure>
+      <a href="capturas/editor.jpg" aria-labelledby="shot-editor"><img src="capturas/editor.jpg" alt="" loading="lazy" width="2960" height="1744"></a>
+      <figcaption class="muted" id="shot-editor"><span class="pt">Editor LaTeX, estrutura do artigo e PDF compilado.</span><span class="en">LaTeX editor, paper outline, and compiled PDF.</span></figcaption>
+    </figure>
+    <figure>
+      <a href="capturas/referencias.jpg" aria-labelledby="shot-refs"><img src="capturas/referencias.jpg" alt="" loading="lazy" width="2960" height="1744"></a>
+      <figcaption class="muted" id="shot-refs"><span class="pt">Referências bibliográficas ao lado do texto.</span><span class="en">Bibliographic references alongside the text.</span></figcaption>
+    </figure>
+    <figure>
+      <a href="capturas/revisao.jpg" aria-labelledby="shot-review"><img src="capturas/revisao.jpg" alt="" loading="lazy" width="2960" height="1744"></a>
+      <figcaption class="muted" id="shot-review"><span class="pt">Painel de revisão e submissão.</span><span class="en">Review and submission panel.</span></figcaption>
+    </figure>
+  </div>
+
   <h2><span class="pt">Primeira abertura</span><span class="en">First launch</span></h2>
   <p class="pt">O TeXugo é gratuito e não tem assinatura paga da Apple nem da Microsoft. Por isso o sistema pergunta uma vez, na primeira abertura de cada versão.</p>
   <p class="en">TeXugo is free and is not signed with a paid Apple or Microsoft certificate, so the system asks once, the first time each version opens.</p>
@@ -92,6 +116,10 @@
       <li>Open TeXugo. macOS says it cannot verify the app; click <b>OK</b>.</li>
       <li>Go to System Settings → Privacy &amp; Security, scroll to the message about TeXugo and click <b>Open Anyway</b>. Confirm with your password.</li>
     </ol>
+    <figure>
+      <a href="capturas/primeira-abertura-mac.jpg" aria-labelledby="shot-mac"><img src="capturas/primeira-abertura-mac.jpg" alt="" loading="lazy" width="2960" height="1744"></a>
+      <figcaption class="muted" id="shot-mac"><span class="pt">Verificação da instalação ao abrir o TeXugo no Mac.</span><span class="en">Installation check when TeXugo first opens on a Mac.</span></figcaption>
+    </figure>
   </details>
   <details>
     <summary>Windows</summary>
