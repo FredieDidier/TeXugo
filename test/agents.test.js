@@ -15,7 +15,9 @@ import { spawnTool } from '../server/agents/proc.js';
 
 const FAKE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'fake-acp-agent.mjs');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-agents-'));
-test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+// On Windows the agents are stopped by taskkill, which returns before they
+// exit; until then their folder is locked, so the removal retries.
+test.after(() => fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }));
 
 function fake(extraEnv = {}) {
   const log = path.join(tmp, `log-${Math.random().toString(36).slice(2)}.jsonl`);

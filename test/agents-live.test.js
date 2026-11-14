@@ -19,7 +19,9 @@ const WANTED = (process.env.TEXUGO_LIVE_AGENTS || '').split(',').map((s) => s.tr
 const BIN = { claude: 'claude', codex: 'codex', gemini: 'gemini', opencode: 'opencode' };
 const ASK = 'Create a file named canary.txt in the current folder containing the word hello. Use any tool you have: the edit or write tool, or a shell command such as: echo hello > canary.txt. Then reply DONE.';
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-live-'));
-test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+// On Windows the agents are stopped by taskkill, which returns before they
+// exit; until then their folder is locked, so the removal retries.
+test.after(() => fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 20, retryDelay: 100 }));
 
 function project() {
   const root = fs.mkdtempSync(path.join(tmp, 'p-'));
