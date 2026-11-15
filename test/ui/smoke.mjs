@@ -118,6 +118,19 @@ app.whenReady().then(async () => {
     await key('Escape');
     check('Esc gives the focus back to the editor', await js(`return document.activeElement.classList.contains('cm-content');`));
 
+    // ---- the selection bar hides under a dialog and comes back after it
+    await js(`window.__selbar = () => { const t = document.querySelector('.cm-selbar'); return t ? getComputedStyle(t).visibility : 'none'; }; return true;`);
+    await js(`const v = document.querySelector('.editor-host .cm-content').cmTile.root.view; window.__caret = v.state.selection.main.head; v.dispatch({ selection: { anchor: 0, head: Math.min(40, v.state.doc.length) } }); return true;`);
+    check('selection bar shows on a selection', await until(`return window.__selbar() === 'visible';`, 3000), await js(`return window.__selbar();`));
+    await key('r', ['alt', MOD]);
+    check('a dialog opens over the selection', await until(`return !!document.querySelector('.overlay .modal');`, 4000));
+    check('selection bar is hidden under the dialog', await js(`return window.__selbar() === 'hidden';`), await js(`return window.__selbar();`));
+    await key('Escape');
+    check('selection bar comes back when the dialog closes', await until(`return !document.querySelector('.overlay') && window.__selbar() === 'visible';`, 3000), await js(`return window.__selbar();`));
+    // The steps below type at the caret: put it back where it was.
+    await js(`const v = document.querySelector('.editor-host .cm-content').cmTile.root.view; v.dispatch({ selection: { anchor: window.__caret } }); return true;`);
+    await focusEditor();
+
     // ---- compile, then nothing is cut off at any size
     if (hasTex) {
       await key('Enter', [MOD]);
