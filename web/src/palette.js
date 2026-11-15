@@ -8,6 +8,7 @@ import { h, clear, icon, fileIcon, relPath, basename, REVEAL, toast } from './do
 import { openSettings } from './settings.js';
 import { newProjectDialog, showWelcome, cloneDialog } from './welcome.js';
 import { markDialog, feedbackDialog } from './sent.js';
+import { overleafSendDialog } from './overleaf.js';
 import { fuzzyScore, bestScore } from './fuzzy.js';
 
 // Areas of the palette, in the order they are listed when nothing is typed.
@@ -49,7 +50,8 @@ function commands(app, S) {
     },
     { a: 'Coautores', t: 'Comentários no texto (seus e dos coautores)', kw: 'comentários comentário coautor discussão responder resolver', i: 'comment', run: () => app.bottom.show('comentarios') },
     { a: 'Coautores', t: 'Marcar a versão enviada (para ler o retorno contra ela)', kw: 'enviar enviada versão marcar coautor amigo leitor retorno sugestões', i: 'papers', run: () => markDialog(app, S) },
-    { a: 'Coautores', t: 'Recebi um retorno: ler as sugestões contra a versão enviada', kw: 'retorno sugestões recebi versão enviada comparar coautor amigo leitor pdf anotado', i: 'down', run: () => feedbackDialog(app, S) },
+    { a: 'Coautores', t: 'Mandar para o Overleaf (ZIP, sem Git)', kw: 'overleaf zip coautor enviar upload projeto gratuito sem git', i: 'external', run: () => overleafSendDialog(app, S) },
+    { a: 'Coautores', t: 'Recebi um retorno: ler as sugestões contra a versão enviada', kw: 'retorno sugestões recebi versão enviada comparar coautor amigo leitor pdf anotado overleaf zip downloads', i: 'down', run: () => feedbackDialog(app, S) },
     { a: 'Revisão e submissão', t: 'Pacote de replicação: checklist da revista', kw: 'replicação replication pacote data editor dcas readme seed dados código aea econometrica zenodo dataverse', i: 'papers', run: () => app.bottom.show('replicacao') },
     { a: 'Coautores', t: 'Novidades dos coautores desde a sua última visita', kw: 'git commits coautor novidades mudanças quem mudou pull remoto', i: 'users', run: () => app.bottom.show('novidades') },
     { a: 'Coautores', t: 'Mostrar ou esconder quem escreveu cada trecho', kw: 'autoria blame git coautor quem escreveu linha', i: 'users', run: () => app.blame.toggle() },

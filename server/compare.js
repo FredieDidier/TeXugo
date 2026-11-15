@@ -85,8 +85,12 @@ async function sourceReader(doc, source, tmp) {
     main = p;
   } else throw new Error('Escolha um .tex, um .zip ou uma pasta.');
   const mainDir = path.dirname(main);
+  // Files that went elsewhere in a ZIP TeXugo made (../tables/t.tex ->
+  // tables/t.tex in the ZIP sent to Overleaf).
+  const rename = source.rename || {};
   const read = async (rel) => {
-    const f = rel === '.main' ? main : path.resolve(mainDir, rel);
+    const moved = rename[rel.split(path.sep).join('/')];
+    const f = rel === '.main' ? main : path.resolve(mainDir, moved || rel);
     // A lone .tex brings only itself; its folder (often Downloads) is not
     // the coauthor's project.
     if (/\.tex$/i.test(p) && !fs.statSync(p).isDirectory() && f !== main) return null;

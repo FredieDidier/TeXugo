@@ -4,7 +4,7 @@
 // response letter) and the checks before sending. Each block says where
 // things stand ("3 notes open") and opens the tool; the long lists stay in
 // the bottom panel.
-import { locale } from './i18n.js';
+import { locale, getLang } from './i18n.js';
 import { call } from './api.js';
 import { h, clear, icon, basename, relPath, toast, dirname, sepOf } from './dom.js';
 import { viciosOf } from './vicios/cm.js';
@@ -17,7 +17,9 @@ import { summary } from './news.js';
 import { authorColor } from './blame.js';
 import { replicationItems } from './replication.js';
 import { loadSent, sentCount, markDialog, feedbackDialog } from './sent.js';
+import { overleafSendDialog, overleafSent } from './overleaf.js';
 
+const L = (pt, en) => (getLang() === 'en' ? en : pt);
 const REC = { reject: 'rejeitar', 'major revision': 'revisão maior', 'minor revision': 'revisão menor', accept: 'aceitar' };
 
 const exists = async (p) => {
@@ -106,6 +108,21 @@ export async function renderRevisao(app, S, el) {
             : 'Marque a versão quando mandar o paper: o retorno é lido contra ela, mesmo que o texto já tenha mudado.',
         [open ? btn('Ver sugestões', () => app.bottom.show('sugestoes'), true) : null, btn('Marcar o envio…', () => markDialog(app, S)), btn('Recebi o retorno…', () => feedbackDialog(app, S, { markId: marks[0] && marks[0].id }))].filter(Boolean),
         { cls: open ? 'open' : '' },
+      ),
+    );
+    // A coauthor on Overleaf: by Git when the project is linked (paid
+    // plans), else by ZIP, read against the version sent.
+    const ol = marks.find((x) => x.note === 'Overleaf');
+    coauthors.push(
+      row(
+        'external',
+        L('Coautor no Overleaf', 'Coauthor on Overleaf'),
+        g && g.overleaf
+          ? L('Ligado pelo Git: Sincronizar, no painel Git, manda e recebe as mudanças.', 'Linked by Git: Sync, in the Git panel, sends and receives the changes.')
+          : ol
+            ? overleafSent(ol, dm(ol.date))
+            : L('Sem Git nem plano pago: um ZIP pronto para virar projeto no Overleaf, e o ZIP que voltar é lido contra ele.', 'No Git or paid plan needed: a ZIP ready to become an Overleaf project, and the ZIP that comes back is read against it.'),
+        g && g.overleaf ? [] : [btn(L('Mandar ZIP…', 'Send ZIP…'), () => overleafSendDialog(app, S)), ol ? btn(L('Recebi do Overleaf…', 'Back from Overleaf…'), () => feedbackDialog(app, S, { markId: ol.id })) : null].filter(Boolean),
       ),
     );
   }

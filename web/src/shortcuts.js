@@ -89,6 +89,7 @@ export const SECTIONS = [
       ['Anotações do PDF (suas ou do coautor), ligadas ao .tex', '', 'Aba Revisão; lista na aba Anotações do painel inferior'],
       ['Comparar com outra versão (PDF com mudanças marcadas)', '', 'Aba Revisão'],
       ['Marcar a versão enviada e ler o retorno contra ela (sugestões: aplica direto, já no texto, conflito, sumiu)', '', 'Aba Revisão → Versões enviadas; aba Sugestões no painel de baixo; paleta: “enviada”, “retorno”'],
+      ['Mandar um ZIP para o Overleaf e ler o ZIP que voltar (coautor sem Git)', '', 'Aba Revisão → Coautor no Overleaf; paleta: “Overleaf”'],
       ['Comentar o trecho selecionado (vai para os coautores com o commit)', '⌥⌘M', 'Barra da seleção: 💬; botão direito; aba Comentários do painel inferior'],
       ['Comentários no texto: responder, resolver, ir ao trecho', '', 'Passe o mouse no trecho marcado; aba Comentários; aba Revisão'],
       ['Novidades dos coautores desde a sua última visita (por pessoa e por seção)', '', 'Aba Revisão; aba Novidades no painel de baixo; paleta: “novidades”'],

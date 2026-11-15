@@ -14,6 +14,7 @@ import * as gitOps from './git.js';
 import * as coauthors from './coauthors.js';
 import * as comments from './comments.js';
 import * as sent from './sent.js';
+import * as overleaf from './overleaf.js';
 import * as sync from './synctex.js';
 import * as textsync from './textsync.js';
 import { BuildManager } from './build.js';
@@ -923,6 +924,14 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
       const own = {};
       for (const [p, text] of Object.entries(buffers || {})) if (allowed(p) && typeof text === 'string') own[path.resolve(p)] = text;
       return sent.feedback(root, mustAllow(doc), { kind: 'path', path: String(source.path) }, { base: base || null, buffers: own, from });
+    },
+    // A coauthor on Overleaf without Git: the ZIP to upload (marked as sent),
+    // and the newest ZIPs in Downloads, where the one that comes back lands.
+    async overleafZip({ root, doc, to }) {
+      return overleaf.overleafZip(mustAllow(root), mustAllow(doc), { to: String(to || '') });
+    },
+    async recentDownloads() {
+      return overleaf.recentDownloads();
     },
     async sentFeedbackGet({ root, id }) {
       return sent.feedbackGet(mustAllow(root), id);

@@ -50,11 +50,14 @@ function sources(doc) {
   return out;
 }
 
-export async function mark(root, doc, { to = '', note = '' } = {}) {
+// `texts` replaces what is read from disk when the version sent is not the
+// files as they are (the Overleaf ZIP, with paths fixed in the copies), and
+// `zipPaths` says where a file went in that ZIP when it moved.
+export async function mark(root, doc, { to = '', note = '', texts = null, zipPaths = null } = {}) {
   root = path.resolve(root);
   const id = newId();
   const dir = path.join(dirOf(root), id);
-  const files = sources(doc);
+  const files = texts || sources(doc);
   for (const [r, text] of Object.entries(files)) {
     const target = path.join(dir, 'src', r);
     if (!target.startsWith(path.join(dir, 'src'))) continue; // ../ inputs: kept by name below
@@ -85,6 +88,7 @@ export async function mark(root, doc, { to = '', note = '' } = {}) {
   const r = await run('git', ['-C', path.dirname(doc), 'rev-parse', 'HEAD'], { timeout: 8000 });
   if (r.code === 0) commit = r.stdout.trim();
   const meta = { id, doc: rel(root, doc), to: String(to).trim().slice(0, 200), note: String(note).trim().slice(0, 1000), date: new Date().toISOString(), files: Object.keys(files), pdf, stale, commit };
+  if (zipPaths && Object.keys(zipPaths).length) meta.zipPaths = zipPaths;
   fs.writeFileSync(path.join(dir, 'meta.json'), JSON.stringify(meta, null, 2) + '\n');
   return meta;
 }
@@ -332,7 +336,15 @@ export async function feedback(root, doc, source, { base = null, buffers = {}, f
   const docDir = path.dirname(doc);
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-sent-'));
   try {
-    const m = await buildMirror(doc, source, tmp);
+    const zipPathsOf = (b) => {
+      if (!b || b.kind !== 'sent') return null;
+      try {
+        return JSON.parse(fs.readFileSync(path.join(dirOf(root), checkId(b.id), 'meta.json'), 'utf8')).zipPaths || null;
+      } catch {
+        return null;
+      }
+    };
+    let m = await buildMirror(doc, { ...source, rename: zipPathsOf(base) }, tmp);
     const theirsOf = (r) => (m.fromCurrent.includes(r) ? null : readText(path.resolve(m.oldDir, r)));
     const theirsMain = readText(m.oldDoc);
     let guessed = null;
@@ -341,6 +353,14 @@ export async function feedback(root, doc, source, { base = null, buffers = {}, f
       if (!cands.length) throw new Error('Não há versão enviada marcada nem commits do Git para comparar. Marque a versão quando enviar o paper.');
       base = cands[0].base;
       guessed = { label: cands[0].label, others: cands.slice(1, 6).map((c) => ({ base: c.base, label: c.label })) };
+      // The guess is a ZIP sent to Overleaf: read the moved files from
+      // where they went in it.
+      const moved = zipPathsOf(base);
+      if (moved) {
+        fs.rmSync(tmp, { recursive: true, force: true });
+        fs.mkdirSync(tmp);
+        m = await buildMirror(doc, { ...source, rename: moved }, tmp);
+      }
     }
     const readBase = await baseReader(root, doc, base);
     const items = [];

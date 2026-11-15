@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 // These compile documents (latexmk, latexdiff, biber) and fail without TeX.
-export const NEEDS_TEX = ['build', 'compare', 'live', 'rr', 'sent', 'submission', 'templates'];
+export const NEEDS_TEX = ['build', 'compare', 'live', 'overleaf', 'rr', 'sent', 'submission', 'templates'];
 
 const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'test');
 const noTex = process.argv.includes('--no-tex');

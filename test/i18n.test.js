@@ -25,6 +25,7 @@ const SKIP_FILES = new Set([
   'web/src/grammar/rules.js',
   'web/src/grammar/text.js', // LaTeX-to-prose conversion: Portuguese words it recognises
   'web/src/sent.js', // L(pt, en) everywhere
+  'web/src/overleaf.js', // L(pt, en) everywhere
   'web/src/replication.js', // L(pt, en) everywhere
   'server/replication-journals.js', // journal data with L(pt, en) notes
   'server/academic-words.js', // word list for the speller

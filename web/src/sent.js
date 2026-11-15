@@ -11,6 +11,12 @@ import { pieces } from '../../server/textdiff.js';
 import { fromSent } from './annotations.js';
 
 const L = (pt, en) => (getLang() === 'en' ? en : pt);
+const ago = (ms) => {
+  const m = Math.round((Date.now() - ms) / 60000);
+  if (m < 60) return L(`há ${Math.max(m, 1)} min`, `${Math.max(m, 1)} min ago`);
+  if (m < 48 * 60) return L(`há ${Math.round(m / 60)} h`, `${Math.round(m / 60)} h ago`);
+  return new Date(ms).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' });
+};
 const day = (iso) => new Date(iso).toLocaleDateString(locale(), { day: '2-digit', month: '2-digit' });
 const STATUS = {
   aplica: () => L('aplica direto', 'applies as is'),
@@ -103,6 +109,23 @@ export async function feedbackDialog(app, S, { markId = null } = {}) {
     h('option', { value: '' }, L('Descobrir sozinho (a versão enviada ou o commit mais parecido)', 'Find it (the sent version or commit closest to it)')),
     marks.map((x) => h('option', { value: x.id, selected: x.id === markId }, L(`Enviada${x.to ? ' a ' + x.to : ''} em ${day(x.date)}${x.note ? ' · ' + x.note : ''}`, `Sent${x.to ? ' to ' + x.to : ''} on ${day(x.date)}${x.note ? ' · ' + x.note : ''}`))),
   );
+  // The newest ZIPs and .tex files in Downloads, where Overleaf's download
+  // and e-mail attachments land. The newest one that arrived after the
+  // version was sent is filled in.
+  const found = h('div', { class: 'faint', style: { fontSize: '12px', marginTop: '6px' } });
+  const fill = (f) => {
+    pathIn.value = f.path;
+    for (const b of found.querySelectorAll('button')) b.classList.toggle('primary', b.dataset.path === f.path);
+  };
+  call('recentDownloads', {})
+    .then((files) => {
+      if (!files.length) return;
+      const since = mk ? Date.parse(mk.date) : (marks[0] && Date.parse(marks[0].date)) || 0;
+      clear(found, L('No Downloads: ', 'In Downloads: '), files.slice(0, 4).map((f) => h('button', { class: 'btn sm', 'data-path': f.path, title: f.path, style: { margin: '2px 4px 2px 0' }, onclick: () => fill(f) }, f.name, h('span', { style: { opacity: 0.75 } }, ' · ' + ago(f.mtime)))));
+      const fresh = files.find((f) => f.mtime > since && /\.zip$/i.test(f.name));
+      if (fresh && since && !pathIn.value) fill(fresh);
+    })
+    .catch(() => {});
   const status = h('div');
   const go = h('button', { class: 'btn primary' }, icon('play'), L('Ler as sugestões', 'Read the suggestions'));
   go.onclick = async () => {
@@ -133,7 +156,7 @@ export async function feedbackDialog(app, S, { markId = null } = {}) {
     body: h(
       'div',
       {},
-      h('div', { class: 'field' }, h('label', {}, L('O que voltou', 'What came back')), h('div', { class: 'row' }, pathIn, pick), h('p', { class: 'faint', style: { fontSize: '12px', marginTop: '6px' } }, L('Um .tex, um ZIP (do Overleaf, por exemplo) ou uma pasta. Para um PDF anotado, escolha o PDF: as notas são ligadas à versão enviada e achadas no texto de hoje.', 'A .tex, a ZIP (from Overleaf, say) or a folder. For an annotated PDF, choose the PDF: notes are tied to the sent version and found in today’s text.'))),
+      h('div', { class: 'field' }, h('label', {}, L('O que voltou', 'What came back')), h('div', { class: 'row' }, pathIn, pick), found, h('p', { class: 'faint', style: { fontSize: '12px', marginTop: '6px' } }, L('Um .tex, um ZIP (do Overleaf, por exemplo) ou uma pasta. Para um PDF anotado, escolha o PDF: as notas são ligadas à versão enviada e achadas no texto de hoje.', 'A .tex, a ZIP (from Overleaf, say) or a folder. For an annotated PDF, choose the PDF: notes are tied to the sent version and found in today’s text.'))),
       h('div', { class: 'field' }, h('label', {}, L('De quem', 'From')), from),
       h('div', { class: 'field' }, h('label', {}, L('Comparar com', 'Compare with')), base),
       status,

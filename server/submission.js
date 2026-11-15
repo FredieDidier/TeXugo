@@ -64,9 +64,16 @@ export function sourceFiles(doc) {
   const fls = readText(outputs(doc).fls);
   if (fls) {
     let pwd = dir;
+    // TeX writes the real path (/private/var/... for /var/..., the target of
+    // a symlinked folder); files are kept under the path the project uses,
+    // or the same file would go in twice.
+    let realDir = dir;
+    try {
+      realDir = fs.realpathSync(dir);
+    } catch {}
     for (const line of fls.split('\n')) {
       const m = line.match(/^PWD (.+)$/);
-      if (m) pwd = m[1];
+      if (m) pwd = m[1] === realDir ? dir : m[1];
       const i = line.match(/^INPUT (.+)$/);
       if (!i) continue;
       const p = path.resolve(pwd, i[1]);
@@ -204,7 +211,9 @@ export async function exportZip(doc, { check = true } = {}) {
 // the engine directly, as arXiv does (no BibTeX, no latexmk), until labels
 // settle. Then look for errors, ??, missing files, and any file read from
 // outside the extracted folder (an absolute path left in the sources).
-export async function checkZip(zip, mainRel, engine = 'pdflatex', origLog = null) {
+// With `latexmk`, the folder is compiled the way Overleaf does it: latexmk
+// with BibTeX or Biber, from the .bib the ZIP carries.
+export async function checkZip(zip, mainRel, engine = 'pdflatex', origLog = null, { latexmk = false } = {}) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-check-'));
   try {
     const u = await run(...unzipCommand(zip, tmp), { timeout: 120000 });
@@ -213,9 +222,11 @@ export async function checkZip(zip, mainRel, engine = 'pdflatex', origLog = null
     const cwd = path.dirname(main);
     let parsed = null;
     let runs = 0;
+    const flag = { pdflatex: '-pdf', xelatex: '-xelatex', lualatex: '-lualatex' }[engine] || '-pdf';
     for (; runs < 4; ) {
       runs++;
-      await run(engine, ['-interaction=nonstopmode', '-file-line-error', '-recorder', path.basename(main)], { cwd, timeout: 300000 });
+      if (latexmk) await run('latexmk', [flag, '-interaction=nonstopmode', '-file-line-error', '-recorder', path.basename(main)], { cwd, timeout: 300000 });
+      else await run(engine, ['-interaction=nonstopmode', '-file-line-error', '-recorder', path.basename(main)], { cwd, timeout: 300000 });
       const log = readText(stem(main) + '.log');
       if (!log) return { ok: false, fatal: `${engine} não gerou log.`, runs };
       parsed = parseLog(log, cwd);
