@@ -218,6 +218,13 @@
   .closing { text-align: center; padding: 104px 0; position: relative; }
   .closing::before { content: ""; position: absolute; inset: 0; background: radial-gradient(50% 60% at 50% 60%, var(--glow), transparent 70%); z-index: -1; }
   .closing img { width: 72px; height: 72px; margin: 0 auto 24px; }
+  .support { max-width: 560px; margin: 56px auto 0; padding: 24px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); text-align: left; }
+  .support h3 { margin: 0 0 8px; font-size: 18px; }
+  .support p { margin: 0 0 12px; color: var(--ink-2); font-size: 15px; }
+  .support .pix { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 16px 0 12px; }
+  .support .pix span { font-size: 14px; color: var(--muted); width: 100%; }
+  .support code { font: 14px/1.4 var(--mono); padding: 8px 10px; border-radius: 8px; background: var(--bg-2); border: 1px solid var(--line); word-break: break-all; flex: 1 1 260px; user-select: all; }
+  .support .fine { margin: 0; }
   footer { border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--muted); font-size: 14px; }
   footer .wrap { display: flex; gap: 12px 24px; flex-wrap: wrap; align-items: center; }
   footer nav { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-left: auto; }
@@ -636,8 +643,8 @@
       <div class="reveal">
         <details>
           <summary><span class="pt">Quanto custa?</span><span class="en">How much does it cost?</span></summary>
-          <p class="pt">Nada. O TeXugo é gratuito e de código aberto, sob a licença MIT. Não há versão paga nem assinatura.</p>
-          <p class="en">Nothing. TeXugo is free and open source, under the MIT license. There is no paid version and no subscription.</p>
+          <p class="pt">Nada. O TeXugo é gratuito e de código aberto, sob a licença MIT. Não há versão paga nem assinatura. Quem quiser pode <a href="#apoiar">apoiar</a> com uma contribuição voluntária.</p>
+          <p class="en">Nothing. TeXugo is free and open source, under the MIT license. There is no paid version and no subscription. Anyone who wants to can <a href="#apoiar">support it</a> with a voluntary contribution.</p>
         </details>
         <details>
           <summary><span class="pt">Preciso pagar por alguma IA?</span><span class="en">Do I need to pay for an AI?</span></summary>
@@ -656,8 +663,8 @@
         </details>
         <details>
           <summary><span class="pt">Meus coautores usam o Overleaf. Dá para trabalhar junto?</span><span class="en">My coauthors use Overleaf. Can we work together?</span></summary>
-          <p class="pt">Dá. Comparar com outra versão e Versões enviadas leem o ZIP exportado do Overleaf. Com a integração Git do Overleaf, que faz parte dos planos pagos dele, o projeto sincroniza pelo painel Git do TeXugo; essa sincronização ainda é experimental.</p>
-          <p class="en">Yes. Compare with another version and Sent versions read the ZIP exported from Overleaf. With Overleaf's Git integration, part of its paid plans, the project syncs from TeXugo's Git panel; that sync is still experimental.</p>
+          <p class="pt">Dá, mesmo no plano gratuito do Overleaf. Na aba Revisão, Coautor no Overleaf monta um ZIP pronto para virar projeto lá, testado do jeito que o Overleaf compila. Quando o coautor termina e baixa o projeto, o TeXugo acha o ZIP na pasta Downloads e mostra só as mudanças dele, para aceitar uma a uma, mesmo que o texto tenha mudado aqui nesse meio-tempo. Com a integração Git do Overleaf, que faz parte dos planos pagos dele, o projeto sincroniza pelo painel Git do TeXugo; essa sincronização ainda é experimental.</p>
+          <p class="en">Yes, even on Overleaf's free plan. In the Review tab, Coauthor on Overleaf builds a ZIP ready to become a project there, tested the way Overleaf compiles. When your coauthor is done and downloads the project, TeXugo finds the ZIP in your Downloads folder and shows only their changes, to accept one by one, even if the text changed here in the meantime. With Overleaf's Git integration, part of its paid plans, the project syncs from TeXugo's Git panel; that sync is still experimental.</p>
         </details>
         <details>
           <summary><span class="pt">Já tenho um projeto. Preciso mudar alguma coisa?</span><span class="en">I already have a project. Do I need to change anything?</span></summary>
@@ -686,6 +693,18 @@
         <a class="btn primary" href="#baixar" data-dl><svg aria-hidden="true"><use href="#i-down"/></svg><span data-dl-label><span class="pt">Baixar</span><span class="en">Download</span></span></a>
       </div>
       <p class="fine"><span class="pt">Gratuito, de código aberto, em português e inglês.</span><span class="en">Free, open source, in Portuguese and English.</span></p>
+      <div class="support" id="apoiar">
+        <h3><span class="pt">Apoiar o TeXugo</span><span class="en">Support TeXugo</span></h3>
+        <p class="pt">O TeXugo é gratuito e vai continuar completo para quem não contribuir. Se ele ajuda no seu trabalho e você quiser apoiar o desenvolvimento, dá para mandar qualquer valor por Pix.</p>
+        <p class="en">TeXugo is free and stays complete for everyone, whether or not they contribute. If it helps your work and you would like to support its development, you can send any amount by Pix.</p>
+        <div class="pix">
+          <span><span class="pt">Chave Pix (aleatória)</span><span class="en">Pix key (random key)</span></span>
+          <code id="pix-key">a42591d1-c13f-4a91-af7f-57dc2de35799</code>
+          <button class="btn ghost sm" type="button" data-copy="pix-key"><span class="pt">Copiar a chave</span><span class="en">Copy the key</span></button>
+        </div>
+        <p class="fine" aria-live="polite" data-copied></p>
+        <p class="fine"><span class="pt">Dar uma estrela no <a href="https://github.com/FredieDidier/TeXugo">GitHub</a> ou <a href="https://github.com/FredieDidier/TeXugo/issues/new/choose">relatar um problema</a> também ajuda.</span><span class="en">Pix is Brazil's instant payment system, so for now this works only from a Brazilian bank account. Starring the project on <a href="https://github.com/FredieDidier/TeXugo">GitHub</a> or <a href="https://github.com/FredieDidier/TeXugo/issues/new/choose">reporting a problem</a> helps too.</span></p>
+      </div>
     </div>
   </section>
 </main>
@@ -699,6 +718,7 @@
       <a href="https://github.com/FredieDidier/TeXugo/blob/main/THIRD-PARTY-NOTICES.txt">Avisos de terceiros</a>
       <a href="https://github.com/FredieDidier/TeXugo">Código</a>
       <a href="https://github.com/FredieDidier/TeXugo/issues/new/choose">Relatar um problema</a>
+      <a href="#apoiar">Apoiar</a>
     </nav>
     <nav class="en" aria-label="Links">
       <a href="https://github.com/FredieDidier/TeXugo/blob/main/PRIVACY.md">Privacy</a>
@@ -706,6 +726,7 @@
       <a href="https://github.com/FredieDidier/TeXugo/blob/main/THIRD-PARTY-NOTICES.txt">Third-party notices</a>
       <a href="https://github.com/FredieDidier/TeXugo">Source</a>
       <a href="https://github.com/FredieDidier/TeXugo/issues/new/choose">Report a problem</a>
+      <a href="#apoiar">Support</a>
     </nav>
   </div>
 </footer>
@@ -716,6 +737,22 @@
     root.classList.add('js');
     const reduce = matchMedia('(prefers-reduced-motion: reduce)');
     const en = () => root.lang === 'en';
+
+    // ---------------------------------------------------------------- Pix key
+    for (const b of document.querySelectorAll('[data-copy]')) {
+      b.addEventListener('click', async () => {
+        const text = document.getElementById(b.dataset.copy).textContent.trim();
+        const say = document.querySelector('[data-copied]');
+        // Both languages, so the line follows a later switch of language.
+        try {
+          await navigator.clipboard.writeText(text);
+          say.innerHTML = '<span class="pt">Chave copiada. Cole no app do seu banco, em Pix.</span><span class="en">Key copied. Paste it in your bank app, under Pix.</span>';
+        } catch {
+          getSelection().selectAllChildren(document.getElementById(b.dataset.copy));
+          say.innerHTML = '<span class="pt">Chave selecionada: copie com ⌘C ou Ctrl+C.</span><span class="en">Key selected: copy it with ⌘C or Ctrl+C.</span>';
+        }
+      });
+    }
 
     // ---------------------------------------------------------------- videos
     // Each video loads only when it comes into view, plays while visible and
