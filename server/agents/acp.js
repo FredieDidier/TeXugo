@@ -7,6 +7,7 @@
 // session/request_permission. Each request becomes an approval card in the
 // panel, with the whole value (a diff, a command, the raw input), and the
 // answer is always "once": nothing is approved for the rest of the session.
+// An agent with permission modes (Codex) asks less in the modes that say so.
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -21,7 +22,7 @@ export const PROTOCOL_VERSION = 1;
 const INTRO = `<texugo-instructions>
 You are running inside TeXugo, a LaTeX editor for academic writing, as the assistant in its side panel.
 The user writes papers, slides and syllabi in LaTeX, usually in Portuguese or English: answer in the user's language.
-Every edit, new file or shell command you make is shown to the user to approve before it happens; if they reject it, ask what they want instead.
+Your edits, new files and shell commands are shown to the user in the panel; depending on the permission mode the user picked, they wait for the user's approval first. If the user rejects one, ask what they want instead.
 Messages may start with a <texugo-context> block with the active file, the selection and the errors of the last LaTeX build: use it, do not repeat it back.
 To compile, prefer telling the user to click Compile in TeXugo; run latexmk yourself only if asked.
 </texugo-instructions>
@@ -61,7 +62,8 @@ export class AcpSession {
   }
 
   async start() {
-    const { bin, args = [], env = {} } = this.agent.acp;
+    const { bin, args = [] } = this.agent.acp;
+    const env = { ...(this.agent.acp.env || {}), ...(this.agent.modeEnv ? this.agent.modeEnv(this.opts.mode) : {}) };
     if (!(await which(bin))) throw new Error(`${this.agent.product} não encontrado. Instale com: ${this.agent.install}`);
     const child = (this.child = spawnLong(bin, args, this.root, env));
     child.stdout.on('data', (d) => {
@@ -241,6 +243,7 @@ export class AcpSession {
     if (!this.sessionId) throw new Error(`${this.agent.product} não abriu a conversa.`);
     await this.choose('model', opts.model);
     await this.choose('thought_level', opts.effort);
+    if (this.agent.modeValue) await this.choose('mode', this.agent.modeValue(opts.mode));
     this.running = true;
     this.emit({ kind: 'status', running: true });
     const prompt = (this.first ? INTRO : '') + text;

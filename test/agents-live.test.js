@@ -170,3 +170,59 @@ test('claude: the one-shot run reads skill references and nothing else outside t
   assert.ok(text.includes(first), `the skill reference was not read. It said: ${text.slice(0, 300)}`);
   assert.ok(!text.includes(token), `a file outside the project and the skills was read. It said: ${text.slice(0, 300)}`);
 });
+
+// The permission modes of the panel, end to end with the real agent. In
+// "ask" the write waits for a card (refused, nothing is written); switched
+// to "edits" in the same conversation, the file is written with no card; a
+// new conversation in "auto" or "full" writes it with no card too.
+//   TEXUGO_LIVE_AGENTS=claude,codex node --test test/agents-live.test.js
+const PANEL = { claude: { bin: 'claude', model: process.env.TEXUGO_LIVE_CLAUDE_MODEL || 'claude-haiku-5-5', effort: 'low' }, codex: { bin: 'codex-acp' } };
+for (const id of ['claude', 'codex']) {
+  test(`${id} panel: "ask" waits for a card; "edits", "auto" and "full" write without one`, { skip: !WANTED.includes(id) && 'set TEXUGO_LIVE_AGENTS to run it', timeout: 1200000 }, async (t) => {
+    if (!(await which(PANEL[id].bin))) return t.skip(`${PANEL[id].bin} is not installed`);
+    const { Agents } = await import('../server/agents/adapter.js');
+    const opts = (mode) => ({ agent: id, model: PANEL[id].model, effort: PANEL[id].effort, mode });
+    const run = async (hub, events, root, text, mode) => {
+      const from = events.length;
+      await hub.send(root, text, opts(mode));
+      // Every card of this turn is refused; the turn ends with a result.
+      const end = Date.now() + 300000;
+      for (;;) {
+        const now = events.slice(from);
+        for (const c of now.filter((e) => e.kind === 'permission' && !e.answered)) (c.answered = true), hub.answer(root, c.reqId, false);
+        if (now.some((e) => e.kind === 'result' || e.kind === 'error')) return now;
+        if (Date.now() > end) throw new Error('no result; events: ' + now.map((e) => e.kind).join(','));
+        await new Promise((r) => setTimeout(r, 200));
+      }
+    };
+    const written = (root) => fs.existsSync(path.join(root, 'canary.txt'));
+    const cards = (evs) => evs.filter((e) => e.kind === 'permission').length;
+    {
+      const root = project();
+      const events = [];
+      const hub = new Agents((m) => events.push(m));
+      try {
+        const asked = await run(hub, events, root, ASK, 'ask');
+        assert.ok(cards(asked) >= 1, 'no card in "ask"; events: ' + asked.map((e) => e.kind).join(','));
+        assert.equal(written(root), false, 'written in "ask" although every card was refused');
+        const edits = await run(hub, events, root, 'The user changed the permission mode. Try again now: ' + ASK, 'edits');
+        assert.equal(cards(edits), 0, 'a card in "edits"');
+        assert.equal(written(root), true, 'not written in "edits"; it said: ' + edits.filter((e) => e.kind === 'text').map((e) => e.text).join(' ').slice(0, 300));
+      } finally {
+        hub.killAll();
+      }
+    }
+    for (const mode of ['auto', 'full']) {
+      const root = project();
+      const events = [];
+      const hub = new Agents((m) => events.push(m));
+      try {
+        const evs = await run(hub, events, root, ASK, mode);
+        assert.equal(cards(evs), 0, `a card in "${mode}"`);
+        assert.equal(written(root), true, `not written in "${mode}"`);
+      } finally {
+        hub.killAll();
+      }
+    }
+  });
+}

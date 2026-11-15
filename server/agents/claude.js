@@ -6,7 +6,9 @@
 // change something (an edit, a new file, a shell command, a web fetch) comes
 // back as a can_use_tool control request; the panel shows it (edits as a
 // diff of the whole file) and we answer allow or deny with what the user
-// chose. Nothing is written without the user's yes.
+// chose. In the default mode nothing is written without the user's yes; the
+// other permission modes (./modes.js) let Claude Code skip some of the asking
+// or all of it.
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -14,6 +16,7 @@ import { claudeSourceFlags } from '../trust.js';
 import { killTree } from '../platform.js';
 import { spawnLong, spawnTool, versionOf } from './proc.js';
 import { which } from '../util.js';
+import { MODES, modeOf } from './modes.js';
 
 // Model and effort picked in the panel (or Preferências). The CLI gets the
 // full id; an older Claude Code that does not know it says so, and we explain.
@@ -34,6 +37,13 @@ export function claudeFlags({ model, effort } = {}) {
   return ['--model', m, '--effort', e];
 }
 
+// The panel's permission modes as Claude Code's --permission-mode.
+const PERMISSION_MODE = { edits: 'acceptEdits', auto: 'auto', full: 'bypassPermissions' };
+const modeFlags = (opts = {}) => {
+  const m = PERMISSION_MODE[modeOf(opts.mode)];
+  return m ? ['--permission-mode', m] : [];
+};
+
 const FREE = ['Read', 'Grep', 'Glob', 'LS', 'TodoWrite', 'Skill'];
 const SKILL_READ = '--allowedTools=Read(~/.claude/skills/**)';
 const NOT_FOUND = 'Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash';
@@ -42,7 +52,7 @@ const NOT_LOGGED = 'O Claude Code não está logado. Rode "claude" no Terminal (
 
 export const SYSTEM = `You are running inside TeXugo, a LaTeX editor for academic writing, as the assistant in its side panel.
 The user writes papers, slides and syllabi in LaTeX, usually in Portuguese or English, and talks to you in Portuguese by default: answer in the user's language.
-Every edit, new file or shell command you make is shown to the user as a diff or a command to approve before it happens; if they reject it, ask what they want instead.
+Your edits, new files and shell commands are shown to the user in the panel; depending on the permission mode the user picked, they wait for the user's approval first. If the user rejects one, ask what they want instead.
 Messages may start with a <texugo-context> block with the active file, the selection and the errors of the last LaTeX build: use it, do not repeat it back.
 To compile, prefer telling the user to click Compile in TeXugo (it compiles linked documents together so \\externaldocument references resolve); run latexmk yourself only if asked.
 If a writing skill is available (for example applied-micro-paper-writing), follow it when you write or revise prose.`;
@@ -56,16 +66,20 @@ export class ClaudeSession {
     this.sessionId = opts.resume || null;
     this.err = '';
     this.buf = '';
-    this.flags = claudeFlags(opts).join(' ');
+    this.flags = [...claudeFlags(opts), ...modeFlags(opts)].join(' ');
     this.opts = opts;
+  }
+
+  args() {
+    const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--permission-prompt-tool', 'stdio', '--allowedTools', FREE.join(','), '--append-system-prompt', SYSTEM, ...claudeSourceFlags(this.root), ...claudeFlags(this.opts), ...modeFlags(this.opts)];
+    if (this.opts.resume) args.push('--resume', this.opts.resume);
+    return args;
   }
 
   async start() {
     const bin = await which('claude');
     if (!bin) throw new Error(NOT_FOUND);
-    const args = ['-p', '--input-format', 'stream-json', '--output-format', 'stream-json', '--verbose', '--permission-prompt-tool', 'stdio', '--allowedTools', FREE.join(','), '--append-system-prompt', SYSTEM, ...claudeSourceFlags(this.root), ...claudeFlags(this.opts)];
-    if (this.opts.resume) args.push('--resume', this.opts.resume);
-    const child = (this.child = spawnLong(bin, args, this.root));
+    const child = (this.child = spawnLong(bin, this.args(), this.root));
     child.stdout.on('data', (d) => {
       this.buf += d;
       let i;
@@ -87,10 +101,11 @@ export class ClaudeSession {
     child.on('error', (err) => this.emit({ kind: 'error', text: String(err) }));
   }
 
-  // The same process serves another message only with the same model and
-  // effort; otherwise the hub starts a new one that resumes this one.
+  // The same process serves another message only with the same model,
+  // effort and permission mode; otherwise the hub starts a new one that
+  // resumes this one.
   matches(opts) {
-    return this.running || this.flags === claudeFlags(opts).join(' ');
+    return this.running || this.flags === [...claudeFlags(opts), ...modeFlags(opts)].join(' ');
   }
   get resumeId() {
     return this.sessionId;
@@ -203,6 +218,7 @@ export const claude = {
   product: 'Claude Code',
   install: 'curl -fsSL https://claude.ai/install.sh | bash',
   site: 'https://claude.com/claude-code',
+  modes: MODES,
   async detect() {
     const bin = await which('claude');
     return { installed: !!bin, panel: !!bin, oneShot: !!bin, version: bin ? await versionOf(bin) : null, models: MODEL_LIST, efforts: EFFORTS, defaultModel: DEFAULT_MODEL, defaultEffort: DEFAULT_EFFORT };

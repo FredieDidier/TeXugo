@@ -7,6 +7,8 @@
 //   run    asks to run a command; reports what the client chose
 //   wait   keeps the turn open until session/cancel
 //   auth   fails as an agent that needs a login
+//   mode   says the permission mode (codex-acp's ids; the first one from
+//          $INITIAL_AGENT_MODE, as codex-acp reads it)
 // It records every message it receives in $FAKE_ACP_LOG, one JSON per line.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,6 +20,7 @@ const waiting = new Map(); // our request id -> resolve
 let cancel = null;
 let model = 'fast-1';
 let level = 'low';
+let mode = process.env.INITIAL_AGENT_MODE || 'read-only';
 
 const send = (m) => process.stdout.write(JSON.stringify({ jsonrpc: '2.0', ...m }) + '\n');
 const update = (sessionId, u) => send({ method: 'session/update', params: { sessionId, update: u } });
@@ -30,6 +33,7 @@ const ask = (method, params) =>
 const config = () => [
   { id: 'model', name: 'Model', category: 'model', type: 'select', currentValue: model, options: [{ value: 'fast-1', name: 'Fast 1' }, { value: 'deep-2', name: 'Deep 2' }] },
   { id: 'reasoning', name: 'Reasoning', category: 'thought_level', type: 'select', currentValue: level, options: [{ group: 'g', name: 'Levels', options: [{ value: 'low', name: 'Low' }, { value: 'high', name: 'High' }] }] },
+  { id: 'mode', name: 'Mode', category: 'mode', type: 'select', currentValue: mode, options: ['read-only', 'workspace-write', 'agent', 'agent-full-access'].map((v) => ({ value: v, name: v })) },
 ];
 
 async function prompt(id, { sessionId, prompt }) {
@@ -81,6 +85,10 @@ async function prompt(id, { sessionId, prompt }) {
     update(sessionId, { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: `choice: ${r.outcome.optionId || r.outcome.outcome}` } });
     return send({ id, result: { stopReason: 'end_turn' } });
   }
+  if (word === 'mode') {
+    update(sessionId, { sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: `mode ${mode}` } });
+    return send({ id, result: { stopReason: 'end_turn' } });
+  }
   if (word === 'wait') {
     update(sessionId, { sessionUpdate: 'tool_call', toolCallId: 'c3', title: 'Delete old.txt', kind: 'delete', status: 'pending' });
     const pending = ask('session/request_permission', { sessionId, toolCall: { toolCallId: 'c3' }, options: [{ optionId: 'a', name: 'Allow', kind: 'allow_once' }] });
@@ -117,6 +125,7 @@ process.stdin.on('data', (d) => {
     } else if (m.method === 'session/set_config_option') {
       if (m.params.configId === 'model') model = m.params.value;
       if (m.params.configId === 'reasoning') level = m.params.value;
+      if (m.params.configId === 'mode') mode = m.params.value;
       send({ id: m.id, result: { configOptions: config() } });
     } else if (m.method === 'session/prompt') prompt(m.id, m.params);
     else if (m.method === 'session/cancel') cancel && cancel();

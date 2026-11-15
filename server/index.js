@@ -714,10 +714,10 @@ export function createServer({ port = 0, token = randomBytes(24).toString('hex')
     async agentList() {
       return listAgents(state.agentCatalog);
     },
-    async agentSend({ root, text, agent, model, effort }) {
+    async agentSend({ root, text, agent, model, effort, mode }) {
       mustAllow(root);
       if (!text || !text.trim()) throw httpError(400, 'Mensagem vazia.');
-      return agents.send(path.resolve(root), text, { agent, model, effort });
+      return agents.send(path.resolve(root), text, { agent, model, effort, mode });
     },
     async agentAnswer({ root, reqId, allow, note }) {
       return agents.answer(path.resolve(mustAllow(root)), reqId, !!allow, note);

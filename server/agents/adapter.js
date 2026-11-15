@@ -2,6 +2,7 @@
 // object with:
 //
 //   id, name, product, install, site, login
+//   modes                   -> the permission modes it offers (./modes.js), or none
 //   detect()                -> { installed, panel, oneShot, version, models?, efforts? }
 //   Session                 -> class (root, opts, emit): one conversation of
 //                              the panel, with start(), send(text, opts),
@@ -31,7 +32,7 @@ export async function listAgents(catalog = {}) {
     AGENTS.map(async (a) => {
       const d = await a.detect();
       const seen = catalog[a.id] || {};
-      return { id: a.id, name: a.name, product: a.product, install: a.install, site: a.site, ...d, models: d.models || seen.models || [], efforts: d.efforts || seen.efforts || [] };
+      return { id: a.id, name: a.name, product: a.product, install: a.install, site: a.site, ...d, models: d.models || seen.models || [], efforts: d.efforts || seen.efforts || [], modes: a.modes || [] };
     }),
   );
 }

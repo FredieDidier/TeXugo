@@ -1,12 +1,13 @@
 // Agent panel: a chat with the user's own agent (Claude Code, Codex, Gemini
 // CLI or OpenCode) about the project, in the sidebar. The agent reads and
-// searches freely; every edit, new file or command arrives here as a card to
-// approve (edits as a diff) before it happens. Messages carry the active
-// file, the selection and the build errors, so "fix this" and "fix the
-// build" work without copying anything.
+// searches freely; by default every edit, new file or command arrives here
+// as a card to approve (edits as a diff) before it happens, and Claude Code
+// and Codex offer permission modes that ask less (AGENT_MODES). Messages
+// carry the active file, the selection and the build errors, so "fix this"
+// and "fix the build" work without copying anything.
 import { Marked } from 'marked';
 import { call, on, native } from './api.js';
-import { h, clear, icon, toast, basename, relPath, joinPath, modal } from './dom.js';
+import { h, clear, icon, toast, basename, relPath, joinPath, modal, confirmBox } from './dom.js';
 import { fileDiff } from './ide.js';
 import { tr } from './i18n.js';
 
@@ -24,10 +25,19 @@ export const CLAUDE_EFFORTS = [
   { id: 'max', label: 'Máximo' },
 ];
 
+// Permission modes of the panel (server/agents/modes.js), for the agents
+// that offer them; each agent maps them to its own setting.
+export const AGENT_MODES = [
+  { id: 'ask', label: 'Perguntar antes', hint: 'Pede a sua aprovação antes de cada edição, arquivo novo ou comando.' },
+  { id: 'edits', label: 'Editar sem perguntar', hint: 'Edita os arquivos do projeto sem perguntar; pede aprovação para o que vai além disso.' },
+  { id: 'auto', label: 'Automático', hint: 'O agente julga o que é seguro e só pede aprovação para o que parecer arriscado.' },
+  { id: 'full', label: 'Acesso total', hint: 'Nunca pergunta: edita qualquer arquivo do computador, roda qualquer comando e acessa a internet.' },
+];
+
 // The agents and what each offers, from the server (agentList). Until it
 // answers, only Claude. The other agents' models and efforts are known once
 // a conversation with them has opened.
-export const AGENTS = [{ id: 'claude', name: 'Claude', product: 'Claude Code', installed: true, panel: true, oneShot: true, models: CLAUDE_MODELS, efforts: CLAUDE_EFFORTS }];
+export const AGENTS = [{ id: 'claude', name: 'Claude', product: 'Claude Code', installed: true, panel: true, oneShot: true, models: CLAUDE_MODELS, efforts: CLAUDE_EFFORTS, modes: AGENT_MODES.map((m) => m.id) }];
 export async function loadAgents() {
   const list = await call('agentList').catch(() => null);
   if (!Array.isArray(list)) return AGENTS;
@@ -39,25 +49,31 @@ export async function loadAgents() {
 export const agentInfo = (id) => AGENTS.find((a) => a.id === id) || AGENTS.find((a) => a.id === 'claude') || AGENTS[0];
 export const modelsOf = (id) => agentInfo(id).models || [];
 export const effortsOf = (id) => agentInfo(id).efforts || [];
+export const modesOf = (id) => AGENT_MODES.filter((m) => (agentInfo(id).modes || []).includes(m.id));
 export const agentName = (S) => agentInfo(agentChoice(S).agent).name;
 
 // What the panel, the agent's terminal and the actions on the text run
 // with. Claude: Opus 5.5, medium by default. Another agent: what was picked
-// for it, or its own default. `only` asks for one agent's choice (the
-// Claude Code terminal is Claude's whatever the panel shows).
+// for it, or its own default. The permission mode is the one picked for the
+// agent, "ask" by default; only the panel uses it (the actions on the text
+// are always read-only). `only` asks for one agent's choice (the Claude Code
+// terminal is Claude's whatever the panel shows).
 export function agentChoice(S, only) {
   const st = S.settings || {};
   const want = only || st.agent;
   // An agent no longer installed falls back to Claude.
   const agent = want && want !== 'claude' && AGENTS.some((a) => a.id === want && a.panel) ? want : 'claude';
+  const m = (st.agentModes || {})[agent];
+  const mode = modesOf(agent).some((x) => x.id === m) ? m : 'ask';
   if (agent === 'claude')
     return {
       agent,
       model: CLAUDE_MODELS.some((m) => m.id === st.claudeModel) ? st.claudeModel : 'claude-opus-5-5',
       effort: CLAUDE_EFFORTS.some((e) => e.id === st.claudeEffort) ? st.claudeEffort : 'medium',
+      mode,
     };
   const pickOf = (list, v) => (v && (!list.length || list.some((x) => x.id === v)) ? v : null);
-  return { agent, model: pickOf(modelsOf(agent), (st.agentModels || {})[agent]), effort: pickOf(effortsOf(agent), (st.agentEfforts || {})[agent]) };
+  return { agent, model: pickOf(modelsOf(agent), (st.agentModels || {})[agent]), effort: pickOf(effortsOf(agent), (st.agentEfforts || {})[agent]), mode };
 }
 
 // Where to get the agents that are not installed.
@@ -198,12 +214,42 @@ export class AgentPanel {
         ? select(claude ? models : [{ id: '', label: 'Modelo padrão' }, ...models], choice.model || '', `Modelo do ${a.name} (vale para o painel e o terminal do ${a.name})`, claude ? (v) => (S.settings.claudeModel = v) : perAgent('agentModels'))
         : h('span', { class: 'muted agent-pick-none' }, 'Modelo padrão do agente'),
       efforts.length ? select(claude ? efforts : [{ id: '', label: 'Esforço padrão' }, ...efforts], choice.effort || '', `Esforço de raciocínio: quanto o ${a.name} pensa antes de responder`, claude ? (v) => (S.settings.claudeEffort = v) : perAgent('agentEfforts')) : null,
+      this.modeSelect(choice, save),
     );
     // Set as properties, so translated here (h() translates only what it builds).
     this.input.placeholder = tr(`Peça ao ${a.name}: corrija o erro de compilação, revise a seleção, explique esta seção…`);
     this.termBtn.title = tr(`Abrir o ${a.product} completo no terminal`);
     this.el.querySelector('.term-kind').style.visibility = claude ? '' : 'hidden';
     if (this.log.querySelector('.agent-hello')) this.empty();
+  }
+
+  // The permission mode of the chosen agent. "Acesso total" asks once more,
+  // since nothing will be asked after it.
+  modeSelect(choice, save) {
+    const S = this.S;
+    const modes = modesOf(choice.agent);
+    if (!modes.length) return null;
+    const hint = (id) => (modes.find((m) => m.id === id) || modes[0]).hint;
+    const sel = h(
+      'select',
+      {
+        class: 'agent-pick agent-mode' + (choice.mode === 'ask' ? '' : ' loose'),
+        'aria-label': 'Permissões do agente',
+        title: tr('Permissões: ') + tr(hint(choice.mode)),
+        onchange: async () => {
+          const v = sel.value;
+          if (v === 'full' && !(await confirmBox('Acesso total', `O ${this.info.name} vai editar qualquer arquivo do computador, rodar qualquer comando e acessar a internet sem perguntar nada. Use só em projetos seus, que você conhece. Para voltar, escolha "Perguntar antes".`, { ok: 'Dar acesso total', danger: true }))) {
+            sel.value = agentChoice(S).mode;
+            return;
+          }
+          S.settings.agentModes = { ...(S.settings.agentModes || {}), [choice.agent]: v };
+          save();
+          this.renderAgent();
+        },
+      },
+      modes.map((m) => h('option', { value: m.id, selected: m.id === choice.mode }, m.label)),
+    );
+    return sel;
   }
 
   pickAgent(id) {
@@ -225,7 +271,9 @@ export class AgentPanel {
       h(
         'div',
         { class: 'agent-hello muted' },
-        h('p', {}, `Converse com o seu ${this.info.product} sobre este projeto. Ele lê e busca os arquivos sozinho; cada edição ou comando aparece aqui para você aceitar antes.`),
+        agentChoice(this.S).mode === 'ask'
+          ? h('p', {}, `Converse com o seu ${this.info.product} sobre este projeto. Ele lê e busca os arquivos sozinho; cada edição ou comando aparece aqui para você aceitar antes.`)
+          : h('p', {}, `Converse com o seu ${this.info.product} sobre este projeto. No modo "${tr(AGENT_MODES.find((m) => m.id === agentChoice(this.S).mode).label)}", o que ele fizer sem perguntar aparece aqui na conversa; o que precisar da sua aprovação vem num cartão.`),
         h('p', {}, 'A mensagem leva o arquivo aberto, a seleção e os erros da última compilação.'),
       ),
     );
@@ -340,6 +388,10 @@ export class AgentPanel {
   async send() {
     const text = this.input.value.trim();
     if (!text || !this.S.project) return;
+    // An agent that edits without asking would find the files as they are on
+    // disk: what is unsaved in TeXugo is saved first, as a card does before
+    // an edit it allows.
+    if (agentChoice(this.S).mode !== 'ask' && this.S.tabs.some((t) => t.dirty) && !(await this.app.saveAll())) return toast('Não deu para salvar os arquivos abertos; a mensagem não foi enviada.', 'error');
     this.input.value = '';
     const t = this.app.activeTab();
     const sel = t && !t.binary && !this.app.view.state.selection.main.empty && this.withSel.checked;
@@ -397,7 +449,9 @@ export class AgentPanel {
     if (keep) this.thinking.remove();
     if (e.kind === 'text') this.add(h('div', { class: 'agent-msg claude' }, md(e.text)));
     else if (e.kind === 'tool') {
-      if (!['Edit', 'MultiEdit', 'Write', 'Bash'].includes(e.name)) this.tools.set(e.id, this.add(this.toolLine(e)));
+      // Claude Code's edits and commands come as cards when it asks; in a
+      // mode that does not ask, the line is what the user sees of them.
+      if (!['Edit', 'MultiEdit', 'Write', 'Bash'].includes(e.name) || agentChoice(this.S).mode !== 'ask') this.tools.set(e.id, this.add(this.toolLine(e)));
     }
     else if (e.kind === 'tool-result') {
       const el = this.tools.get(e.id);
@@ -414,13 +468,15 @@ export class AgentPanel {
   toolLine(e) {
     const inp = e.input || {};
     const file = inp.file_path || inp.path || inp.notebook_path;
-    const what = file ? relPath(this.S.project.root, file) : inp.pattern || inp.command || inp.skill || inp.url || inp.query || inp.description || '';
+    // A file outside the project shows its name; the whole path is the title.
+    const rel = file ? relPath(this.S.project.root, file) : '';
+    const what = file ? (rel === file ? basename(file) : rel) : inp.pattern || inp.command || inp.skill || inp.url || inp.query || inp.description || '';
     return h(
       'div',
       { class: 'agent-tool', onclick: file && /\.\w+$/.test(file) ? () => this.app.openFile(joinPath(this.S.project.root, file)) : null },
       icon(e.icon || (e.name === 'Bash' ? 'command' : /Edit|Write/.test(e.name) ? 'edit' : e.name === 'Grep' || e.name === 'WebSearch' ? 'search' : 'file')),
       h('span', {}, e.label || TOOL_PT[e.name] || e.name),
-      what ? h('code', {}, document.createTextNode(String(what).slice(0, 90))) : null,
+      what ? h('code', { title: String(file || what) }, document.createTextNode(String(what).slice(0, 90))) : null,
     );
   }
 

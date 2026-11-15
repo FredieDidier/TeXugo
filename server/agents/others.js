@@ -8,6 +8,7 @@ import path from 'node:path';
 import { which } from '../util.js';
 import { AcpSession } from './acp.js';
 import { spawnTool, tail, versionOf } from './proc.js';
+import { MODES, modeOf } from './modes.js';
 
 // Model and effort ids go on a command line (through cmd.exe on Windows):
 // only plain ids pass.
@@ -115,9 +116,12 @@ export const gemini = {
   },
 };
 
-// Codex: the panel through codex-acp, started in its read-only mode (asks
-// before editing files or using the network; commands run in a sandbox that
-// cannot write); the one-shot is `codex exec --sandbox read-only`.
+// Codex: the panel through codex-acp, started in the session mode that
+// matches the panel's permission mode (./modes.js). The default is its
+// read-only mode: asks before editing files or using the network, and
+// commands run in a sandbox that cannot write. The one-shot is
+// `codex exec --sandbox read-only`.
+const CODEX_MODE = { ask: 'read-only', edits: 'workspace-write', auto: 'agent', full: 'agent-full-access' };
 export const codex = {
   id: 'codex',
   name: 'Codex',
@@ -125,7 +129,12 @@ export const codex = {
   install: 'npm install -g @openai/codex @agentclientprotocol/codex-acp',
   site: 'https://developers.openai.com/codex',
   login: 'Rode "codex login" no terminal e entre na sua conta.',
-  acp: { bin: 'codex-acp', args: [], env: { INITIAL_AGENT_MODE: 'read-only' } },
+  acp: { bin: 'codex-acp', args: [] },
+  modes: MODES,
+  modeValue: (m) => CODEX_MODE[modeOf(m)],
+  modeEnv(m) {
+    return { INITIAL_AGENT_MODE: this.modeValue(m) };
+  },
   tui: ({ model, effort }) => ['codex', ...(safeId(model) ? ['-m', model] : []), ...(safeId(effort) ? ['-c', `model_reasoning_effort=${effort}`] : [])],
   async detect() {
     const [acp, bin] = await Promise.all([which('codex-acp'), which('codex')]);

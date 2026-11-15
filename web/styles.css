@@ -581,6 +581,11 @@ body.no-change-marks .cm-line.cm-chg-del, body.no-change-marks .cm-line.cm-chg-d
 .agent-modlog { font: 11px/1.4 var(--mono); color: var(--faint); margin: 2px 0; }
 .agent-picks { gap: 6px; font-size: 12px; margin-bottom: 6px; }
 .agent-picks .agent-pick { max-width: none; flex: 1; min-width: 0; }
+/* The permission mode gets a line of its own under model and effort; one
+   that asks less than the default stands out. */
+.agent-picks { flex-wrap: wrap; }
+.agent-picks .agent-mode { flex: 1 1 100%; }
+.agent-picks .agent-mode.loose { border-color: var(--warn); }
 /* The agent picker gives way before the header's buttons do. */
 .agent-head .agent-which { flex: 0 1 auto; min-width: 0; max-width: 110px; }
 .agent-head .btn { flex-shrink: 0; }

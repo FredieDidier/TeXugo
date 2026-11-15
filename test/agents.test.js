@@ -12,6 +12,8 @@ import { AcpSession, choices, applyUnified } from '../server/agents/acp.js';
 import { Agents } from '../server/agents/adapter.js';
 import { opencode, codex, gemini, safeId } from '../server/agents/others.js';
 import { spawnTool } from '../server/agents/proc.js';
+import { ClaudeSession, claude, claudeFlags } from '../server/agents/claude.js';
+import { MODES } from '../server/agents/modes.js';
 
 const FAKE = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'fake-acp-agent.mjs');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-agents-'));
@@ -30,11 +32,14 @@ function fake(extraEnv = {}) {
   return { agent, log, sent: () => fs.readFileSync(log, 'utf8').trim().split('\n').map((l) => JSON.parse(l)) };
 }
 
-async function session(extraEnv) {
+// opts: what the panel sends (model, effort, mode); extra: fields of the
+// agent object, such as the permission modes of Codex.
+async function session(extraEnv, opts = {}, extra = {}) {
   const root = fs.mkdtempSync(path.join(tmp, 'p-'));
   const f = fake(extraEnv);
+  Object.assign(f.agent, extra);
   const events = [];
-  const s = new f.agent.Session(root, {}, (e) => events.push(e));
+  const s = new f.agent.Session(root, opts, (e) => events.push(e));
   await s.start();
   // Waits for an event; a turn that never ends fails the test in 10 s
   // instead of holding it.
@@ -199,7 +204,7 @@ test('OpenCode: the panel asks before every change; the one-shot has only readin
   assert.equal(ro['*'], 'deny');
   assert.equal(ro.read, 'allow');
   // Codex starts in its read-only mode; Gemini in the mode that asks.
-  assert.equal(codex.acp.env.INITIAL_AGENT_MODE, 'read-only');
+  assert.equal(codex.modeEnv().INITIAL_AGENT_MODE, 'read-only');
   assert.deepEqual(gemini.acp.args, ['--acp', '--approval-mode', 'default']);
 });
 
@@ -238,4 +243,74 @@ test('an agent whose program is missing says how to install it, without hanging'
 
 test('OpenCode starts without the user’s Claude Code skills, in the panel, the one-shot and the terminal', () => {
   for (const env of [opencode.acp.env, opencode.readOnlyEnv, opencode.tuiEnv]) assert.equal(env.OPENCODE_DISABLE_CLAUDE_CODE_SKILLS, '1');
+});
+
+test('permission modes: Codex starts in the mode picked in the panel, read-only when none', () => {
+  assert.deepEqual(MODES, ['ask', 'edits', 'auto', 'full']);
+  const start = (m) => codex.modeEnv(m).INITIAL_AGENT_MODE;
+  assert.equal(start(), 'read-only');
+  assert.equal(start('ask'), 'read-only');
+  assert.equal(start('edits'), 'workspace-write');
+  assert.equal(start('auto'), 'agent');
+  assert.equal(start('full'), 'agent-full-access');
+  assert.equal(start('agent-full-access'), 'read-only');
+  // Only Claude Code and Codex offer the modes in the panel.
+  assert.deepEqual(claude.modes, MODES);
+  assert.deepEqual(codex.modes, MODES);
+  assert.equal(gemini.modes, undefined);
+  assert.equal(opencode.modes, undefined);
+});
+
+test('permission modes: Claude Code gets --permission-mode, and another mode is another process', () => {
+  const flag = (mode) => {
+    const a = new ClaudeSession(tmp, { mode }, () => {}).args();
+    const i = a.indexOf('--permission-mode');
+    return i < 0 ? null : a[i + 1];
+  };
+  assert.equal(flag(undefined), null);
+  assert.equal(flag('ask'), null);
+  assert.equal(flag('edits'), 'acceptEdits');
+  assert.equal(flag('auto'), 'auto');
+  assert.equal(flag('full'), 'bypassPermissions');
+  assert.equal(flag('bypassPermissions'), null);
+  const s = new ClaudeSession(tmp, { mode: 'ask' }, () => {});
+  assert.equal(s.matches({ mode: 'ask' }), true);
+  assert.equal(s.matches({}), true);
+  assert.equal(s.matches({ mode: 'full' }), false);
+  // The read-only runs (actions on the text, referee report, response) never take it.
+  assert.ok(!claudeFlags({ mode: 'full' }).includes('--permission-mode'));
+});
+
+test('permission modes: Codex opens in the chosen mode and changes it within the conversation', async () => {
+  const modes = { modes: codex.modes, modeEnv: codex.modeEnv, modeValue: codex.modeValue };
+  const said = (events) => events.filter((e) => e.kind === 'text').pop().text;
+  const sets = (sent) => sent().filter((m) => m.method === 'session/set_config_option').map((m) => [m.params.configId, m.params.value]);
+  {
+    const { s, events, turn, sent } = await session({}, { mode: 'full' }, modes);
+    await s.send('mode', { mode: 'full' });
+    await turn();
+    assert.equal(said(events), 'mode agent-full-access');
+    assert.deepEqual(sets(sent), []);
+    s.close();
+  }
+  {
+    const { s, events, turn, sent } = await session({}, {}, modes);
+    await s.send('mode', {});
+    await turn();
+    assert.equal(said(events), 'mode read-only');
+    await s.send('mode', { mode: 'edits' });
+    await turn();
+    assert.equal(said(events), 'mode workspace-write');
+    assert.deepEqual(sets(sent), [['mode', 'workspace-write']]);
+    s.close();
+  }
+});
+
+test('permission modes: an agent without them gets no mode', async () => {
+  const { s, events, turn, sent } = await session({}, { mode: 'full' });
+  await s.send('mode', { mode: 'full' });
+  await turn();
+  assert.equal(events.filter((e) => e.kind === 'text').pop().text, 'mode read-only');
+  assert.equal(sent().filter((m) => m.method === 'session/set_config_option').length, 0);
+  s.close();
 });
