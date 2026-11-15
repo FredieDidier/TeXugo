@@ -105,7 +105,9 @@ app.whenReady().then(async () => {
     await js(`window.__keys = []; document.addEventListener('keydown', (e) => window.__keys.push([e.key, e.code, e.keyCode, e.ctrlKey, e.metaKey].join(' ')), true); return true;`);
     await key('p', [MOD]);
     await type('body');
-    check('⌘P finds the file', (await js(`return document.querySelector('.palette .item.sel')?.innerText || '';`)).includes('body.tex'), await js(`return window.__keys;`));
+    // The project's files arrive after the palette opens; a slow runner
+    // shows the typed text before them.
+    check('⌘P finds the file', await until(`return (document.querySelector('.palette .item.sel')?.innerText || '').includes('body.tex');`, 6000), await js(`return { keys: window.__keys, open: !!document.querySelector('.palette-ov'), sel: document.querySelector('.palette .item.sel')?.innerText || '' };`));
     await key('Enter');
     check('the file opens and the editor has the focus', await until(`return document.querySelector('.tab.active .label')?.textContent === 'body.tex' && document.activeElement.classList.contains('cm-content');`, 4000), await js(`return { tabs: [...document.querySelectorAll('.tab .label')].map((e) => e.textContent), active: document.activeElement?.className, palette: !!document.querySelector('.palette-ov') };`));
 
