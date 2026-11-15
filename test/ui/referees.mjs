@@ -14,6 +14,15 @@
 // once (fake-claude.mjs), to check this script; TEXUGO_REFEREES_FAKE=bad
 // makes the stand-in misbehave, and the checks must fail.
 //
+// TEXUGO_REFEREES_MODEL and TEXUGO_REFEREES_EFFORT pick the model and the
+// reasoning effort of the run (written to settings.claudeModel and
+// settings.claudeEffort of the temporary profile). The ids are the ones of
+// MODEL_LIST and EFFORTS in server/agents/claude.js, for example
+// claude-haiku-5-5 and low; an unknown id stops the run with exit code 2.
+// Without them the run uses the app's defaults (Opus 5.5, medium effort),
+// which costs the most. A cheap model shows that the path works, not the
+// quality an expensive one would give.
+//
 // Parecer: the run ends, every point links to a line that exists (and,
 // when TeXugo found the quote, the line holds it), a click opens that line,
 // and no file of the project changes (the report goes to .texugo/review).
@@ -57,7 +66,17 @@ process.env.TEXUGO_REFEREES_ARGLOG = ARGLOG;
 
 const { proj, doc, reports } = await makeRefereeProject(TMP);
 const reportsText = fs.readFileSync(reports, 'utf8');
-fs.writeFileSync(path.join(TMP, 'profile', 'state.json'), JSON.stringify({ settings: { grammar: false, lang: 'pt', reopenLast: false, onboarded: true } }));
+const { MODELS, EFFORTS } = await import(pathToFileURL(path.join(REPO, 'server', 'agents', 'claude.js')).href);
+const MODEL = process.env.TEXUGO_REFEREES_MODEL || '';
+const EFFORT = process.env.TEXUGO_REFEREES_EFFORT || '';
+if ((MODEL && !MODELS.includes(MODEL)) || (EFFORT && !EFFORTS.includes(EFFORT))) {
+  console.log(`BLOCKED unknown model or effort (models: ${MODELS.join(', ')}; efforts: ${EFFORTS.join(', ')})`);
+  process.exit(2);
+}
+const settings = { grammar: false, lang: 'pt', reopenLast: false, onboarded: true };
+if (MODEL) settings.claudeModel = MODEL;
+if (EFFORT) settings.claudeEffort = EFFORT;
+fs.writeFileSync(path.join(TMP, 'profile', 'state.json'), JSON.stringify({ settings }));
 app.setPath('userData', path.join(TMP, 'profile'));
 dialog.showMessageBoxSync = () => 2;
 
