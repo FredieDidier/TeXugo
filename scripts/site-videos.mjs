@@ -49,6 +49,7 @@ const T = {
     eqIntro: 'Estimamos',
     missingRef: ' A Figura~\\ref{fig:mapa} mostra as ciclovias.',
     tics: 'Vale ressaltar que os ciclistas chega mais cedo ao trabalho.',
+    wordy: 'De modo geral, os resultados obtidos neste estudo parecem indicar, em grande medida, que as ciclovias novas contribuíram de forma bastante significativa para reduzir o tempo que as pessoas gastam no trajeto até o trabalho.',
     revisions: [
       ['Comparamos os bairros', 'Comparamos 38 bairros'],
       ['O tempo médio de viagem caiu quatro minutos', 'O tempo médio de viagem caiu 4,2 minutos'],
@@ -73,6 +74,7 @@ const T = {
     eqIntro: 'We estimate',
     missingRef: ' Figure~\\ref{fig:map} shows the bike lanes.',
     tics: 'It is worth noting that cyclists now save a hour every week.',
+    wordy: 'Generally speaking, the results obtained in this study appear to indicate, to a large extent, that the new bike lanes contributed in a rather significant way to reducing the amount of time that people spend on their way to work.',
     revisions: [
       ['We compare neighborhoods', 'We compare 38 neighborhoods'],
       ['The average trip became four minutes shorter', 'The average trip became 4.2 minutes shorter'],
@@ -504,7 +506,7 @@ app.whenReady().then(async () => {
     const introText = fs.readFileSync(path.join(PROJ, introRel), 'utf8');
     const bibText = fs.readFileSync(path.join(PROJ, 'references.bib'), 'utf8');
     const lastSentence = T.intro[3].slice(-30);
-    const scenes = { compilar, 'ao-vivo': aoVivo, problemas, escrita, comparar, referencia };
+    const scenes = { compilar, 'ao-vivo': aoVivo, problemas, escrita, ia, comparar, referencia };
     for (const name of Object.keys(scenes)) if (!ONLY.length || ONLY.includes(name)) await scenes[name]();
 
     // 1. Compile: the PDF made the usual way has ??; TeXugo builds paper and
@@ -618,6 +620,43 @@ app.whenReady().then(async () => {
       await sleep(600);
       await moveTo({ x: ed.x + ed.width * 0.62, y: ed.y + 380 });
       await rec.stop(2000);
+      await setDoc(introText);
+    }
+
+    // 4b. An AI action on a selection: the user's own agent shortens the
+    // passage, and the change is accepted from a word diff.
+    async function ia() {
+      await openFile(introRel);
+      await closeBottom();
+      await setDoc(introText + '\n' + T.wordy + '\n');
+      await js(`const b = [...document.querySelectorAll('.activitybar > *')].find((e) => /^(Arquivos|Files)/.test(e.title || '')); if (b.getAttribute('aria-pressed') !== 'true') b.click(); return true;`);
+      await sleep(500);
+      const ed = await rect('.editor-group');
+      const crop = { x: 44, y: ed.y, width: 1146, height: 620 };
+      rec.cursor = { x: ed.x + ed.width * 0.5, y: ed.y + 480 };
+      await rec.start('ia', crop);
+      await sleep(800);
+      const a = await textRect(T.wordy.slice(0, 12));
+      const b = await endOf(T.wordy.slice(-20));
+      await moveTo({ x: a.x + 1, y: (a.y + a.y2) / 2 });
+      wc.sendInputEvent({ type: 'mouseDown', x: Math.round(a.x + 1), y: Math.round((a.y + a.y2) / 2), button: 'left', clickCount: 1 });
+      await moveTo(b, 900);
+      wc.sendInputEvent({ type: 'mouseUp', x: Math.round(b.x), y: Math.round(b.y), button: 'left', clickCount: 1 });
+      await js(`const v = ${VIEW}; const d = v.state.doc.toString(); const i = d.indexOf(${JSON.stringify(T.wordy)}); v.dispatch({ selection: { anchor: i, head: i + ${T.wordy.length} } }); return true;`);
+      await sleep(600);
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      await click(mid, { right: true });
+      await until(`return !!document.querySelector('.menu .mi');`, 3000);
+      await sleep(700);
+      await click(byText('.menu .mi', '/^(Encurtar|Shorten)/'));
+      rec.speed(8);
+      await until(`return !!document.querySelector('.ai-diff');`, 180000);
+      rec.speed(1);
+      await sleep(3500);
+      await click(byText('.modal button', '/^(Aceitar|Accept)$/'));
+      await sleep(600);
+      await moveTo({ x: ed.x + ed.width * 0.55, y: ed.y + 500 });
+      await rec.stop(2600);
       await setDoc(introText);
     }
 
