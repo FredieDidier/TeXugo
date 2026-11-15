@@ -32,7 +32,7 @@ export async function listAgents(catalog = {}) {
     AGENTS.map(async (a) => {
       const d = await a.detect();
       const seen = catalog[a.id] || {};
-      return { id: a.id, name: a.name, product: a.product, install: a.install, site: a.site, ...d, models: d.models || seen.models || [], efforts: d.efforts || seen.efforts || [], modes: a.modes || [] };
+      return { id: a.id, name: a.name, product: a.product, install: a.install, panelInstall: a.panelInstall, site: a.site, ...d, models: d.models || seen.models || [], efforts: d.efforts || seen.efforts || [], modes: a.modes || [] };
     }),
   );
 }

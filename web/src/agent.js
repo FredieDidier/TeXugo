@@ -61,8 +61,9 @@ export const agentName = (S) => agentInfo(agentChoice(S).agent).name;
 export function agentChoice(S, only) {
   const st = S.settings || {};
   const want = only || st.agent;
-  // An agent no longer installed falls back to Claude.
-  const agent = want && want !== 'claude' && AGENTS.some((a) => a.id === want && a.panel) ? want : 'claude';
+  // An agent no longer installed falls back to Claude. One with only the
+  // one-shot run (Codex without codex-acp) serves the actions on the text.
+  const agent = want && want !== 'claude' && AGENTS.some((a) => a.id === want && (a.panel || a.oneShot)) ? want : 'claude';
   const m = (st.agentModes || {})[agent];
   const mode = modesOf(agent).some((x) => x.id === m) ? m : 'ask';
   if (agent === 'claude')
@@ -79,6 +80,8 @@ export function agentChoice(S, only) {
 // Where to get the agents that are not installed.
 export function installDialog() {
   const missing = AGENTS.filter((a) => !a.installed || !a.panel);
+  // An agent already installed (Codex in the ChatGPT app) lacks only its panel program.
+  const cmd = (a) => (a.installed && a.panelInstall ? a.panelInstall : a.install);
   modal({
     title: 'Instalar outro agente',
     body: h(
@@ -91,11 +94,11 @@ export function installDialog() {
               'div',
               { style: { marginBottom: '14px' } },
               h('b', {}, a.product),
-              h('pre', { class: 'agent-cmd' }, document.createTextNode(a.install)),
+              h('pre', { class: 'agent-cmd' }, document.createTextNode(cmd(a))),
               h(
                 'div',
                 { style: { display: 'flex', gap: '12px', alignItems: 'center' } },
-                h('button', { class: 'btn sm', onclick: () => navigator.clipboard?.writeText(a.install).then(() => toast('Comando copiado.', 'ok')) }, 'Copiar o comando'),
+                h('button', { class: 'btn sm', onclick: () => navigator.clipboard?.writeText(cmd(a)).then(() => toast('Comando copiado.', 'ok')) }, 'Copiar o comando'),
                 a.site ? h('a', { href: a.site, target: '_blank', rel: 'noopener' }, 'Site') : null,
               ),
             ),
@@ -198,7 +201,7 @@ export class AgentPanel {
     const a = this.info;
     clear(
       this.agentSel,
-      AGENTS.map((x) => h('option', { value: x.id, selected: x.id === choice.agent, disabled: !x.panel }, x.panel ? x.name : `${x.name} (não instalado)`)),
+      AGENTS.map((x) => h('option', { value: x.id, selected: x.id === choice.agent, disabled: !x.panel && !x.oneShot }, x.panel ? x.name : x.oneShot ? `${x.name} (sem o painel)` : `${x.name} (não instalado)`)),
       AGENTS.some((x) => !x.panel) ? h('option', { value: '' }, 'Instalar outro agente…') : null,
     );
     const save = () => this.app.saveSettingsSoon && this.app.saveSettingsSoon();
@@ -228,7 +231,7 @@ export class AgentPanel {
   modeSelect(choice, save) {
     const S = this.S;
     const modes = modesOf(choice.agent);
-    if (!modes.length) return null;
+    if (!modes.length || !this.info.panel) return null;
     const hint = (id) => (modes.find((m) => m.id === id) || modes[0]).hint;
     const sel = h(
       'select',
@@ -266,6 +269,20 @@ export class AgentPanel {
   }
 
   empty() {
+    const a = this.info;
+    // An agent installed without its panel program: the actions on the text
+    // use it; the conversation here needs one more install.
+    if (!a.panel)
+      return clear(
+        this.log,
+        h(
+          'div',
+          { class: 'agent-hello muted' },
+          h('p', {}, `As ações de IA no texto, o parecer e a resposta aos pareceristas já usam o seu ${a.product}. Para conversar com ele aqui no painel, falta um programa que liga o ${a.product} ao TeXugo. Instale pelo terminal:`),
+          h('pre', { class: 'agent-cmd' }, document.createTextNode(a.panelInstall || a.install)),
+          h('p', {}, 'Depois, abra uma conversa nova (+).'),
+        ),
+      );
     clear(
       this.log,
       h(
@@ -388,6 +405,7 @@ export class AgentPanel {
   async send() {
     const text = this.input.value.trim();
     if (!text || !this.S.project) return;
+    if (!this.info.panel) return this.empty();
     // An agent that edits without asking would find the files as they are on
     // disk: what is unsaved in TeXugo is saved first, as a card does before
     // an edit it allows.

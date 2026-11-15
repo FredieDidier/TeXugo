@@ -127,6 +127,8 @@ export const codex = {
   name: 'Codex',
   product: 'Codex',
   install: 'npm install -g @openai/codex @agentclientprotocol/codex-acp',
+  // With Codex already there (by hand or in the ChatGPT app), the panel needs only this.
+  panelInstall: 'npm install -g @agentclientprotocol/codex-acp',
   site: 'https://developers.openai.com/codex',
   login: 'Rode "codex login" no terminal e entre na sua conta.',
   acp: { bin: 'codex-acp', args: [] },

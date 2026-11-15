@@ -44,6 +44,7 @@ const EN = {
   'Baixo': 'Low',
   'Alto': 'High',
   'Atalhos e comandos (manual)': 'Shortcuts and commands (manual)',
+  'Depois, abra uma conversa nova (+).': 'Then start a new conversation (+).',
   // agent panel: permission modes
   'Perguntar antes': 'Ask first',
   'Editar sem perguntar': 'Edit without asking',
@@ -649,6 +650,8 @@ const PATTERNS = [
   [/^Esforço de raciocínio: quanto o (\S+) pensa antes de responder$/, 'Reasoning effort: how much $1 thinks before answering'],
   [/^Peça ao (\S+): corrija o erro de compilação, revise a seleção, explique esta seção…$/, 'Ask $1: fix the build error, revise the selection, explain this section…'],
   [/^Abrir o (.+) completo no terminal$/, 'Open the full $1 in the terminal'],
+  [/^(.+) \(sem o painel\)$/, '$1 (no panel)'],
+  [/^As ações de IA no texto, o parecer e a resposta aos pareceristas já usam o seu (.+)\. Para conversar com ele aqui no painel, falta um programa que liga o (.+) ao TeXugo\. Instale pelo terminal:$/, 'The AI actions on the text, the referee report and the response to referees already use your $1. To chat with it here in the panel, one more program is needed to connect $2 to TeXugo. Install it from the terminal:'],
   [/^Converse com o seu (.+) sobre este projeto\. No modo "(.+)", o que ele fizer sem perguntar aparece aqui na conversa; o que precisar da sua aprovação vem num cartão\.$/, 'Chat with your $1 about this project. In the "$2" mode, what it does without asking shows up here in the conversation; what needs your approval comes as a card.'],
   [/^O (\S+) vai editar qualquer arquivo do computador, rodar qualquer comando e acessar a internet sem perguntar nada\. Use só em projetos seus, que você conhece\. Para voltar, escolha "Perguntar antes"\.$/, '$1 will edit any file on the computer, run any command and use the internet without asking anything. Use it only on your own projects, ones you know. To go back, pick "Ask first".'],
   [/^Converse com o seu (.+) sobre este projeto\. Ele lê e busca os arquivos sozinho; cada edição ou comando aparece aqui para você aceitar antes\.$/, 'Chat with your $1 about this project. It reads and searches the files on its own; every edit or command shows up here for you to accept first.'],

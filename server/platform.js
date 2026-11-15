@@ -54,7 +54,9 @@ export function extraPaths({ platform = process.platform, env = process.env, hom
     ];
   }
   if (platform === 'darwin') {
-    return ['/Library/TeX/texbin', ...texLiveYears('/usr/local/texlive', 'universal-darwin'), '/opt/homebrew/bin', ...claude, '/usr/local/bin', '/usr/bin', '/bin', '/usr/sbin', '/sbin'];
+    // Last: the Codex that comes inside the ChatGPT app, so one installed by
+    // hand wins. The folder holds only Codex's own programs.
+    return ['/Library/TeX/texbin', ...texLiveYears('/usr/local/texlive', 'universal-darwin'), '/opt/homebrew/bin', ...claude, '/usr/local/bin', '/usr/bin', '/bin', '/usr/sbin', '/sbin', '/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin'];
   }
   const arch = process.arch === 'arm64' ? 'aarch64-linux' : 'x86_64-linux';
   return [...texLiveYears('/usr/local/texlive', arch), path.join(home, '.local', 'texlive', 'bin', arch), ...claude, '/usr/local/bin', '/usr/bin', '/bin', '/snap/bin'];

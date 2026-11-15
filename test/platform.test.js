@@ -9,6 +9,9 @@ test('data folder and tool paths for each system', () => {
   assert.match(appDataDir('TeXugo', { platform: 'win32', env: { APPDATA: 'C:\\Users\\ana\\AppData\\Roaming' }, home: 'C:\\Users\\ana' }), /Roaming[\\/]TeXugo$/);
   assert.equal(appDataDir('TeXugo', { platform: 'linux', env: {}, home: '/home/ana' }), '/home/ana/.config/TeXugo');
   assert.ok(extraPaths({ platform: 'darwin', home: '/Users/ana' }).includes('/Library/TeX/texbin'));
+  // The Codex that comes with the ChatGPT app, last, so one installed by hand wins.
+  const mac = extraPaths({ platform: 'darwin', home: '/Users/ana' });
+  assert.equal(mac.at(-1), '/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin');
   assert.ok(extraPaths({ platform: 'win32', env: { LOCALAPPDATA: 'C:\\L' }, home: 'C:\\Users\\ana' }).some((p) => /MiKTeX/.test(p)));
   assert.deepEqual(openCommand('/a.pdf', 'linux'), ['xdg-open', ['/a.pdf']]);
   assert.deepEqual(revealCommand('C:\\p\\a.pdf', 'win32'), ['explorer.exe', ['/select,C:\\p\\a.pdf']]);
