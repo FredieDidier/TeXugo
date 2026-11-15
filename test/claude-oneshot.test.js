@@ -13,7 +13,8 @@ const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'texugo-oneshot-'));
 const bin = path.join(tmp, 'bin');
 fs.mkdirSync(bin);
 const out = path.join(tmp, 'out.json');
-fs.writeFileSync(path.join(bin, 'claude'), `#!/bin/sh\ncat > /dev/null\ncat "${out}"\n`, { mode: 0o755 });
+const argsFile = path.join(tmp, 'args.txt');
+fs.writeFileSync(path.join(bin, 'claude'), `#!/bin/sh\nprintf '%s\\n' "$@" > "${argsFile}"\ncat > /dev/null\ncat "${out}"\n`, { mode: 0o755 });
 process.env.PATH = bin + path.delimiter + process.env.PATH;
 const { claude, ClaudeSession } = await import('../server/agents/claude.js');
 test.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
@@ -34,6 +35,17 @@ test('another error from Claude Code is passed on as it came', { skip }, async (
 test('a good run returns the text', { skip }, async () => {
   result({ is_error: false, result: '<texugo>{}</texugo>' });
   assert.equal(await claude.oneShot('prompt', { root: tmp }), '<texugo>{}</texugo>');
+});
+
+// The one-shot run reads the project and the user's own skills, the
+// references next to each SKILL.md included; nothing else is pre-approved.
+// The live test in agents-live.test.js checks that Claude Code honours it.
+test('the one-shot run may read the skills folder and nothing broader', { skip }, async () => {
+  result({ is_error: false, result: 'ok' });
+  await claude.oneShot('prompt', { root: tmp });
+  const args = fs.readFileSync(argsFile, 'utf8').split('\n');
+  assert.deepEqual(args.filter((a) => /allowedTools|add-dir|permission-mode|dangerously/i.test(a)), ['--allowedTools=Read(~/.claude/skills/**)']);
+  assert.equal(args[args.indexOf('--tools') + 1], 'Skill,Read');
 });
 
 const EXPIRED = 'Failed to authenticate: this login reached its time limit and cannot be renewed. Run `claude auth login` to sign in again.';

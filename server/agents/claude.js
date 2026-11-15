@@ -35,6 +35,7 @@ export function claudeFlags({ model, effort } = {}) {
 }
 
 const FREE = ['Read', 'Grep', 'Glob', 'LS', 'TodoWrite', 'Skill'];
+const SKILL_READ = '--allowedTools=Read(~/.claude/skills/**)';
 const NOT_FOUND = 'Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash';
 const AUTH = /authenticat|log ?in|credential/i;
 const NOT_LOGGED = 'O Claude Code não está logado. Rode "claude" no Terminal (ou no terminal do TeXugo) e entre na sua conta.';
@@ -210,11 +211,13 @@ export const claude = {
     return ClaudeSession;
   },
   // One headless run, read-only tools: the selection actions, the referee
-  // review and the response to referees.
+  // review and the response to referees. Reads outside the project are
+  // refused in a headless run, so the user's own skills folder is allowed
+  // by name: a skill's SKILL.md points to reference files next to it.
   async oneShot(prompt, opts) {
     const bin = await which('claude');
     if (!bin) throw new Error('Claude Code não encontrado. Instale com: curl -fsSL https://claude.ai/install.sh | bash (e entre na sua conta com "claude" no Terminal).');
-    const out = await spawnTool(bin, ['-p', '--output-format', 'json', '--tools', opts.tools || 'Skill,Read', '--no-session-persistence', ...claudeSourceFlags(opts.root), ...claudeFlags(opts)], prompt, opts);
+    const out = await spawnTool(bin, ['-p', '--output-format', 'json', '--tools', opts.tools || 'Skill,Read', SKILL_READ, '--no-session-persistence', ...claudeSourceFlags(opts.root), ...claudeFlags(opts)], prompt, opts);
     const notLogged = 'O Claude Code não está logado. Abra o Terminal, rode "claude" e entre na sua conta.';
     let data;
     try {

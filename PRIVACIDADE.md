@@ -10,7 +10,7 @@ Alguns recursos, todos opcionais, falam com serviços de fora. A tabela diz quai
 
 | Para onde | Quando | O que vai | Como evitar |
 |---|---|---|---|
-| Anthropic, pelo **seu** Claude Code | Ações de IA no texto, painel do agente, parecer, resposta aos pareceristas, com o Claude escolhido no painel | O trecho escolhido e o contexto em volta. No parecer vai o paper inteiro, e na resposta vão os pareceres que você colar. Vai também tudo o que o agente ler no projeto | Não usar os recursos de IA |
+| Anthropic, pelo **seu** Claude Code | Ações de IA no texto, painel do agente, parecer, resposta aos pareceristas, com o Claude escolhido no painel | O trecho escolhido e o contexto em volta. No parecer vai o paper inteiro, e na resposta vão os pareceres que você colar. Vai também tudo o que o agente ler no projeto e nas skills que você instalou no Claude Code (`~/.claude/skills`) | Não usar os recursos de IA |
 | OpenAI, Google ou o provedor que você configurou, pelo **seu** Codex, Gemini CLI ou OpenCode | Os mesmos recursos, quando um desses agentes é o escolhido no painel | O mesmo que no Claude Code. O TeXugo abre o OpenCode sem as skills do Claude Code da sua pasta pessoal, que ele leria e mandaria ao modelo | Escolher outro agente, ou não usar os recursos de IA |
 | Crossref (`api.crossref.org`) | Adicionar referência, verificar referências | O DOI, o título e o primeiro autor de cada entrada | Não usar esses dois recursos |
 | OpenAlex (`api.openalex.org`) | Os mesmos | O título | O mesmo |

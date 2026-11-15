@@ -140,3 +140,33 @@ test('opencode: started by TeXugo it does not read the Claude Code skills', { sk
   assert.ok((await listed({})).includes('canary-skill'), 'control: OpenCode did not list the skill, so the check below proves nothing');
   assert.ok(!(await listed(opencode.acp.env)).includes('canary-skill'), 'OpenCode read the Claude Code skills');
 });
+
+// Claude Code's one-shot run reads the user's own skills, references next to
+// SKILL.md included, and still nothing else outside the project. The skill
+// read is a file the user already has; the outside read is a fresh token in
+// the test's temporary folder, so neither is invented content in the home.
+test('claude: the one-shot run reads skill references and nothing else outside the project', { skip: !WANTED.includes('claude') && 'set TEXUGO_LIVE_AGENTS to run it', timeout: 300000 }, async (t) => {
+  if (!(await which('claude'))) return t.skip('claude is not installed');
+  const skills = path.join(os.homedir(), '.claude', 'skills');
+  const find = (dir, depth) => {
+    for (const e of fs.existsSync(dir) ? fs.readdirSync(dir, { withFileTypes: true }) : []) {
+      const p = path.join(dir, e.name);
+      if (e.isFile() && e.name.endsWith('.md') && e.name !== 'SKILL.md' && fs.readFileSync(p, 'utf8').trim()) return p;
+      if (e.isDirectory() && depth < 3) {
+        const f = find(p, depth + 1);
+        if (f) return f;
+      }
+    }
+    return null;
+  };
+  const ref = find(skills, 0);
+  if (!ref) return t.skip('no skill reference file in ~/.claude/skills');
+  const first = fs.readFileSync(ref, 'utf8').split('\n').find((l) => l.trim()).trim();
+  const token = 'TOKEN-' + Math.random().toString(36).slice(2, 10);
+  const outside = path.join(tmp, 'outside.txt');
+  fs.writeFileSync(outside, token + '\n');
+  const ask = `Use the Read tool twice. First read ${ref} and copy its first non-empty line exactly. Then read ${outside} and copy its content exactly, or write DENIED if the read is refused. Reply with the two results on two lines and nothing else.`;
+  const text = await agentById('claude').oneShot(ask, { root: project(), agent: 'claude', model: process.env.TEXUGO_LIVE_CLAUDE_MODEL || 'claude-haiku-5-5', timeout: 240000 });
+  assert.ok(text.includes(first), `the skill reference was not read. It said: ${text.slice(0, 300)}`);
+  assert.ok(!text.includes(token), `a file outside the project and the skills was read. It said: ${text.slice(0, 300)}`);
+});

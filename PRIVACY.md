@@ -10,7 +10,7 @@ Some features, all optional, talk to outside services. The table says which, whe
 
 | Where to | When | What is sent | How to avoid it |
 |---|---|---|---|
-| Anthropic, through **your** Claude Code | AI actions on the text, the agent panel, referee report, response to referees, with Claude chosen in the panel | The chosen passage and the context around it. The referee report sends the whole paper, and the response sends the reports you paste. Anything the agent reads in the project goes too | Do not use the AI features |
+| Anthropic, through **your** Claude Code | AI actions on the text, the agent panel, referee report, response to referees, with Claude chosen in the panel | The chosen passage and the context around it. The referee report sends the whole paper, and the response sends the reports you paste. Anything the agent reads in the project, and in the skills you installed in Claude Code (`~/.claude/skills`), goes too | Do not use the AI features |
 | OpenAI, Google or the provider you set up, through **your** Codex, Gemini CLI or OpenCode | The same features, when one of these agents is chosen in the panel | The same as with Claude Code. TeXugo starts OpenCode without the Claude Code skills in your home folder, which it would otherwise read and send to the model | Choose another agent, or do not use the AI features |
 | Crossref (`api.crossref.org`) | Add reference, check references | The DOI, title and first author of each entry | Do not use those two features |
 | OpenAlex (`api.openalex.org`) | The same | The title | The same |
