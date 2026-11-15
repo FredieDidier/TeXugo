@@ -119,6 +119,7 @@
 
   /* ---------------------------------------------- video frames (shots) */
   .shot { position: relative; margin: 0 auto; max-width: var(--w, 100%); }
+  .shot + .shot { margin-top: 56px; }
   .frame { position: relative; border-radius: 14px; overflow: hidden; background: var(--card); border: 1px solid var(--line-2); box-shadow: var(--shadow); }
   .frame video, .frame img { width: 100%; }
   .frame.window .lights { position: absolute; top: 1.667%; left: 0.972%; display: flex; gap: 9.7%; width: 6%; pointer-events: none; }
@@ -425,6 +426,10 @@
           <div class="frame"><video muted playsinline loop preload="none" width="1600" height="880" data-v="escrita" poster="videos/pt/escrita.webp"></video></div>
           <figcaption><span class="pt">Roxo pontilhado: um vício de escrita, com o motivo e a fonte. Azul ondulado: gramática, com a correção num clique.</span><span class="en">Dotted purple: a writing tic, with the reason and its source. Wavy blue: grammar, with the fix one click away.</span></figcaption>
         </figure>
+        <figure class="shot reveal" style="--w: 1150px">
+          <div class="frame"><video muted playsinline loop preload="none" width="1600" height="866" data-v="ia" poster="videos/pt/ia.webp"></video></div>
+          <figcaption><span class="pt">Selecione um trecho, peça para encurtar e aceite ou descarte a mudança, mostrada palavra a palavra.</span><span class="en">Select a passage, ask to shorten it, and accept or discard the change, shown word by word.</span></figcaption>
+        </figure>
       </article>
 
       <article class="chapter" id="citar">
@@ -721,6 +726,7 @@
       'ao-vivo': ['Vídeo: com a prévia ao vivo ligada, uma frase e uma equação aparecem no PDF enquanto são digitadas.', 'Video: with the live preview on, a sentence and an equation appear in the PDF as they are typed.'],
       problemas: ['Vídeo: uma referência a uma figura inexistente; o painel Problemas explica o ?? e leva à linha.', 'Video: a reference to a figure that does not exist; the Problems panel explains the ?? and goes to the line.'],
       escrita: ['Vídeo: o mouse sobre um vício de escrita mostra o motivo; sobre um erro de concordância, a correção, aplicada com um clique.', 'Video: hovering a writing tic shows the reason; hovering a grammar error shows the fix, applied with one click.'],
+      ia: ['Vídeo: um parágrafo prolixo é selecionado; o agente de IA o encurta, a mudança aparece palavra a palavra e é aceita.', 'Video: a wordy paragraph is selected; the AI agent shortens it, the change is shown word by word and accepted.'],
       referencia: ['Vídeo: um DOI colado vira entrada no .bib e citação no texto.', 'Video: a pasted DOI becomes a .bib entry and a citation in the text.'],
       comparar: ['Vídeo: comparar com o primeiro commit gera um PDF com o texto novo em azul e o apagado em vermelho.', 'Video: comparing with the first commit builds a PDF with new text in blue and deleted text in red.'],
     };
