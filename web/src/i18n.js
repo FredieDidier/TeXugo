@@ -43,6 +43,8 @@ const EN = {
   'Pareceres': 'Referee reports',
   'Baixo': 'Low',
   'Alto': 'High',
+  'Atalhos e comandos (manual)': 'Shortcuts and commands (manual)',
+  'Resposta aos pareceristas (R&R, response letter)': 'Response to referees (R&R, response letter)',
   // item 6: new version notice
   'Há uma versão nova do TeXugo. Clique para ver.': 'A new version of TeXugo is out. Click to see it.',
   'Não consegui falar com o GitHub agora. Tente de novo mais tarde.': 'Could not reach GitHub right now. Try again later.',
@@ -625,6 +627,8 @@ const EN = {
 // Sentences built from parts: [regex on the Portuguese, English replacement].
 const PATTERNS = [
   [/^( ?)Resposta aos pareceristas: (.+)$/s, '$1Response to referees: $2'],
+  [/^Parecer pronto: 1 ponto\.$/, 'Referee report ready: 1 point.'],
+  [/^Parecer pronto: (\d+) pontos\.$/, 'Referee report ready: $1 points.'],
   // Sentences that name the chosen agent: Claude, Codex, Gemini, OpenCode.
   [/^(.+) instalado: escolha o agente no topo do painel; as ações de IA usam o mesmo\.$/, '$1 installed: pick the agent at the top of the panel; the AI actions use the same one.'],
   [/^(.+) \(não instalado\)$/, '$1 (not installed)'],

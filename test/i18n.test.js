@@ -160,7 +160,7 @@ function template(src, start) {
 }
 
 // Words only Portuguese has (not "as", "do", "no", "on", which English has too).
-const PT_WORDS = /(?<![\p{L}])(?:não|você|está|são|já|também|até|então|só|arquivo|arquivos|pasta|projeto|abrir|salvar|compilar|nenhum|nenhuma|para|com|uma|dos|das|nos|nas|que|ao|pelo|pela|isso|esse|essa|este|esta|aqui|agora|depois|antes|ainda|mais|sem|mas|quando|onde|como|porque|seu|sua|seus|suas|foi|tem|há|linha|linhas|página|versão)(?![\p{L}])/giu;
+const PT_WORDS = /(?<![\p{L}])(?:não|você|está|são|já|também|até|então|só|arquivo|arquivos|pasta|projeto|abrir|salvar|compilar|nenhum|nenhuma|para|com|uma|dos|das|nos|nas|que|ao|pelo|pela|isso|esse|essa|este|esta|aqui|agora|depois|antes|ainda|mais|sem|mas|quando|onde|como|porque|seu|sua|seus|suas|foi|tem|há|linha|linhas|página|versão|aos|atalhos|comandos|resposta|parecer|pareceristas|mostrar|esconder|buscar|novo|nova)(?![\p{L}])/giu;
 const EN_WORDS = /\b(?:the|and|of|to|is|are|you|your|with|for|this|that|not|it|be|from|or)\b/gi;
 function looksPortuguese(s) {
   if (/^\s*(?:SELECT|INSERT|UPDATE|WITH)\b/.test(s)) return false; // SQL
@@ -259,7 +259,7 @@ const RUNTIME = [
   'paper.tex vai para o Lixo do macOS (dá para recuperar de lá).', 'paper.tex vai para a lixeira do sistema (dá para recuperar de lá).',
   '3 linhas coladas na tabela. ⌘Z desfaz.', 'Tabela 3×4 colada em LaTeX. ⌘Z desfaz. Falta \\usepackage{booktabs} no preâmbulo.',
   'A prévia parou na linha 12: Undefined control sequence. O PDF mostra a última versão boa.',
-  '2 commits novos no remoto, ainda não baixados.', '1 commit novo no remoto, ainda não baixado.', '2 commits no remoto, ainda não baixados',
+  '2 commits novos no remoto, ainda não baixados.', 'Parecer pronto: 1 ponto.', 'Parecer pronto: 12 pontos.', '1 entrada nova em refs.bib.', '3 entradas novas em refs.bib; 2 já estavam lá (mesma chave, DOI ou título).', '1 commit novo no remoto, ainda não baixado.', '2 commits no remoto, ainda não baixados',
   'Não instalado. Download de 9,0 GB; ocupa 15,4 GB depois de descompactado.', 'Baixar (9,0 GB)', 'Pausado em 40% de 9,0 GB.', 'Baixando: 12% de 9,0 GB.',
   'Instalado (15,4 GB no disco). O corretor usa os n-gramas em textos em inglês.',
   ' · cópia de 12/11/2026, 13:07 · o arquivo não existe mais no disco',

@@ -10,6 +10,8 @@
 "vai para o Lixo do macOS (dá para recuperar de lá)."
 "vai para a lixeira do sistema (dá para recuperar de lá)."
 "${…} linhas coladas na tabela"
+"commit novo"
+"${…} entrada${…} nova${…} em ${…}${…}."
 " Falta \\usepackage{booktabs} no preâmbulo."
 ". O PDF mostra a última versão boa."
 " na linha ${…}"

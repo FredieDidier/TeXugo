@@ -384,7 +384,7 @@ export async function viciosReport(app, S) {
           'ul',
           {},
           Object.values(SOURCES).map((s) =>
-            h('li', {}, s.url ? h('a', { href: '#', onclick: (e) => (e.preventDefault(), call('openUrl', { url: s.url })) }, s.t) : s.t),
+            h('li', {}, s.url ? h('a', { href: '#', onclick: (e) => (e.preventDefault(), call('openUrl', { url: s.url })) }, getLang() === 'en' ? s.en : s.t) : getLang() === 'en' ? s.en : s.t),
           ),
         ),
       ),

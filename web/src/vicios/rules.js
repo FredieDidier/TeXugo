@@ -25,14 +25,14 @@
 export const VERSION = '2026-11';
 
 export const SOURCES = {
-  W: { t: 'Wikipedia: Signs of AI writing (WikiProject AI Cleanup), versão de out./2026', url: 'https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing' },
-  K: { t: 'Kobak et al., “Delving into LLM-assisted writing in biomedical publications through excess vocabulary”, Science Advances (2025); lista de 900 palavras atualizada em jul./2025', url: 'https://github.com/berenslab/llm-excess-vocab' },
-  A: { t: 'Abraham, “The load-bearing vocabulary of Claude” (ago./2026): vocabulário que foi de 0,7% a ~39% das descrições de pull request no GitHub', url: 'https://news.ycombinator.com/item?id=49461817' },
-  U: { t: 'Unslop style guide (abr./2026)', url: 'https://github.com/dbohdan/unslop/blob/master/style-guide/unslop-style-guide.md' },
-  S: { t: 'Guia de escrita de artigos de economia aplicada (skills applied-micro-paper-writing e manuscript-audit)', url: null },
-  P: { t: 'Fontes em português: SEO Happy Hour sobre o estudo da Search Engine Land (2025); Doutora Nathália, “Como avaliar texto escrito por IA”; Fast Company Brasil (2025)', url: 'https://www.seohappyhour.com/noticias/vicio-escrita-ia-estudo/' },
-  E: { t: 'Equivalente em português de um padrão documentado em inglês (adaptação do TeXugo; não há estudo quantitativo em português)', url: null },
-  C: { t: 'Decalques comuns entre português e inglês na escrita acadêmica (lista do TeXugo)', url: null },
+  W: { t: 'Wikipedia: Signs of AI writing (WikiProject AI Cleanup), versão de out./2026', en: 'Wikipedia: Signs of AI writing (WikiProject AI Cleanup), version of Oct. 2026', url: 'https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing' },
+  K: { t: 'Kobak et al., “Delving into LLM-assisted writing in biomedical publications through excess vocabulary”, Science Advances (2025); lista de 900 palavras atualizada em jul./2025', en: 'Kobak et al., “Delving into LLM-assisted writing in biomedical publications through excess vocabulary”, Science Advances (2025); list of 900 words updated in Jul. 2025', url: 'https://github.com/berenslab/llm-excess-vocab' },
+  A: { t: 'Abraham, “The load-bearing vocabulary of Claude” (ago./2026): vocabulário que foi de 0,7% a ~39% das descrições de pull request no GitHub', en: 'Abraham, “The load-bearing vocabulary of Claude” (Aug. 2026): vocabulary that went from 0.7% to ~39% of pull request descriptions on GitHub', url: 'https://news.ycombinator.com/item?id=49461817' },
+  U: { t: 'Unslop style guide (abr./2026)', en: 'Unslop style guide (Apr. 2026)', url: 'https://github.com/dbohdan/unslop/blob/master/style-guide/unslop-style-guide.md' },
+  S: { t: 'Guia de escrita de artigos de economia aplicada (skills applied-micro-paper-writing e manuscript-audit)', en: 'Writing guide for applied economics papers (skills applied-micro-paper-writing and manuscript-audit)', url: null },
+  P: { t: 'Fontes em português: SEO Happy Hour sobre o estudo da Search Engine Land (2025); Doutora Nathália, “Como avaliar texto escrito por IA”; Fast Company Brasil (2025)', en: 'Sources in Portuguese: SEO Happy Hour on the Search Engine Land study (2025); Doutora Nathália, “Como avaliar texto escrito por IA”; Fast Company Brasil (2025)', url: 'https://www.seohappyhour.com/noticias/vicio-escrita-ia-estudo/' },
+  E: { t: 'Equivalente em português de um padrão documentado em inglês (adaptação do TeXugo; não há estudo quantitativo em português)', en: 'Portuguese equivalent of a pattern documented in English (TeXugo’s adaptation; there is no quantitative study in Portuguese)', url: null },
+  C: { t: 'Decalques comuns entre português e inglês na escrita acadêmica (lista do TeXugo)', en: 'Common calques between Portuguese and English in academic writing (TeXugo’s list)', url: null },
 };
 
 export const CATEGORIES = {

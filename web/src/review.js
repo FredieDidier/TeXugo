@@ -59,7 +59,7 @@ async function run(app, S, doc, { journal, focus }) {
   try {
     const report = await call('reviewRun', { root: S.project.root, doc, journal, focus, lang: getLang() === 'en' ? 'en' : 'pt', ...agentChoice(S) });
     S.review = { status: 'done', doc, report };
-    toast(`Parecer pronto: ${report.points.length} pontos.`, 'ok');
+    toast(`Parecer pronto: ${report.points.length} ponto${report.points.length === 1 ? '' : 's'}.`, 'ok');
   } catch (err) {
     S.review = { status: 'error', doc, error: err.message };
   } finally {
